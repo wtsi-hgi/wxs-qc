@@ -7,6 +7,8 @@ import hail as hl
 import json
 import logging
 from typing import Optional, Any, Union
+
+
 from wes_qc.hail_utils import path_spark
 from wes_qc.config import get_config
 from utils.utils import select_founders, collect_pedigree_samples
@@ -674,31 +676,23 @@ def parse_hard_filter_values(filter_string: str) -> tuple:
     return values[1], values[3], values[5], values[7], values[9]
 
 
-def plot_hard_filter_combinations(df: pd.DataFrame, x: str, y: str, outfile: str):
+def plot_hard_filter_combinations(
+    df: pd.DataFrame, x: str, y: str, outfile: str, height=800, width=1200, match_aspect=False, text_size="18pt"
+):
     """
     Create an interactive scatter plot of hard filter combinations with enhanced controls
-
-    :param pd.DataFrame df: Input dataframe with filter metrics
-    :param str x: Column name for x-axis
-    :param str y: Column name for y-axis
-    :param str outfile: Path to save the plot
     """
     # Create the data source
     # Convert DP to string for factor mapping
     print(f"--- Generating interactive plot {y} vs {x} in {outfile}, ---")
-    df["DP"] = df["DP"].astype(str)
     source = bokeh.models.ColumnDataSource(df)
     filtered_source = bokeh.models.ColumnDataSource(data=source.data)
-    margin_x = abs(df[x].max() - df[x].min()) * 0.05
-    max_x = df[x].max() + margin_x
-    min_x = df[x].min() - margin_x
-    margin_y = abs(df[y].max() - df[y].min()) * 0.05
-    max_y = df[y].max() + margin_y
-    min_y = df[y].min() - margin_y
 
     # Define markers for different DP values
-    MARKERS = ["circle", "diamond", "triangle", "square", "star", "plus"]
-    DPs = [str(i) for i in sorted(df["DP"].unique().tolist())]
+    # Is buggy for a single DP, so swithced off.
+    # df["DP"] = df["DP"].astype(str)
+    # MARKERS = ["circle", "diamond", "triangle", "square", "star", "plus"]
+    # DPs = [str(i) for i in sorted(df["DP"].unique().tolist())]
 
     tooltips = [
         ("--", "--"),
@@ -711,15 +705,32 @@ def plot_hard_filter_combinations(df: pd.DataFrame, x: str, y: str, outfile: str
         ("Call Rate", "@call_rate"),
     ]
     hover = bokeh.models.HoverTool(tooltips=tooltips)
+    boxzoom = bokeh.models.BoxZoomTool(match_aspect=match_aspect)  # <- important
+    wheelzoom = bokeh.models.WheelZoomTool()  # respects match_aspect on the figure
+    if match_aspect:
+        plot_params = {
+            "tools": [hover, "pan", boxzoom, wheelzoom, "zoom_in", "zoom_out", "reset", "save"],
+            "match_aspect": True,
+            "aspect_scale": 1.0,
+        }
+    else:
+        margin_x = abs(df[x].max() - df[x].min()) * 0.05
+        max_x = df[x].max() + margin_x
+        min_x = df[x].min() - margin_x
+        margin_y = abs(df[y].max() - df[y].min()) * 0.05
+        max_y = df[y].max() + margin_y
+        min_y = df[y].min() - margin_y
+
+        plot_params = {"x_range": (min_x, max_x), "y_range": (min_y, max_y)}
+
     plot = bokeh.plotting.figure(
         title=(" ").join([y, "v", x]),
-        height=800,
-        width=1400,
+        height=height,
+        width=width,
         x_axis_label=x,
         y_axis_label=y,
-        x_range=(min_x, max_x),
-        y_range=(min_y, max_y),
-        tools=[hover, "pan", "box_zoom", "wheel_zoom", "zoom_in", "zoom_out", "reset", "save"],
+        sizing_mode="fixed",
+        **plot_params,
     )
 
     bin_min = df["bin"].min()
@@ -748,20 +759,23 @@ def plot_hard_filter_combinations(df: pd.DataFrame, x: str, y: str, outfile: str
         size=14,
         alpha=0.6,
         color={"field": "bin", "transform": color_mapper},
-        marker=bokeh.transform.factor_mark("DP", MARKERS, DPs),
-        legend_group="DP",
+        # marker=bokeh.transform.factor_mark("DP", MARKERS, DPs), # Removing markers and DP - bugs with interactive selection
+        # legend_group="DP",
     )
+    plot.axis.axis_label_text_font_size = text_size
+    plot.axis.major_label_text_font_size = text_size
 
     # Configure legend
-    plot.legend.click_policy = "hide"
-    plot.legend.location = "top_left"
-    plot.legend.title = "DP"
-    plot.legend.background_fill_alpha = 0.7
+    # plot.legend.click_policy = "hide"
+    # plot.legend.location = "top_left"
+    # plot.legend.title = "DP"
+    # plot.legend.background_fill_alpha = 0.7
 
     # Add color bar with custom ticks
     ticks = np.linspace(bin_min + interval / 2, bin_max - interval / 2, num_bins)
     color_bar = bokeh.models.ColorBar(
         color_mapper=color_mapper,
+        major_label_text_font_size=text_size,
         label_standoff=12,
         title="Bin",
         location=(0, 0),
@@ -1005,7 +1019,8 @@ def main():
         for k, v in config["step4"]["plot"].items():
             type_, x, y = k.split("-")
             df = df_snv if type_ == "snv" else df_indel
-            plot_hard_filter_combinations(df, x, y, v)
+            match_aspect = (x, y) in [("TP", "FP"), ("precision", "recall")]
+            plot_hard_filter_combinations(df, x, y, v, match_aspect=match_aspect)
         print("=== Plotting hard filter combinations completed successfully ===")
 
 
