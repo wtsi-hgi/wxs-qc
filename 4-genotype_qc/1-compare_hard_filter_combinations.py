@@ -677,7 +677,7 @@ def parse_hard_filter_values(filter_string: str) -> tuple:
 
 
 def plot_hard_filter_combinations(
-    df: pd.DataFrame, x: str, y: str, outfile: str, height=800, width=1200, match_aspect=False, text_size="18pt"
+    df: pd.DataFrame, x: str, y: str, outfile: str, height=800, width=1000, match_aspect=False, text_size="18pt"
 ):
     """
     Create an interactive scatter plot of hard filter combinations with enhanced controls
@@ -687,12 +687,6 @@ def plot_hard_filter_combinations(
     print(f"--- Generating interactive plot {y} vs {x} in {outfile}, ---")
     source = bokeh.models.ColumnDataSource(df)
     filtered_source = bokeh.models.ColumnDataSource(data=source.data)
-
-    # Define markers for different DP values
-    # Is buggy for a single DP, so swithced off.
-    # df["DP"] = df["DP"].astype(str)
-    # MARKERS = ["circle", "diamond", "triangle", "square", "star", "plus"]
-    # DPs = [str(i) for i in sorted(df["DP"].unique().tolist())]
 
     tooltips = [
         ("--", "--"),
@@ -705,14 +699,16 @@ def plot_hard_filter_combinations(
         ("Call Rate", "@call_rate"),
     ]
     hover = bokeh.models.HoverTool(tooltips=tooltips)
-    boxzoom = bokeh.models.BoxZoomTool(match_aspect=match_aspect)  # <- important
-    wheelzoom = bokeh.models.WheelZoomTool()  # respects match_aspect on the figure
+    wheelzoom = bokeh.models.WheelZoomTool()
+    boxzoom = bokeh.models.BoxZoomTool(match_aspect=match_aspect)
+    plot_params: dict[str, Any] = {"tools": [hover, "pan", boxzoom, wheelzoom, "zoom_in", "zoom_out", "reset", "save"]}
     if match_aspect:
-        plot_params = {
-            "tools": [hover, "pan", boxzoom, wheelzoom, "zoom_in", "zoom_out", "reset", "save"],
-            "match_aspect": True,
-            "aspect_scale": 1.0,
-        }
+        plot_params.update(
+            {
+                "match_aspect": True,
+                "aspect_scale": 1.0,
+            }
+        )
     else:
         margin_x = abs(df[x].max() - df[x].min()) * 0.05
         max_x = df[x].max() + margin_x
@@ -721,7 +717,7 @@ def plot_hard_filter_combinations(
         max_y = df[y].max() + margin_y
         min_y = df[y].min() - margin_y
 
-        plot_params = {"x_range": (min_x, max_x), "y_range": (min_y, max_y)}
+        plot_params.update({"x_range": (min_x, max_x), "y_range": (min_y, max_y)})
 
     plot = bokeh.plotting.figure(
         title=(" ").join([y, "v", x]),
@@ -729,7 +725,6 @@ def plot_hard_filter_combinations(
         width=width,
         x_axis_label=x,
         y_axis_label=y,
-        sizing_mode="fixed",
         **plot_params,
     )
 
@@ -759,23 +754,16 @@ def plot_hard_filter_combinations(
         size=14,
         alpha=0.6,
         color={"field": "bin", "transform": color_mapper},
-        # marker=bokeh.transform.factor_mark("DP", MARKERS, DPs), # Removing markers and DP - bugs with interactive selection
-        # legend_group="DP",
     )
     plot.axis.axis_label_text_font_size = text_size
     plot.axis.major_label_text_font_size = text_size
-
-    # Configure legend
-    # plot.legend.click_policy = "hide"
-    # plot.legend.location = "top_left"
-    # plot.legend.title = "DP"
-    # plot.legend.background_fill_alpha = 0.7
 
     # Add color bar with custom ticks
     ticks = np.linspace(bin_min + interval / 2, bin_max - interval / 2, num_bins)
     color_bar = bokeh.models.ColorBar(
         color_mapper=color_mapper,
         major_label_text_font_size=text_size,
+        title_text_font_size=text_size,
         label_standoff=12,
         title="Bin",
         location=(0, 0),
@@ -878,6 +866,66 @@ def plot_hard_filter_combinations(
     checkbox_cr.js_on_change("active", callback)
     palette_select.js_on_change("value", palette_callback)
 
+    if match_aspect:
+        # A button to toggle forcing aspect ratio
+        aspect_toggle = bokeh.models.Checkbox(
+            name="Fix aspect ratio",
+            active=match_aspect,
+        )
+        enforce_aspect = bokeh.models.CustomJS(
+            args=dict(xr=plot.x_range, yr=plot.y_range, toggle=aspect_toggle, aspect_scale=1),
+            code="""
+            // Do nothing if user turned the lock off
+            if (!toggle.active) { return; }
+            // Keep y span proportional to x span using the fixed aspect_scale
+            const xmid = (xr.start + xr.end) / 2.0
+            const ymid = (yr.start + yr.end) / 2.0
+
+            const xspan = Math.abs(xr.end - xr.start)
+            let yspan  = xspan * aspect_scale
+
+            // Update y-range to match target span, preserving its center
+            yr.start = ymid - yspan/2.0
+            yr.end   = ymid + yspan/2.0
+        """,
+        )
+
+        toggle_cb = bokeh.models.CustomJS(
+            args=dict(
+                xr=plot.x_range,
+                yr=plot.y_range,
+                fig=plot,
+                boxzoom=boxzoom,
+                aspect_scale=1,
+            ),
+            code="""
+            // Update tool + figure settings to match the toggle
+            boxzoom.match_aspect = cb_obj.active;
+            fig.match_aspect     = cb_obj.active;
+
+            // If turning ON, snap current view to the correct ratio immediately
+            if (cb_obj.active) {
+                const xmid  = (xr.start + xr.end) / 2.0;
+                const ymid  = (yr.start + yr.end) / 2.0;
+                const xspan = Math.abs(xr.end - xr.start);
+                const yspan = xspan * aspect_scale;
+
+                yr.start = ymid - yspan/2.0;
+                yr.end   = ymid + yspan/2.0;
+
+                xr.change.emit();
+                yr.change.emit();
+            }
+        """,
+        )
+
+        # Run the aspect ratio check whenever either range changes
+        plot.x_range.js_on_change("start", enforce_aspect)
+        plot.x_range.js_on_change("end", enforce_aspect)
+        plot.y_range.js_on_change("start", enforce_aspect)
+        plot.y_range.js_on_change("end", enforce_aspect)
+        aspect_toggle.js_on_change("active", toggle_cb)
+
     # Create layout with all controls
     controls = bokeh.layouts.column(
         bokeh.layouts.row(
@@ -889,9 +937,17 @@ def plot_hard_filter_combinations(
             bokeh.layouts.column(bokeh.models.Div(text="<b>Call Rate</b>"), checkbox_cr, width=100),
         ),
         bokeh.models.Div(text="<b>Bin Range Filter</b>"),
-        bokeh.layouts.row(bokeh.layouts.column(min_bin_slider, max_bin_slider, width=200)),
+        bokeh.layouts.row(bokeh.layouts.column(min_bin_slider, max_bin_slider, width=180)),
         bokeh.layouts.row(bokeh.layouts.column(palette_select, width=200)),
     )
+    if match_aspect:
+        controls.children.append(bokeh.models.Div(text="<b>Aspect ratio control</b>"))
+        controls.children.append(
+            bokeh.layouts.row(
+                bokeh.layouts.row(bokeh.models.Div(text="<b>Fix aspect ratio</b>"), aspect_toggle, width=200)
+            )
+        )
+
     layout = bokeh.layouts.row(controls, plot)
 
     # Save to file
