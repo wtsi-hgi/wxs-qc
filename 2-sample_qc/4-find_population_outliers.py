@@ -4,7 +4,7 @@ import os.path
 import hail as hl
 import pandas as pd
 
-from wes_qc import hail_utils
+from wes_qc import hail_utils, constants
 from utils.utils import parse_config, path_spark
 from gnomad.sample_qc.filtering import compute_stratified_metrics_filter
 import bokeh.plotting as bkplot
@@ -145,8 +145,9 @@ def plot_sampleqc_metric(
     upper_threshold=None,
     n_bins=150,
     color="blue",
-    plot_width: int = 800,
-    plot_height: int = 600,
+    plot_width: int = constants.width,
+    plot_height: int = constants.height,
+    text_size=constants.plots_text_size,
 ):
     """
     Plots a histogram of the given metric values for a specific population, with options to add
@@ -197,7 +198,7 @@ def plot_sampleqc_metric(
             x=lower_threshold,
             y=hist.max(),
             text=f"{n_below}",
-            text_font_size="10pt",
+            text_font_size=text_size,
             background_fill_color="white",
             background_fill_alpha=0.5,
             text_align="right",
@@ -214,7 +215,7 @@ def plot_sampleqc_metric(
             x=upper_threshold,
             y=hist.max(),
             text=f"{n_above}",
-            text_font_size="10pt",
+            text_font_size=text_size,
             background_fill_color="white",
             background_fill_alpha=0.5,
             text_align="left",
@@ -222,11 +223,20 @@ def plot_sampleqc_metric(
         )
         p.add_layout(hline_upper)
         p.add_layout(ann_above)
+        p.axis.axis_label_text_font_size = text_size
+        p.axis.major_label_text_font_size = text_size
+        p.title.text_font_size = text_size
     return p
 
 
 def plot_sample_qc_metrics(
-    pop_ht: hl.Table, plot_outdir: str, plot_width: int = 400, plot_height: int = 400, n_bins: int = 100, **kwargs
+    pop_ht: hl.Table,
+    plot_outdir: str,
+    plot_width: int = 400,
+    plot_height: int = 400,
+    text_size="12pt",
+    n_bins: int = 100,
+    **kwargs,
 ):
     def extract_lower_upper(metadata):
         output = {}
@@ -265,6 +275,7 @@ def plot_sample_qc_metrics(
                 color=pop_colors[pop],
                 plot_width=plot_width,
                 plot_height=plot_height,
+                text_size=text_size,
             )
 
             plots.append(p)

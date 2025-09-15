@@ -4,7 +4,7 @@ import bokeh
 
 from utils.utils import parse_config
 from wes_qc.hail_utils import path_spark
-from wes_qc import hail_utils
+from wes_qc import hail_utils, constants
 
 verifybamid_types = {
     "#SEQ_ID": "str",
@@ -35,8 +35,16 @@ def validate_verifybamid(
     verifybamid_plot: str,
     samples_failing_freemix_tsv: str,
     freemix_treshold: float = 0.05,
+    width=constants.width,
+    height=constants.height,
+    text_size=constants.plots_text_size,
     **kwargs,
 ) -> hl.MatrixTable:
+    """
+    Validates and visualizes Freemix scores from verifyBamID against a Hail MatrixTable.
+    This function annotates the MatrixTable with Freemix scores, identifies samples failing the Freemix threshold,
+    exports them if applicable, and generates a scatter plot to visualize the Freemix scores.
+    """
     verifybamid = verifybamid.key_by("#SEQ_ID")
     mt = mt.annotate_cols(freemix=verifybamid[mt.s].FREEMIX)
 
@@ -69,8 +77,8 @@ def validate_verifybamid(
         xlabel="n",
         ylabel="Freemix score",
         title="Freemix score",
-        width=800,
-        height=800,
+        width=width,
+        height=height,
     )
     hline = bokeh.models.Span(location=freemix_treshold, dimension="width", line_color="red", line_width=3)
     # Add the Span annotation to the plot
@@ -78,14 +86,18 @@ def validate_verifybamid(
 
     label = bokeh.models.Label(
         x=20,
-        y=700,
+        y=height - 200,
         text=f"{n_samples_failed_freemix} samples failed freemix",
         x_units="screen",
         y_units="screen",
         text_color="black",
-        text_font_size="14pt",
+        text_font_size=text_size,
     )
     p.add_layout(label)
+
+    p.axis.axis_label_text_font_size = text_size
+    p.axis.major_label_text_font_size = text_size
+    p.title.text_font_size = text_size
 
     bokeh.plotting.output_file(verifybamid_plot)
     bokeh.plotting.save(p)

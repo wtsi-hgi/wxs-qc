@@ -5,7 +5,7 @@ import hail as hl
 import bokeh
 from utils.utils import parse_config, path_spark
 
-from wes_qc import hail_utils, hail_patches
+from wes_qc import hail_utils, hail_patches, constants
 
 
 def apply_hard_filters(
@@ -87,22 +87,15 @@ def select_fstat_outliers(sex_ht: hl.Table, fstat_low: float, fstat_high: float,
     return sex_ht.filter((sex_ht.f_stat > fstat_low) & (sex_ht.f_stat < fstat_high))
 
 
-def plot_f_stat_histogram(sex_ht: hl.Table, fstat_low: float, fstat_high: float, **kwargs):
+def plot_f_stat_histogram(
+    sex_ht: hl.Table, fstat_low: float, fstat_high: float, text_size=constants.plots_text_size, **kwargs
+):
     """
     Plot a histogram of F-statistic values from a Hail Table and annotate it with thresholds
     and the count of outliers.
-
-    Parameters:
-        sex_ht (hl.Table): Input Hail Table containing the F-statistic data.
-        fstat_low (float): Lower F-stat threshold for detecting outliers.
-        fstat_high (float): Upper F-stat threshold for detecting outliers.
-
-    Returns:
-        bokeh.plotting.figure.Figure: Bokeh figure containing the histogram with thresholds
-        and annotation.
     """
     n_outliers = sex_ht.filter((sex_ht.f_stat > fstat_low) & (sex_ht.f_stat < fstat_high)).count()
-    plot = hl.plot.histogram(sex_ht.f_stat, legend="Fstat")
+    plot = hl.plot.histogram(sex_ht.f_stat, legend="Fstat", title="F-stat distribution")
     hline_lower = bokeh.models.Span(location=fstat_low, dimension="height", line_color="red", line_width=2)
     hline_higher = bokeh.models.Span(location=fstat_high, dimension="height", line_color="red", line_width=2)
     plot.add_layout(hline_lower)
@@ -111,6 +104,9 @@ def plot_f_stat_histogram(sex_ht: hl.Table, fstat_low: float, fstat_high: float,
         x=(fstat_low + fstat_high) / 2, y=10, text=str(n_outliers), text_font_size="12pt", text_color="red"
     )  # Add label to the figure
     plot.add_layout(label)
+    plot.axis.axis_label_text_font_size = text_size
+    plot.axis.major_label_text_font_size = text_size
+    plot.title.text_font_size = text_size
     return plot
 
 

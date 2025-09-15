@@ -12,7 +12,7 @@ from typing import Optional, Any, Union
 from wes_qc.hail_utils import path_spark
 from wes_qc.config import get_config
 from utils.utils import select_founders, collect_pedigree_samples
-from wes_qc import hail_utils, filtering, hail_patches
+from wes_qc import hail_utils, filtering, hail_patches, constants
 import pandas as pd
 import bokeh.plotting
 import bokeh.layouts
@@ -677,7 +677,14 @@ def parse_hard_filter_values(filter_string: str) -> tuple:
 
 
 def plot_hard_filter_combinations(
-    df: pd.DataFrame, x: str, y: str, outfile: str, height=800, width=1000, match_aspect=False, text_size="18pt"
+    df: pd.DataFrame,
+    x: str,
+    y: str,
+    outfile: str,
+    match_aspect=False,
+    width=constants.width,
+    height=constants.height,
+    text_size=constants.plots_text_size,
 ):
     """
     Create an interactive scatter plot of hard filter combinations with enhanced controls

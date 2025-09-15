@@ -5,9 +5,12 @@ import bokeh
 import math
 
 import pandas as pd
+from wes_qc import constants
 
 
-def plot_pop_pca(pca_scores: hl.Table, plot_file: str, n_pca: int = 3, pop: Optional[str] = None) -> None:
+def plot_pop_pca(
+    pca_scores: hl.Table, plot_file: str, n_pca: int = 3, pop: Optional[str] = None, text_size=constants.plots_text_size
+) -> None:
     """
     Plots grid of n_pca PCA components
     """
@@ -31,6 +34,9 @@ def plot_pop_pca(pca_scores: hl.Table, plot_file: str, n_pca: int = 3, pop: Opti
                 colors=colors_map,
                 title=f"PC{i+1} vs PC{j+1}",
             )
+            p.axis.axis_label_text_font_size = text_size
+            p.axis.major_label_text_font_size = text_size
+            p.title.text_font_size = text_size
             layout[i][j] = p
 
     plots = bokeh.layouts.gridplot(layout)
@@ -90,7 +96,12 @@ def mutation_spectra_stats(df: pd.DataFrame, iqr_multiplier: float) -> Tuple[pd.
 
 
 def plot_mutation_spectra_boxplots(
-    stats: pd.DataFrame, outliers: pd.DataFrame, width=800, height=600, **kwargs
+    stats: pd.DataFrame,
+    outliers: pd.DataFrame,
+    width=constants.width,
+    height=constants.height,
+    text_size=constants.plots_text_size,
+    **kwargs,
 ) -> bokeh.plotting.figure:
     """
     Plot mutation spectra by calculated table
@@ -157,11 +168,16 @@ def plot_mutation_spectra_boxplots(
     p.xaxis.axis_label = "Mutation Type"
     p.yaxis.axis_label = "Proportion"
     p.xaxis.major_label_orientation = math.pi / 4
+    p.axis.axis_label_text_font_size = text_size
+    p.axis.major_label_text_font_size = text_size
+    p.title.text_font_size = text_size
 
     return p
 
 
-def plot_mutation_spectra_barplot(stats: pd.DataFrame, width=800, height=600, **kwargs) -> bokeh.plotting.figure:
+def plot_mutation_spectra_barplot(
+    stats: pd.DataFrame, width=constants.width, height=constants.height, text_size=constants.plots_text_size, **kwargs
+) -> bokeh.plotting.figure:
     """
     Plot mutation spectra from mutation spectra stats as a bar plot
     """
@@ -221,6 +237,9 @@ def plot_mutation_spectra_barplot(stats: pd.DataFrame, width=800, height=600, **
     p.xaxis.axis_label = "Mutation Type"
     p.yaxis.axis_label = "Proportion"
     p.xaxis.major_label_orientation = math.pi / 4
+    p.axis.axis_label_text_font_size = text_size
+    p.axis.major_label_text_font_size = text_size
+    p.title.text_font_size = text_size
 
     # Add hover tool
     hover = bokeh.models.HoverTool(
@@ -255,6 +274,7 @@ def plot_variant_stats(
     FS_threshold: float = -1,
     MQ_threshold: float = -1,
     title: str = "",
+    text_size=constants.plots_text_size,
 ) -> bokeh.layouts.Column:
     p1 = hl.plot.histogram(ht.info.QD, legend="QD", title=title)
     if QD_threshold > 0:
@@ -268,6 +288,11 @@ def plot_variant_stats(
     if MQ_threshold > 0:
         hline3 = bokeh.models.Span(location=MQ_threshold, dimension="height", line_color="red", line_width=2)
         p3.add_layout(hline3)
+    # Set label and axis sizes
+    for p in [p1, p2, p3]:
+        p.axis.axis_label_text_font_size = text_size
+        p.axis.major_label_text_font_size = text_size
+        p.title.text_font_size = text_size
     # Arrange vertically
     combined_plot = bokeh.layouts.column(p1, p2, p3)
     return combined_plot

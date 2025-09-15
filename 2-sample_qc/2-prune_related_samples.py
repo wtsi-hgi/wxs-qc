@@ -5,7 +5,7 @@ import os
 from utils.utils import parse_config, path_local, path_spark
 import bokeh.plotting as bkplt
 import bokeh.layouts as bklayouts
-from wes_qc import hail_utils, hail_patches
+from wes_qc import hail_utils, hail_patches, constants
 
 
 def prune_mt(mt: hl.MatrixTable, ld_prune_args, **kwargs) -> hl.MatrixTable:
@@ -74,10 +74,17 @@ def prune_pc_relate(
     return related_samples_to_remove, scores, relatedness_ht
 
 
-def plot_relatedness(relatedness_ht: hl.Table, relatedness_plotfile: str, **kwargs) -> None:
+def plot_relatedness(
+    relatedness_ht: hl.Table, relatedness_plotfile: str, text_size=constants.plots_text_size, **kwargs
+) -> None:
     """Plot relatedness scores."""
     p1 = hl.plot.histogram(relatedness_ht.kin, title="Kinship distribution")
+    p1.axis.axis_label_text_font_size = text_size
+    p1.axis.major_label_text_font_size = text_size
+    p1.title.text_font_size = text_size
     p2 = hl.plot.scatter(relatedness_ht.kin, relatedness_ht.ibd2, xlabel="Kinship", ylabel="IBD2")
+    p2.axis.axis_label_text_font_size = text_size
+    p2.axis.major_label_text_font_size = text_size
     layout = bklayouts.gridplot([p1, p2], ncols=2)
     bkplt.output_file(relatedness_plotfile)
     bkplt.save(layout)

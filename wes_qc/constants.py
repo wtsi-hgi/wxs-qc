@@ -51,3 +51,11 @@ intergenic_variant
 intron_variant
 upstream_gene_variant
 """.split()
+
+##################
+# Visualizations #
+##################
+
+plots_text_size = "18pt"
+width = 1200
+height = 1000
