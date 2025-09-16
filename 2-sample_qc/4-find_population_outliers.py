@@ -223,9 +223,9 @@ def plot_sampleqc_metric(
         )
         p.add_layout(hline_upper)
         p.add_layout(ann_above)
-        p.axis.axis_label_text_font_size = text_size
-        p.axis.major_label_text_font_size = text_size
-        p.title.text_font_size = text_size
+    p.axis.axis_label_text_font_size = text_size
+    p.axis.major_label_text_font_size = text_size
+    p.title.text_font_size = text_size
     return p
 
 
