@@ -672,12 +672,14 @@ _Note_: currently, the script outputs all the graphs, even if the corresponding 
 You can ignore graphs for the skipped parameters.
 
 All plots are interactive, and you can use the following options to explode your data:
-* Zoom in/out
 * Move to a specific location by dragging a graph content.
 * Use checkboxes to filter data by `DP`, `GQ` `AB`, and `call_rate` hardfilters.
   This option is especially useful when you select/deselect a checkbox and observe how your data change.
 * Use sliders to filter by minimum/maximum bin value.
 * Change between several available color maps using the dropdown menu.
+* Zoom in/out.
+  For `FP/TP` and `precision/recall` graphs the aspect ratio is fixed to `1:1`.
+  You can disable the aspect ratio fix using the checkbox under the bin selection sliders.
 
 If you need to analyze more data points, add required values to the config file and rerun the evaluation.
 The evaluation script dumps intermediate results for each filter combination and calculates only new
