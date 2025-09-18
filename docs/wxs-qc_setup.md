@@ -4,10 +4,10 @@ The pipeline code is infrastructure agnostic and can run on a single machine.
 However, Hail data structures are “heavy” in terms of storage space and memory.
 Before starting, ensure you have enough memory and storage space to proceed.
 
-If you're working inside the Wellcome Sanger Institute infrastructure,
-we recommend that you use `osdataproc` to create cluster with Hail and Spark backend.
-Follow the [Hail on SPARK](https://hgi-projects.pages.internal.sanger.ac.uk/documentation/docs/tutorials/hail-on-spark/)
-guide to create such a cluster.
+The process of provisioning and managing a Spark/Hail cluster is outside the scope of this manual.
+If you’re working within the Wellcome Sanger Institute infrastructure,
+we recommend using `osdataproc` to create a cluster with Spark and Hail back‑ends.
+Follow the [Hail on SPARK](https://hgi-projects.pages.internal.sanger.ac.uk/documentation/docs/tutorials/hail-on-spark/) guide to set up such a cluster.
 
 
 ## Set up the codebase

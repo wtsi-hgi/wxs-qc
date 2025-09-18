@@ -525,14 +525,17 @@ that allow you to improve the results.
 Therefore, at this point you don't need to make a final decision.
 You only need to choose a provisional RF bin interval to analyze it on the next steps.
 
-### Checking threshold selection
+### (Optional) Checking threshold selection
 
 If you want, you can calculate the number of true positive and false positive variants
 remaining at your chosen thresholds before running genotype evaluation.
-This scripts uses only RF bin filtering and runs faster than the full hardfilter evaluation.
+
+Steps 3.8 and 3.9 had been implemented before the hardfilter evaluation was introduced.
+These scripts use only RF bin filtering and run faster than the full hardfilter evaluation.
+You can use it to quickly estimate the percentage of surviving variations for your bins.
+However, the hard filter evaluation provides more comprehensive information, so typically we don’t use these scripts.
 
 Use for `snv_bin` and `indel_bin` the thresholds selected for SNVs and indels respectively).
-
 
 ```shell
 python 3-variant_qc/8-select_thresholds.py --snv snv_bin --indel indel_bin
