@@ -19,7 +19,7 @@ The high-level description of the QC process is available in a separate document
 Detailed howto for the QC process is here:
 [WcS-QC howto](docs/wxs-qc_howto.md).
 For this howto we used an open example dataset, described
-[here](docs/example-dataset.md)
+[here](docs/wxs-qc_example-dataset.md)
 
 ### How to get the latest changes from the `main` branch
 
