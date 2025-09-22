@@ -101,7 +101,7 @@ Here are all already implemented tags:
 
 The WxS-QC pipeline reports samples as **passed** in all validation results are expected.
 However, there are many cases when samples reported as **failed** are not real failures,
-Especilly, if the external genotype data are not complete.
+especially if the external genotype data are not complete.
 We suggest that you investigate all failed samples and find out potential
 
 ### Several common reasons of false-positive failed samples
