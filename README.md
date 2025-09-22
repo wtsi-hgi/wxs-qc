@@ -13,11 +13,13 @@ The code is designed to run standalone or on the SPARK cluster with the
 
 ## How to QC your data
 
-The high-level description of the QC process is available in a separate document: 
+The high-level description of the QC process is available in a separate document:
 [WxS-QC concepts](docs/wxs-qc_concepts.md).
 
 Detailed howto for the QC process is here:
 [WcS-QC howto](docs/wxs-qc_howto.md).
+For this howto we used an open example dataset, described
+[here](docs/wxs-qc_example-dataset.md)
 
 ### How to get the latest changes from the `main` branch
 
