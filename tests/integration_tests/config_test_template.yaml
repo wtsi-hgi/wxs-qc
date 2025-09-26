@@ -406,44 +406,44 @@ step4:
   # --- Step 4.2 --- #
   annotate_cq_rf:
     mtfile: '${cvars.mtdir}/mt_varqc_splitmulti.mt'
-    cqfile: '${cvars.metadir}/control_set_small.all_consequences_with_gene_and_csq.tsv.bgz'
+    cqfile: '${general.metadata.vep_consequences}'
 
   apply_hard_filters:
     hard_filters:
       snp:
         relaxed:
-          bin: 98
+          bin: 94
           dp: 5
           gq: 10
           ab: 0.2
           call_rate: 0.1
         medium:
-          bin: 96
+          bin: 91
           dp: 5
           gq: 10
           ab: 0.2
           call_rate: 0.1
         stringent:
-          bin: 94
+          bin: 88
           dp: 5
           gq: 10
           ab: 0.2
           call_rate: 0.5
       indel:
         relaxed:
-          bin: 90
+          bin: 80
           dp: 5
           gq: 10
           ab: 0.2
           call_rate: 0.1
         medium:
-          bin: 88
+          bin: 74
           dp: 5
           gq: 10
           ab: 0.2
           call_rate: 0.1
         stringent:
-          bin: 86
+          bin: 72
           dp: 5
           gq: 10
           ab: 0.3
