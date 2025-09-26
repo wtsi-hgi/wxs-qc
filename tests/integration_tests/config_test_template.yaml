@@ -19,7 +19,7 @@
 general:
   # Dataset name - the root folder for all analysis files
   # Also used for the naming of tables, plots, etc
-  dataset_name: 'integration-data'
+  dataset_name: 'control_set_small'
   # Dataset root directory - to use in folder paths
   data_root: '{INTEGRATION_TESTS_DIR}/${general.dataset_name}'
   tmp_dir: 'file://${general.data_root}/tmp' # output
@@ -35,6 +35,12 @@ general:
   var_qc_rf_dir: '${general.data_root}/variant_qc_random_forest'
   vcf_export_dir: '${general.data_root}/vcf_after-qc'
   # random forest model ID is generated during step3.3, catch the parameter `runhash` and place it here
+  metadata:
+    verifybamid_selfsm:  '${general.metadata_dir}/${general.dataset_name}.verify_bam_id_result.selfSM.tsv'  # Set to null if you don't have freemix data
+    self_reported_sex:   '${general.metadata_dir}/${general.dataset_name}.self_reported_sex.tsv'
+    vep_consequences:   '${general.metadata_dir}/${general.dataset_name}.all_consequences_with_gene_and_csq.tsv.bgz'
+    pedigree:           {PEDIGREE_FILE_NAME} # Set to null if you don't have trios
+    giab_sample_id: 'EGAN00003332049' # Set to null if you don't have control samples
 
   rf_model_id: "testhash"
 
@@ -98,14 +104,15 @@ step1:
 
   # --- Step 1.2 --- #
   validate_verifybamid:
-    verifybamid_selfsm: '${cvars.metadir}/control_set_small.verify_bam_id_result.selfSM.tsv' # Set to null if you don't have freemix data
+    verifybamid_selfsm: '${general.metadata.verifybamid_selfsm}'
     verifybamid_plot: '${cvars.pltdir}/freemix_validation.html'
     samples_failing_freemix_tsv: '${cvars.anndir}/samples_failing_freemix.tsv'
     freemix_treshold: 0.05
 
-  sex_metadata_file: '${cvars.metadir}/control_set_small.mlwh_sample_and_sex.txt'
+  sex_metadata_file: '${general.metadata.self_reported_sex}'
   mt_metadata_annotated: '${cvars.mtdir}/mt_metadata_annotated.mt'
 
+  # --- Step 1.3 --- #
   validate_gtcheck:
     wes_microarray_mapping: '${cvars.metadir}/control_set_small.microarray_mapping.tsv' # Set to null if you don't have microarray data
     microarray_ids: '${cvars.metadir}/control_set_small.microarray_samples.txt'
@@ -117,6 +124,7 @@ step1:
     microarray_id_col: 'Microarray_ID'
     gtcheck_score_threshold: 0.2
 
+  # --- Step 1.4 --- #
   plot_mutation_spectra_preqc:
     mut_spectra_path: '${cvars.anndir}/mutation_spectra_preqc.tsv'
     mut_spectra_plot_path: '${cvars.pltdir}/mutation_spectra_preqc.html'
@@ -209,7 +217,7 @@ step2:
     gnomad_prop_train: 0.8
     gnomad_min_prob: 0.5
     pop_ht_outfile: '${cvars.mtdir}/pop_assignments.ht'
-    pop_ht_out_tsv: '${cvars.mtdir}/pop_assignments.tsv'
+    pop_ht_out_tsv: '${cvars.anndir}/pop_assignments.tsv'
 
   plot_pop_pca_assigned:
     pca_components: 3
@@ -252,7 +260,7 @@ step2:
 
 step3:
   # To skip all trios-related computations, put here the `null` value
-  pedfile: {PEDIGREE_FILE_NAME}  #'${cvars.metadir}/control_set_small_trios.ped' - put from test_integration
+  pedfile: '${general.metadata.pedigree}'
 
   # --- Step 3.1 --- #
   split_multi_and_var_qc:
@@ -305,7 +313,7 @@ step3:
 
   # --- Step 3.5 --- #
   add_cq_annotation:
-    synonymous_file: '${cvars.metadir}/control_set_small.synonymous_variants.tsv.bgz'
+    synonymous_file: '${cvars.metadir}/${general.dataset_name}.synonymous_variants.tsv.bgz'
 
   dnm_and_family_annotation:
     dnm_htfile: '${cvars.mtdir}/denovo_table.ht'
@@ -355,7 +363,7 @@ step3:
   # --- Step 3.9 --- #
   annotate_mt_with_cq_rf_score_and_bin:
     mtfile: '${cvars.mtdir}/mt_varqc_splitmulti.mt'
-    cqfile: '${cvars.metadir}/control_set_small.all_consequences.tsv.bgz'
+    cqfile: '${cvars.metadir}/${general.dataset_name}.all_consequences.tsv.bgz'
     mtoutfile_after_varqc: '${cvars.mtdir}/mt_after_var_qc.mt'
 
 
@@ -370,8 +378,8 @@ step4:
     # The ID of GIAB HG001 (NA12878) sample, if it presents in your sequencing data
     # If you don't have it, use null value instead
     # (the precision/recall calculations will be skipped in this case)
-    giab_sample_id: 'EGAN00003332049'
-    evaluate_unfiltered: true # Calculate stats for initial matrixtable without filtering
+    giab_sample_id: '${general.metadata.giab_sample_id}'
+    evaluate_unfiltered: false # Calculate stats for initial matrixtable without filtering
     hardfilter_combinations:
       snp_bins: [70, 90]
       indel_bins: [40, 80]
@@ -398,7 +406,7 @@ step4:
   # --- Step 4.2 --- #
   annotate_cq_rf:
     mtfile: '${cvars.mtdir}/mt_varqc_splitmulti.mt'
-    cqfile: '${cvars.metadir}/control_set_small.all_consequences_with_gene_and_csq.tsv.bgz'
+    cqfile: '${general.metadata.vep_consequences}'
 
   apply_hard_filters:
     hard_filters:

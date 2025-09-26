@@ -13,7 +13,7 @@ set -e
 script="${1}"
 args="${*:2}"
 
-repo="wes_qc"
+repo="wxs_qc"
 local_path="/Users/gz3/programming"
 remote_path="/home/ubuntu/temprun"
 session_name="HailBatch"

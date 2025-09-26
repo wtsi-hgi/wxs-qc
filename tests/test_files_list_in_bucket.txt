@@ -5,7 +5,7 @@
 ./metadata/control_set_small.combined.gtcheck.txt
 ./metadata/control_set_small.microarray_mapping.tsv
 ./metadata/control_set_small.microarray_samples.txt
-./metadata/control_set_small.mlwh_sample_and_sex.txt
+./metadata/control_set_small.self_reported_sex.tsv
 ./metadata/control_set_small.samples_to_remove_after_sampleqc.tsv
 ./metadata/control_set_small.synonymous_variants.tsv.bgz
 ./metadata/control_set_small.trios.fam

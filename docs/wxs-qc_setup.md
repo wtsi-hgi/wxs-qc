@@ -44,8 +44,13 @@ source .venv/bin/activate
 ```
 
 Set up environment variables:
-add the project folder to the `PYTHONPATH`,
-set memory size for SPARK.
+add the project folder to the `PYTHONPATH`, set memory size for SPARK.
+Ensure that you set the correct memory amount, taking into account the Java machine overhead.
+
+If any of the pipeline steps fails with a connection error, like
+`Connection aborted` or `Remote end closed connection without response`,
+the most common reason is that one of the worker tasks was killed due to memory limit.
+Try to lower driver and executor memory limits to resolve it.
 
 ```bash
 export PYTHONPATH=$( pwd ):$PYTHONPATH
@@ -59,7 +64,7 @@ export PYSPARK_SUBMIT_ARGS="--driver-memory 48G --executor-memory 48G pyspark-sh
 ### Manually running the code on a local machine
 
 To manually run the code on a local machine,
-activate the environment, run the Python, and provide the path to the pipeline script:
+activate the environment, run Python, and provide the path to the pipeline script:
 
 ```shell
 python 1-import_data/1-import_gatk_vcfs_to_hail.py
