@@ -166,10 +166,10 @@ python 1-import_data/1-import_gatk_vcfs_to_hail.py
 
 ### Annotate metadata
 
-This script annotates samples with all provided metadata:
-VerifyBamId Freemix score, self-reported sex, self-reported ethnicity, etc.
+This script annotates samples with the provided metadata:
+VerifyBamId Freemix score and self-reported sex.
 
-Specify the corresponding input file in the config for each available annotation
+Specify the corresponding input file in the `general->metadata` config for each available annotation
 (follow the links to download the sample files):
 
 * [verifybamid_selfsm—:](https://wes-qc-data.cog.sanger.ac.uk/metadata/control_set_small.verify_bam_id_result.selfSM.tsv) - the VerifyBamID Freemix data.
@@ -377,6 +377,7 @@ This is an unheaded, tab-delimited file that contains the following columns:
 - Proband sex (1-male, 2-female, 0-unknown)
 - Proband affected status (0 or 1)
 
+If you have it, specify the pedigree file in the `general->metadata->pedigree` section of the config file.
 If you don't have pedigree data, several sub-steps will be skipped, and some metrics
 for the final graphs won't be calculated.
 
@@ -441,6 +442,9 @@ chr10   100204528   rs374991603 G   A   synonymous_variant
 chr10   100204555   rs17880383  G   A   synonymous_variant
 ```
 
+Place the file name in the config file section
+`step3->add_cq_annotation->synonymous_file` and run annotation:
+
 ```shell
 python 3-variant_qc/5-annotate_ht_after_rf.py
 ```
@@ -480,7 +484,7 @@ remaining at your chosen thresholds before running genotype evaluation.
 
 Steps 3.8 and 3.9 had been implemented before the hardfilter evaluation was introduced.
 These scripts use only RF bin filtering and run faster than the full hardfilter evaluation.
-You can use it to quickly estimate the percentage of surviving variations for your bins.
+You can use it to quickly estimate the percentage of variants passing bin filtering.
 However, the hard filter evaluation provides more comprehensive information, so typically we don’t use these scripts.
 
 Use for `snv_bin` and `indel_bin` the thresholds selected for SNVs and indels respectively).
@@ -514,6 +518,8 @@ determined on the VariantQC step.
 This filter applies on the variation level, removing
 all genotypes for the variation above the threshold
 (for RF bin smaller values are better)
+
+### Choose the set of hard filters for evaluation
 
 Based on the results of the VariantQC step populate the provisional values
 for the SNV and indel random forest bins in the `evaluation` part of the config file.
@@ -560,12 +566,13 @@ even if you're skipping the precision/recall calculation.
 If you don't have a GIAB sample, put `null` in the `giab_sample` section.
 The precision/recall calculations will be skipped in this case.
 
-**Making the correct panel for precision/recall evaluation:**
+### Make the panel bed file for precision/recall evaluation
 The precision-recall calculation compares the variations in the control GIAB VCF with the variations
 actually present in your dataset GIAB sample.
-To get correct precision/recall values you should use for evaluation
-the intersection of confident regions between GIAb VCF (`HG001_GRCh38_1_22_v4.2.1_benchmark.vcf.gz`)
-and your dataset sequencing panel.
+If you run precision/recall calculations,
+you should use
+the intersection of high-confident regions between GIAB VCF (`HG001_GRCh38_1_22_v4.2.1_benchmark.vcf.gz`)
+and your sequencing panel.
 
 Intersect it using `bedtools` to get the overlaps:
 
@@ -576,10 +583,12 @@ bedtools intersect -a HG001_GRCh38_1_22_v4.2.1_benchmark.bed -b your_exome_panel
 Place the resulting panel file to the `metadata` folder and add it to the config:
 
 ```yaml
+step4:
+  evaluation:
     prec_recall_panel_bed: '${cvars.metadir}/HG001_exome_intersected.bed'
 ```
 
-**Run the hard-filter evaluation step**:
+### Run the hard-filter evaluation step
 
 ```shell
 python 4-genotype_qc/1-compare_hard_filter_combinations.py --all
@@ -588,6 +597,8 @@ python 4-genotype_qc/1-compare_hard_filter_combinations.py --all
 The script calculates all possible combinations of hard filters.
 Depending on the dataset size and number of evaluated combinations, the calculation can take significant time.
 The script prints elapsed time and estimated time to complete after each step.
+
+### Evaluate step outputs
 
 After finishing the calculations, the script
 makes interactive plots in the `plot` directory with the `hard_filter_evaluation` prefix.
@@ -599,7 +610,6 @@ Choosing the correct combination requires professional knowledge and could be tr
 For more detailed explanation of this process you could review some relevant publications,
 (for example https://pmc.ncbi.nlm.nih.gov/articles/PMC11747307/).
 
-**Evaluation step outputs:**
 For each hardfilter combination, the script calculates the following metrics:
 * Percentage of likely-true-positives (TP) and likely-false-positives (FP) variants
   (see the explanation above in the variant QC step description).
@@ -650,6 +660,17 @@ If needed, add more values to evaluate in the config and rerun the hard filter e
 ### Run the Genotype QC with the chosen set of filters
 
 Now you can apply your custom thresholds and make variants with corresponding filters.
+The pipeline annotates all variations with VEP consequences.
+To make the consequence file, extract it from VEP-annotated VCF using `bcftools`:
+```bash
+bcftools view dataset.vep-annotated.vcf.gz | bcftools +split-vep -s worst -f '%CHROM\t%POS\t%ID\t%REF\t%ALT\t%CSQ\t%Consequence\t%SYMBOL\t%HGNC_ID\n' | bgzip > dataset.all_consequences_with_gene_and_csq.tsv.bgz
+```
+
+The example of the file can be found in the
+[WSI bucket](https://wes-qc-data.cog.sanger.ac.uk/metadata/control_set_small.all_consequences_with_gene_and_csq.tsv.bgz).
+
+You need to extract the VEP consequences and place the consequence file name
+to the `general->metadata->vep_consequences` section of the config section, and run the genotype QC.
 
 ```shell
 python 4-genotype_qc/2-apply_range_of_hard_filters.py
@@ -685,7 +706,7 @@ so the sum of stats is not equal to the total number of variations.
 
 Also, the script outputs in the console the variant counts per sample
 
-This step requres a separate VEP annotation file in the following format:
+This step requires a separate VEP annotation file in the following format:
 
 ```
 chr10   100199947   rs367984062 A   C   intron_variant
