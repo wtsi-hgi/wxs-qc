@@ -166,20 +166,22 @@ for chr in {1..22} X; do bcftools view -R GRCh38.gencode.v47.exome.bed 1kGP_chr$
 Now you can copy all VCFs with the `nosv.exome.vcf.gz` suffix to a new folder,
 and use it in step 0.1 of the resource preparation stage (stage 0).
 
-## Using original gnomAD data
+## Using whole-genome gnomAD variant frequencies
 
-The Variant QC part of the pipeline uses population frequencies from the
+The Variant QC part of the pipeline uses variant frequencies from the
 [gnomAD project](https://gnomad.broadinstitute.org/)
 to find _de novo_ variations.
-Technically, for this step you can use the original gnomAD exome/genome data.
-However, the full-size gnomAD dataset is very big, so we prepared
+
+The full-size gnomAD dataset is very big, so we included in the resource bundle
 a reduced version, containing only global population frequencies for exome regions.
 
-If you want to use your own gnomAD data (for example, for whole-genome data),
-  you need to manually download it from https://gnomad.broadinstitute.org/downloads
-  (use the _Sites Hail Table_ version),
-  place the path to the table in the config file section `prepare_gnomad_ht -> input_gnomad_htfile`,
-  and run the script to make a reduced version:
+If you want to use your own gnomAD data (for example, for whole-genome sequences),
+you need to manually download it from https://gnomad.broadinstitute.org/downloads
+(use the **Sites Hail Table** version),
+place the path to the table in the config file section `prepare_gnomad_ht -> input_gnomad_htfile`,
+and run the script to extract population frequencies:
   ```shell
   spark-submit 0-resource_preparation/3-prepare-gnomad-table.py
   ```
+
+Please note that this step overwrites existing gnomAD frequencies in the resources folder.

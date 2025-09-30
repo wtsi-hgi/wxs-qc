@@ -149,6 +149,16 @@ into a single table of truth variants.
 python 0-resource_preparation/2-generate-truthset-ht.py
 ```
 
+### (Optional) Extract whole-genome gnomAD frequencies
+
+The Variant QC part of the pipeline uses variant frequencies from the
+[gnomAD project](https://gnomad.broadinstitute.org/)
+to find _de novo_ variations.
+The resource bundle contains variant frequencies for exome variants.
+If you want to use whole-genome frequencies, refer to the
+[resource preparation](wxs-qc_prepare-resources.md#using-whole-genome-gnomad-variant-frequencies) section
+to prepare whole-genome gnomAD frequencies.
+
 ## Stage 1. Load data
 
 This stage focuses on the variations loading and validation against external data.
