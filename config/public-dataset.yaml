@@ -381,11 +381,11 @@ step4:
     giab_sample_id: ${general.metadata.giab_sample_id}
     evaluate_unfiltered: false # Calculate stats for initial matrixtable without filtering
     hardfilter_combinations:
-      snp_bins:   [ 86, 88, 90, 91, 92, 93, 94, 96 ]
-      indel_bins: [ 68, 72, 74, 76, 78, 80, 84, 88 ]
+      snp_bins:   [ 100 ]
+      indel_bins: [ 100 ]
       dp_vals: [ 5, 10 ]
-      gq_vals: [ 10, 15 ]
-      ab_vals: [ 0.2, 0.3 ]
+      gq_vals: [ 10, 20 ]
+      ab_vals: [ 0.0 ]
       missing_vals: [ 0.1, 0.5 ]
     json_dump_folder: '${cvars.anndir}/${general.rf_model_id}/json_dump'
     snp_json:   '${cvars.anndir}/${general.rf_model_id}/hard_filter_evaluation.snv.json'
