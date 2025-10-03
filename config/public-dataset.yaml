@@ -386,7 +386,7 @@ step4:
       dp_vals: [ 5, 10 ]
       gq_vals: [ 10, 20 ]
       ab_vals: [ 0.0 ]
-      missing_vals: [ 0.1, 0.5 ]
+      missing_vals: [ 0.0 ]
     json_dump_folder: '${cvars.anndir}/${general.rf_model_id}/json_dump'
     snp_json:   '${cvars.anndir}/${general.rf_model_id}/hard_filter_evaluation.snv.json'
     snp_tsv:    '${cvars.anndir}/${general.rf_model_id}/hard_filter_evaluation.snv.tsv'

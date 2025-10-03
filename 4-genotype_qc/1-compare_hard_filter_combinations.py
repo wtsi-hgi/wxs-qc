@@ -35,8 +35,9 @@ def clean_mt(mt: hl.MatrixTable) -> hl.MatrixTable:
     Reduces matrixtable by cleaning all fields not required for hardfilter evaluation
     """
     mt = mt.select_entries(mt.GT, mt.HetAB, mt.DP, mt.GQ)
-    mt = mt.drop(mt.assigned_pop, *mt.row_value)
-    mt = mt.annotate_rows(info=hl.Struct())
+    # TODO commentign this to keep quality filtering for standard filtering
+    # mt = mt.drop(mt.assigned_pop, *mt.row_value)
+    # mt = mt.annotate_rows(info=hl.Struct())
     mt = mt.annotate_rows(
         type=hl.case()
         .when(hl.is_snp(mt.alleles[0], mt.alleles[1]), snv_label)
@@ -361,6 +362,13 @@ def filter_and_count(
         )
         results[var_type][filter_name] = var_counts
 
+    # TODO: adding additional filtering after counting total TP and FP
+    print("=== Calculating total TP and FP for before quality filtering ===")
+    (results[f"{var_type}_total_tp"], results[f"{var_type}_total_fp"]) = count_tp_fp(mt)
+    mt = mt.filter_rows((mt.qual >= 100))
+    mt = mt.filter_rows((mt.info.QD >= 2) & (mt.info.FS <= 60) & (mt.info.MQ >= 30))
+    (results[f"{var_type}_total_tp_after_qual"], results[f"{var_type}_total_fp_after_qual"]) = count_tp_fp(mt)
+
     mt_bin_path_previous = os.path.join(mtdir, f"tmp.hard_filters_combs_{var_type}.bin.1.mt")
     mt_bin_path_current = os.path.join(mtdir, f"tmp.hard_filters_combs_{var_type}.bin.2.mt")
 
@@ -423,8 +431,6 @@ def filter_and_count(
                             print(f"--- Estimated to complete: {str_timedelta(est_time)}.")
 
     print(f"=== Calculating total TP and FP for {var_type} ===")
-
-    (results[f"{var_type}_total_tp"], results[f"{var_type}_total_fp"]) = count_tp_fp(mt)
 
     return results
 
@@ -1025,6 +1031,15 @@ def main():
 
         print("=== Annotating matrix table with RF bins ===")
         mt = hl.read_matrix_table(path_spark(mtfile))
+        # TODO: Quality histogram
+        # -----------------------------------------------------------------------------
+        rows = mt.rows()
+        rows.describe()
+        # exit(0)
+        qhist = hl.plot.histogram(rows.qual, range=(0, 300), bins=100)
+        bokeh.io.output_file("/mnt/vol/calcs/wxs-qc_public_dataset_v3/plots/qual_hist.html")
+        bokeh.io.save(qhist)
+
         mt = clean_mt(mt)  # Remove all information not required for hard filter evaluation
 
         rf_ht = hl.read_table(path_spark(rf_htfile))
