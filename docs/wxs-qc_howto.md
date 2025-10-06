@@ -204,6 +204,10 @@ python 1-import_data/2-import_annotations.py
 For each available annotation, the script prints out the list of samples that don't have annotations.
 For the Freemix score it performs validation and saves the Freemix plot.
 
+The `remove_freemix_outliers` config option of the `validate_verifybamid` step
+controls whether we remove all Freemix outliers at this stage
+or pass it to the sample QC.
+
 ### Annotate and validate GtCheck results
 
 A good practice for clinical samples is to make independent genotyping
