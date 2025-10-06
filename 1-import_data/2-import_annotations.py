@@ -35,6 +35,7 @@ def validate_verifybamid(
     verifybamid_plot: str,
     samples_failing_freemix_tsv: str,
     freemix_treshold: float = 0.05,
+    remove_freemix_outliers: bool = False,
     width=constants.width,
     height=constants.height,
     text_size=constants.plots_text_size,
@@ -102,6 +103,11 @@ def validate_verifybamid(
     bokeh.plotting.output_file(verifybamid_plot)
     bokeh.plotting.save(p)
 
+    if remove_freemix_outliers:
+        print("=== Removing freemix outliers")
+        # Removing Freemix outliers
+        # For samples without freemix comparison returns false, so we keep them in the dataset
+        mt = mt.filter_cols(mt.freemix > freemix_treshold, keep=False)
     return mt
 
 
@@ -152,6 +158,7 @@ def main() -> None:
         print("=== Running verifyBamID validation ")
         verifybamid = hl.import_table(path_spark(verifybamid_selfsm), types=verifybamid_types)
         mt = validate_verifybamid(mt, verifybamid, **config["step1"]["validate_verifybamid"])
+
     else:
         print("=== Skipping verifyBamID validation")
 
