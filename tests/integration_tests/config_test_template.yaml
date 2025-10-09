@@ -108,7 +108,7 @@ step1:
     verifybamid_plot: '${cvars.pltdir}/freemix_validation.html'
     samples_failing_freemix_tsv: '${cvars.anndir}/samples_failing_freemix.tsv'
     freemix_treshold: 0.05
-    remove_freemix_outliers: true
+    remove_freemix_outliers: false
 
   sex_metadata_file: ${general.metadata.self_reported_sex}
   mt_metadata_annotated: '${cvars.mtdir}/mt_metadata_annotated.mt'
