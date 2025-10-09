@@ -332,7 +332,7 @@ def main():
     # = STEP PARAMETERS = #
 
     # = STEP DEPENDENCIES = #
-    raw_mt_file = config["step1"]["gatk_mt_outfile"]
+    raw_mt_file = config["step1"]["validate_gtcheck"]["mt_gtcheck_validated"]
     pop_ht_file = config["step2"]["predict_pops"]["pop_ht_outfile"]
 
     # = STEP OUTPUTS = #
