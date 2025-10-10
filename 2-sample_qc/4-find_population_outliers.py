@@ -3,13 +3,14 @@ import os.path
 
 import hail as hl
 import pandas as pd
+from typing import Optional
 
 from wes_qc import hail_utils, constants
 from utils.utils import parse_config, path_spark
 from gnomad.sample_qc.filtering import compute_stratified_metrics_filter
 import bokeh.plotting as bkplot
 import bokeh.layouts as bklayouts
-from bokeh.models import Div, Span, Range1d, Label, Title
+from bokeh.models import Div, Span, Range1d, Label
 import numpy as np
 from collections import defaultdict
 
@@ -131,22 +132,16 @@ def stratified_sample_qc(
     return mt_with_sampleqc, pop_ht
 
 
-def add_caption_to_plot(p, metric, pop):
-    caption_title = Title(text=f"{metric} for {pop}", text_font_size="14pt", align="center")
-    p.add_layout(caption_title, "above")
-    p.yaxis.axis_label = "Count"
-    p.xaxis.axis_label = metric
-    return p
-
-
 def plot_sampleqc_metric(
     df: pd.Series,
+    metric: str,
     lower_threshold=None,
     upper_threshold=None,
     n_bins=150,
     color="blue",
     plot_width: int = constants.width,
     plot_height: int = constants.height,
+    plot_title: Optional[str] = None,
     text_size=constants.plots_text_size,
 ):
     """
@@ -225,7 +220,10 @@ def plot_sampleqc_metric(
         p.add_layout(ann_above)
     p.axis.axis_label_text_font_size = text_size
     p.axis.major_label_text_font_size = text_size
-    p.title.text_font_size = text_size
+    if plot_title is not None:
+        p.title.text = plot_title
+        p.title.text_font_size = text_size
+    p.xaxis.axis_label = metric
     return p
 
 
@@ -269,6 +267,7 @@ def plot_sample_qc_metrics(
             lower, upper = limits[(metric, pop)]
             p = plot_sampleqc_metric(
                 data,
+                metric,
                 lower_threshold=lower,
                 upper_threshold=upper,
                 n_bins=n_bins,
@@ -286,17 +285,19 @@ def plot_sample_qc_metrics(
             # Python deepcopy doesn't work
             p = plot_sampleqc_metric(
                 data,
+                metric,
                 lower_threshold=lower,
                 upper_threshold=upper,
                 n_bins=n_bins,
                 color=pop_colors[pop],
                 plot_width=plot_width,
                 plot_height=plot_height,
+                plot_title=f"{metric} for {pop}",
+                text_size=text_size,
             )
-            plot_with_caption = add_caption_to_plot(p, metric, pop)
             plot_name = f"SampleQC_hist_{metric}_{pop}.html"
             bkplot.output_file(os.path.join(plot_outdir, plot_name))
-            bkplot.save(plot_with_caption)
+            bkplot.save(p)
 
         plots.append(
             Div(
