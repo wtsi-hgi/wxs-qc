@@ -242,6 +242,7 @@ step2:
     compute_stratified_metrics_filter_args:
       lower_threshold: 4.0 # Using a broad interval to make all samples pass QC
       upper_threshold: 4.0
+      metric_threshold: {'r_ti_tv':[4.0, 4.0]}
     output_text_file: '${cvars.anndir}/sample_qc_by_pop.tsv.bgz' # output
     output_globals_json_file: '${cvars.anndir}/sample_qc_by_pop.globals.json' # output
 
