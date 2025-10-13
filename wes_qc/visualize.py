@@ -23,6 +23,8 @@ def plot_pop_pca(
 
     layout = [[None] * n_pca for i in range(n_pca)]
     label = pca_scores[pop] if pop is not None else None
+    hover_fields = {"Sample": pca_scores.s}
+
     for i in range(n_pca):
         for j in range(i + 1, n_pca):
             p = hl.plot.scatter(
@@ -33,7 +35,9 @@ def plot_pop_pca(
                 label=label,
                 colors=colors_map,
                 title=f"PC{i+1} vs PC{j+1}",
+                hover_fields=hover_fields,
             )
+
             p.axis.axis_label_text_font_size = text_size
             p.axis.major_label_text_font_size = text_size
             p.title.text_font_size = text_size
