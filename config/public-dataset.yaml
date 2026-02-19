@@ -38,7 +38,9 @@ general:
   metadata:
     verifybamid_selfsm:  '${general.metadata_dir}/${general.dataset_name}.verify_bam_id_result.selfSM.tsv'  # Set to null if you don't have freemix data
     self_reported_sex:   '${general.metadata_dir}/${general.dataset_name}.self_reported_sex.tsv'
-    vep_consequences:   '${general.metadata_dir}/${general.dataset_name}.all_consequences_with_gene_and_csq.tsv.bgz'
+    #Set batch_file to null if you don't have batch information. All samples will be marked as batch1.
+    batch_file:          '${general.metadata_dir}/${general.dataset_name}.batch.tsv'
+    vep_consequences:    '${general.metadata_dir}/${general.dataset_name}.all_consequences_with_gene_and_csq.tsv.bgz'
     pedigree:            '${general.metadata_dir}/${general.dataset_name}.trios.fam'
     giab_sample_id: 'NA12878'
 
@@ -111,6 +113,7 @@ step1:
     remove_freemix_outliers: true
 
   sex_metadata_file: ${general.metadata.self_reported_sex}
+  batch_metadata_file: ${general.metadata.batch_file}
   mt_metadata_annotated: '${cvars.mtdir}/mt_metadata_annotated.mt'
 
   # --- Step 1.3 --- #

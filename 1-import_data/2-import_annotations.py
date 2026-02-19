@@ -131,6 +131,27 @@ def annotate_self_reported_sex(mt: hl.MatrixTable, sex_metadata_file: str, **kwa
 
     return mt_sex_annotated
 
+def annotate_batch(mt: hl.MatrixTable, batch_metadata_file: str, **kwargs) -> hl.MatrixTable:
+    """
+    Annotates samples in the matrix-table with the batch information
+    """
+    if batch_metadata_file is not None:
+        metadata_ht = hl.import_table(path_spark(batch_metadata_file), delimiter="\t").key_by("sample_id")
+        mt_batch_annotated = mt.annotate_cols(batch=metadata_ht[mt.s].batch)
+
+        # Checking for the samples without self-reported sex
+        samples = mt_batch_annotated.cols()
+        samples_without_batch = samples.filter(~hl.is_defined(samples.batch))
+        n_samples_no_batch = samples_without_batch.count()
+        if n_samples_no_batch > 0:
+            print(f"=== WARNING: Detected {n_samples_no_batch} samples without batch information: ", end="")
+            print(" ".join(samples_without_batch.s.collect()))
+        else:
+            print("=== OK: All samples are annotated with batch information")
+    else:
+        mt_batch_annotated = mt.annotate_cols(batch='batch1')
+        print("=== OK: All samples are annotated with batch information")
+    return mt_batch_annotated
 
 def main() -> None:
     # = STEP SETUP = #
@@ -145,7 +166,7 @@ def main() -> None:
     verifybamid_selfsm = config["step1"]["validate_verifybamid"]["verifybamid_selfsm"]
     # TODO: change after merging previous config changes from main
     sex_metadata_file = config["step1"]["sex_metadata_file"]
-
+    batch_metadata_file = config["step1"]["batch_metadata_file"]
     # = STEP OUTPUTS = #
     mtoutpath = config["step1"]["mt_metadata_annotated"]
 
@@ -167,6 +188,9 @@ def main() -> None:
         mt = annotate_self_reported_sex(mt, path_spark(sex_metadata_file))
     else:
         print("=== Skipping self-reported sex annotation")
+    
+    print("=== Annotating batch ")
+    mt = annotate_batch(mt, path_spark(batch_metadata_file))
 
     mt.write(path_spark(mtoutpath), overwrite=True)
 
