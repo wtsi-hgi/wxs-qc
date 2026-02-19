@@ -185,9 +185,10 @@ step2:
 
   prune_plot_pca:
     plink_outfile: '${cvars.anndir}/mt_unrelated.plink'
-    pca_components: 4
-    pca_scores_file: '${cvars.mtdir}/mt_pca_scores.ht' # output
-    pca_loadings_file: '${cvars.mtdir}/mt_pca_loadings.ht' # output
+    pca_components: 10
+    union_pca_scores_file: '${cvars.mtdir}/mt_pca_scores.ht' # output
+    pca_scores_file: '${cvars.mtdir}/mt_pca_scores.unrelated_samples.ht' # output
+    pca_loadings_file: '${cvars.mtdir}/mt_pca_loadings.unrelated_samples.ht' # output
     pca_mt_file: '${cvars.mtdir}/mt_pca.mt' # output
     plot_outfile: '${cvars.pltdir}/pca.html' # output
 
