@@ -7,13 +7,92 @@ from typing import Optional
 
 from wes_qc import hail_utils, constants
 from utils.utils import parse_config, path_spark
-from gnomad.sample_qc.filtering import compute_stratified_metrics_filter
+from gnomad.sample_qc.filtering import determine_nearest_neighbors, compute_stratified_metrics_filter
 import bokeh.plotting as bkplot
 import bokeh.layouts as bklayouts
 from bokeh.models import Div, Span, Range1d, Label
 import numpy as np
 from collections import defaultdict
+import math
 
+def get_nearest_neighbour_strata (
+    qc_ht: hl.Table,
+    pca_ht: hl.Table,
+    num_neighbors: int,
+    use_batch: bool,
+    **kwargs,
+    ) -> hl.Table:
+    """
+    Determine N nearest neighbors for each sample
+    :param qc_ht: Input Table with sample_QC
+    :param pca_ht: PCA scores HT file
+    :param num_neighbors: Number of nearest neighbors to identify for each sample. Default is 50
+    :param use_batch: Use batch column for stratification or not. True or False
+    """
+
+    #determine nearest neighbors
+    ht = determine_nearest_neighbors(
+        qc_ht,
+        pca_ht[qc_ht.key].scores,
+        n_neighbors=num_neighbors,
+        strata={"batch": qc_ht.batch} if use_batch else None
+    )
+    return ht
+
+def qc_metrics_with_nn (
+        qc_ht: hl.Table,
+        nn_ht: hl.Table,
+        **kwargs,
+    ) -> hl.Table:
+    qc_ht = qc_ht.annotate(
+        nearest_neighbors=nn_ht[qc_ht.key].nearest_neighbors
+    )    
+    filter_ht = compute_stratified_metrics_filter(
+        qc_ht,
+        qc_metrics={metric: qc_ht.sample_qc[metric] for metric in qc_metrics},
+        lower_threshold=4.0,
+        upper_threshold=4.0,
+        metric_threshold={
+            "r_het_hom_var": (math.inf, 4.0),
+            "heterozygosity_rate": (math.inf, 4.0),
+        },
+        comparison_sample_expr=qc_ht.nearest_neighbors,
+    )
+    filter_ht = filter_ht.select_globals(**nn_ht.index_globals())
+    return filter_ht
+
+def get_mad_table (
+        qc_ht: hl.Table,
+        qc_metrics: hl.Table,
+    ) -> hl.Table:
+    metrics = [
+        "heterozygosity_rate",
+        "n_snp",
+        "r_ti_tv",
+        "n_transition",
+        "n_transversion",
+        "r_insertion_deletion",
+        "n_insertion",
+        "n_deletion",
+        "r_het_hom_var"
+    ]
+    ht = qc_ht.join(qc_metrics, how="left")    
+    for m in metrics:
+        ht = ht.annotate(
+            **{
+                f"{m}": hl.if_else(
+                    ht.qc_metrics_stats[m].mad != 0,
+                    (ht.sample_qc[m] - ht.qc_metrics_stats[m].median)
+                    / ht.qc_metrics_stats[m].mad,
+                    ht.sample_qc[m] - ht.qc_metrics_stats[m].median
+                )
+            }
+        )
+    #extract columns showing how many MADs are needed to get this equilibrium val=median+N*MAD
+    ht_mad = ht.select(
+        **{f: ht[f] for f in metrics}
+    )
+    return ht_mad
 
 # TODO: rename to annotate_with_pop
 def annotate_mt(raw_mt_file: str, pop_ht_file: str):
@@ -331,10 +410,13 @@ def main():
     tmp_dir = config["general"]["tmp_dir"]
 
     # = STEP PARAMETERS = #
-
+    runmode=config["step2"]["stratified_sample_qc"]["sample_qc_method"]
+    n_neighbors=config["step2"]["stratified_sample_qc"]["nn_args"]["n_neighbors"]
+    use_batch=config["step2"]["stratified_sample_qc"]["nn_args"]["use_batch"]
     # = STEP DEPENDENCIES = #
     raw_mt_file = config["step1"]["validate_gtcheck"]["mt_gtcheck_validated"]
     pop_ht_file = config["step2"]["predict_pops"]["pop_ht_outfile"]
+    pc_scores_file = config["step2"]["prune_plot_pca"]["union_pca_scores_file"]
 
     # = STEP OUTPUTS = #
     annotated_mt_file = config["step2"]["annotate_with_pop"]["annotated_mt_file"]
@@ -346,22 +428,33 @@ def main():
 
     # = STEP LOGIC = #
     _ = hail_utils.init_hl(tmp_dir)
+    if runmode=="pop":
+        # annotate mt with runid and pop
+        mt = annotate_mt(raw_mt_file, pop_ht_file)
+        mt.write(path_spark(annotated_mt_file), overwrite=True)
 
-    # annotate mt with runid and pop
-    mt = annotate_mt(raw_mt_file, pop_ht_file)
-    mt.write(path_spark(annotated_mt_file), overwrite=True)
+        # run sample QC and stratify by population
+        mt_with_sampleqc, pop_ht = stratified_sample_qc(mt, **config["step2"]["stratified_sample_qc"])
+        mt_with_sampleqc.write(path_spark(mt_qc_outfile), overwrite=True)
+        mt_with_sampleqc.cols().write(path_spark(ht_qc_cols_outfile), overwrite=True)
+        pop_ht.write(path_spark(qc_filter_file), overwrite=True)
+        pop_ht.export(path_spark(output_text_file), delimiter="\t")
+        pop_ht.globals.export(path_spark(output_globals_json))
 
-    # run sample QC and stratify by population
-    mt_with_sampleqc, pop_ht = stratified_sample_qc(mt, **config["step2"]["stratified_sample_qc"])
-    mt_with_sampleqc.write(path_spark(mt_qc_outfile), overwrite=True)
-    mt_with_sampleqc.cols().write(path_spark(ht_qc_cols_outfile), overwrite=True)
-    pop_ht.write(path_spark(qc_filter_file), overwrite=True)
-    pop_ht.export(path_spark(output_text_file), delimiter="\t")
-    pop_ht.globals.export(path_spark(output_globals_json))
+        # plot population metrics
+        print("=== Plotting population metrics ===")
+        plot_sample_qc_metrics(pop_ht, **config["step2"]["plot_sample_qc_metrics"])
 
-    # plot population metrics
-    print("=== Plotting population metrics ===")
-    plot_sample_qc_metrics(pop_ht, **config["step2"]["plot_sample_qc_metrics"])
+    elif runmode=="nn":
+        pca_ht=hl.read_table(path_spark(pc_scores_file))
+        ########
+        mt_with_qc=hl.sample_qc(mt)
+        qc_ht=mt_with_qc.cols()
+        ########
+        nn_ht=get_nearest_neighbour_strata(qc_ht, pca_ht, n_neighbors, use_batch)
+        qc_metrics_ht=qc_metrics_with_nn(qc_ht, nn_ht)
+        mad_ht=get_mad_table(qc_ht, qc_metrics_ht)
+        #add file save and plot creation
 
 
 if __name__ == "__main__":

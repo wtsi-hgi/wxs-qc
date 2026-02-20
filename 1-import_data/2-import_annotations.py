@@ -135,21 +135,17 @@ def annotate_batch(mt: hl.MatrixTable, batch_metadata_file: str, **kwargs) -> hl
     """
     Annotates samples in the matrix-table with the batch information
     """
-    if batch_metadata_file is not None:
-        metadata_ht = hl.import_table(path_spark(batch_metadata_file), delimiter="\t").key_by("sample_id")
-        mt_batch_annotated = mt.annotate_cols(batch=metadata_ht[mt.s].batch)
+    metadata_ht = hl.import_table(path_spark(batch_metadata_file), delimiter="\t").key_by("sample_id")
+    mt_batch_annotated = mt.annotate_cols(batch=metadata_ht[mt.s].batch)
 
-        # Checking for the samples without self-reported sex
-        samples = mt_batch_annotated.cols()
-        samples_without_batch = samples.filter(~hl.is_defined(samples.batch))
-        n_samples_no_batch = samples_without_batch.count()
-        if n_samples_no_batch > 0:
-            print(f"=== WARNING: Detected {n_samples_no_batch} samples without batch information: ", end="")
-            print(" ".join(samples_without_batch.s.collect()))
-        else:
-            print("=== OK: All samples are annotated with batch information")
+    # Checking for the samples without self-reported sex
+    samples = mt_batch_annotated.cols()
+    samples_without_batch = samples.filter(~hl.is_defined(samples.batch))
+    n_samples_no_batch = samples_without_batch.count()
+    if n_samples_no_batch > 0:
+        print(f"=== WARNING: Detected {n_samples_no_batch} samples without batch information: ", end="")
+        print(" ".join(samples_without_batch.s.collect()))
     else:
-        mt_batch_annotated = mt.annotate_cols(batch='batch1')
         print("=== OK: All samples are annotated with batch information")
     return mt_batch_annotated
 
@@ -189,8 +185,11 @@ def main() -> None:
     else:
         print("=== Skipping self-reported sex annotation")
     
-    print("=== Annotating batch ")
-    mt = annotate_batch(mt, path_spark(batch_metadata_file))
+    if batch_metadata_file is not None:
+        print("=== Annotating batch ")
+        mt = annotate_batch(mt, path_spark(batch_metadata_file))
+    else:
+        print("=== Skipping batch annotation")
 
     mt.write(path_spark(mtoutpath), overwrite=True)
 
