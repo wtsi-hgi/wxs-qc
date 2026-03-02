@@ -235,7 +235,7 @@ step2:
     annotated_mt_file: '${cvars.mtdir}/gatk_unprocessed_with_pop.mt' # output
 
   stratified_sample_qc:
-    sample_qc_method: 'pop' #pop -stratification based on population; nn - nearest neighbours
+    sample_qc_method: 'pop' #pop -stratification based on population; nn - nearest neighbours; lm - linear model
     mt_qc_outfile: '${cvars.mtdir}/mt_pops_sampleqc.mt' # output
     ht_qc_cols_outfile: '${cvars.mtdir}/mt_pops_sampleqc.ht' # output
     qc_filter_file: '${cvars.mtdir}/mt_pops_QC_filters.ht' # output

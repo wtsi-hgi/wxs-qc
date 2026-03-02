@@ -14,6 +14,110 @@ from bokeh.models import Div, Span, Range1d, Label
 import numpy as np
 from collections import defaultdict
 import math
+from sklearn.linear_model import LinearRegression
+
+def run_linear_model(qc_ht, pca_ht):
+    """
+    Returns:
+      residuals_df: raw residuals (wide format)
+      madnorm_df: MAD-normalized residuals (wide format)
+    
+    Note: 'batch' column is optional. If present, batch effects will be regressed out.
+    """
+    qc_df = qc_ht.to_pandas()
+    pc_df = pca_ht.to_pandas()
+    
+    # -----------------------------
+    # Expand PCA scores dynamically
+    # -----------------------------
+    pc_expanded = pd.DataFrame(
+        pc_df["scores"].tolist(),
+        index=pc_df.index
+    )
+    pc_cols = [f"PC{i}" for i in range(1, pc_expanded.shape[1] + 1)]
+    pc_expanded.columns = pc_cols
+    pc_expanded["s"] = pc_df["s"]
+    
+    # -----------------------------
+    # Merge QC + PCA
+    # -----------------------------
+    qc_df = qc_df.merge(pc_expanded, on="s", how="left")
+    
+    # -----------------------------
+    # Check if batch column exists
+    # -----------------------------
+    has_batch = "batch" in qc_df.columns
+    
+    # -----------------------------
+    # Metrics
+    # -----------------------------
+    metrics = [
+        "heterozygosity_rate",
+        "n_snp",
+        "r_ti_tv",
+        "n_transition",
+        "n_transversion",
+        "r_insertion_deletion",
+        "n_insertion",
+        "n_deletion",
+        "r_het_hom_var"
+    ]
+    metrics_full = [f"sample_qc.{m}" for m in metrics]
+    
+    # -----------------------------
+    # Output containers (wide)
+    # -----------------------------
+    if has_batch:
+        residuals_df = qc_df[["s", "batch"]].copy()
+        madnorm_df = qc_df[["s", "batch"]].copy()
+    else:
+        residuals_df = qc_df[["s"]].copy()
+        madnorm_df = qc_df[["s"]].copy()
+    
+    # -----------------------------
+    # Loop over metrics
+    # -----------------------------
+    for m, m_full in zip(metrics, metrics_full):
+        valid = qc_df[m_full].notna()
+        data = qc_df.loc[valid].copy()
+        
+        if data.empty:
+            continue
+        
+        # Design matrix - start with PCs
+        X_pc = data[pc_cols].fillna(0)
+        
+        # Add batch dummies if batch column exists
+        if has_batch:
+            batch_dummies = pd.get_dummies(
+                data["batch"],
+                prefix="batch",
+                drop_first=True
+            )
+            X = pd.concat([X_pc, batch_dummies], axis=1)
+        else:
+            X = X_pc
+        
+        y = data[m_full]
+        
+        # Fit model
+        model = LinearRegression()
+        model.fit(X, y)
+        residuals = y - model.predict(X)
+        
+        # MAD normalization
+        med = np.median(residuals)
+        mad = np.median(np.abs(residuals - med))
+        if mad == 0:
+            madnorm = residuals - med
+        else:
+            madnorm = (residuals - med) / (1.4826 * mad)
+        
+        # Insert back into wide tables
+        #residuals_df.loc[valid, m] = residuals
+        madnorm_df.loc[valid, m] = madnorm
+        ht = hl.Table.from_pandas(madnorm_df, key='s')
+    return ht
 
 def get_nearest_neighbour_strata (
     qc_ht: hl.Table,
@@ -89,9 +193,17 @@ def get_mad_table (
             }
         )
     #extract columns showing how many MADs are needed to get this equilibrium val=median+N*MAD
-    ht_mad = ht.select(
-        **{f: ht[f] for f in metrics}
-    )
+    has_batch = 'batch' in qc_ht.row
+    # Select metrics and batch if it exists
+    if has_batch:
+        ht_mad = ht.select(
+            batch=ht.batch,
+            **{f: ht[f] for f in metrics}
+        )
+    else:
+        ht_mad = ht.select(
+            **{f: ht[f] for f in metrics}
+        )
     return ht_mad
 
 # TODO: rename to annotate_with_pop
@@ -455,7 +567,16 @@ def main():
         qc_metrics_ht=qc_metrics_with_nn(qc_ht, nn_ht)
         mad_ht=get_mad_table(qc_ht, qc_metrics_ht)
         #add file save and plot creation
-
+        mad_ht.write(path_spark(qc_filter_file), overwrite=True)
+    elif runmode=="lm":
+        pca_ht=hl.read_table(path_spark(pc_scores_file))
+        ########
+        mt_with_qc=hl.sample_qc(mt)
+        qc_ht=mt_with_qc.cols()
+        ########
+        mad_ht=run_linear_model(qc_ht, pca_ht)
+        #add file save and plot creation
+        mad_ht.write(path_spark(qc_filter_file), overwrite=True)
 
 if __name__ == "__main__":
     main()
