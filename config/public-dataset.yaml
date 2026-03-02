@@ -236,9 +236,9 @@ step2:
 
   stratified_sample_qc:
     sample_qc_method: 'pop' #pop -stratification based on population; nn - nearest neighbours; lm - linear model
-    mt_qc_outfile: '${cvars.mtdir}/mt_pops_sampleqc.mt' # output
-    ht_qc_cols_outfile: '${cvars.mtdir}/mt_pops_sampleqc.ht' # output
-    qc_filter_file: '${cvars.mtdir}/mt_pops_QC_filters.ht' # output
+    mt_qc_outfile: '${cvars.mtdir}/mt_stratified_sampleqc.mt' # output
+    ht_qc_cols_outfile: '${cvars.mtdir}/mt_stratified_sampleqc.ht' # output
+    qc_filter_file: '${cvars.mtdir}/mt_stratified_QC_filters.ht' # output
     min_depth: 5
     min_genotype_quality: 10
     min_vaf: 0.2
@@ -252,12 +252,12 @@ step2:
       lower_threshold: 4.0 # Using a broad interval to make all samples pass QC
       upper_threshold: 4.0
       metric_threshold: {'r_ti_tv':[4.0, 4.0]}
-    output_text_file: '${cvars.anndir}/sample_qc_by_pop.tsv.bgz' # output
-    output_globals_json_file: '${cvars.anndir}/sample_qc_by_pop.globals.json' # output
+    output_text_file: '${cvars.anndir}/stratified_sample_qc.tsv.bgz' # output
+    output_globals_json_file: '${cvars.anndir}/stratified_sample_qc.globals.json' # output
 
   plot_sample_qc_metrics:
     n_bins: 20
-    plot_outdir: '${cvars.pltdir}/sample_qc_metrics'
+    plot_outdir: '${cvars.pltdir}/stratified_sample_qc_metrics'
 
   # --- Step 2.5 --- #
   remove_sample_qc_fails:
