@@ -1,15 +1,24 @@
 # Exome and Genome cohorts QC using WxS-QC pipeline
 
-This guide explains how to perform QC of exome/genome data cohorts using the WxS-QC pipeline.
+This guide explains how to perform QC of human exome/genome data cohorts 
+using the WxS-QC pipeline.
+
+The general information regarding the pipeline capabilities and limitations 
+is available in the [readme](../README.md).
 
 ## Pre-requirements
 
 Input data should be a multi-sample VCF file or a set of VCF files.
-We suggest variant calling by GATK4 suite using haplotype caller and joint calling steps.
+We tested the pipeline on variants calling by GATK4 suite using haplotype caller and joint calling steps.
+
 The pipeline has no direct dependencies of GATK,
 but it uses variant-level and genotype-level metrics calculated by GATK.
-You can try to use the data from another caller,
-but this capability hasn't been tested.
+By altering the inputs to the RF model, the variant QC could be adapted for other variant callers 
+(FreeBayes, Strelka2, etc).
+Details are provided in the [Variant QC section](#stage-3-variant-qc).
+
+The adaptation of the variant QC for modern neural network-based callers, 
+like DeepVariant and DRAGEN, is underway. 
 
 We suggest not applying the GATK4 VQSR,
 because the pipeline has its own more flexible variant QC block.
