@@ -16,7 +16,18 @@ from collections import defaultdict
 import math
 from sklearn.linear_model import LinearRegression
 
-def run_linear_model(qc_ht, pca_ht):
+def run_sample_qc(raw_mt_file):
+    mt=hl.read_matrix_table(path_spark(raw_mt_file))
+    mt_with_sampleqc=hl.sample_qc(mt)
+    mt_with_sampleqc = mt_with_sampleqc.annotate_cols(
+        sample_qc=mt_with_sampleqc.sample_qc.annotate(
+            heterozygosity_rate=mt_with_sampleqc.sample_qc.n_het / mt_with_sampleqc.sample_qc.n_called
+        )
+    )
+    qc_ht=mt_with_sampleqc.cols()
+    return qc_ht
+
+def run_linear_model(qc_ht, pca_ht, use_batch):
     """
     Returns:
       residuals_df: raw residuals (wide format)
@@ -67,7 +78,10 @@ def run_linear_model(qc_ht, pca_ht):
     # -----------------------------
     # Output containers (wide)
     # -----------------------------
-    if has_batch:
+    if use_batch and not has_batch:
+        print("no batch information, batch won't be used for qc")
+
+    if has_batch and use_batch:
         residuals_df = qc_df[["s", "batch"]].copy()
         madnorm_df = qc_df[["s", "batch"]].copy()
     else:
@@ -133,7 +147,9 @@ def get_nearest_neighbour_strata (
     :param num_neighbors: Number of nearest neighbors to identify for each sample. Default is 50
     :param use_batch: Use batch column for stratification or not. True or False
     """
-
+    if use_batch and 'batch' not in qc_ht.row:
+        print("no batch information, batch won't be used for qc")
+        use_batch=False
     #determine nearest neighbors
     ht = determine_nearest_neighbors(
         qc_ht,
@@ -150,10 +166,21 @@ def qc_metrics_with_nn (
     ) -> hl.Table:
     qc_ht = qc_ht.annotate(
         nearest_neighbors=nn_ht[qc_ht.key].nearest_neighbors
-    )    
+    )
+    metrics = [
+        "heterozygosity_rate",
+        "n_snp",
+        "r_ti_tv",
+        "n_transition",
+        "n_transversion",
+        "r_insertion_deletion",
+        "n_insertion",
+        "n_deletion",
+        "r_het_hom_var"
+    ]
     filter_ht = compute_stratified_metrics_filter(
         qc_ht,
-        qc_metrics={metric: qc_ht.sample_qc[metric] for metric in qc_metrics},
+        qc_metrics={metric: qc_ht.sample_qc[metric] for metric in metrics},
         lower_threshold=4.0,
         upper_threshold=4.0,
         metric_threshold={
@@ -520,15 +547,15 @@ def plot_mad_metrics(
     plot_outdir: str,
     plot_width: int = 400,
     plot_height: int = 400,
-    text_size="12pt",
+    text_size: str = "12pt",
     n_bins: int = 100,
     lower_threshold: float = -4.0,
     upper_threshold: float = 4.0,
+    use_batch: bool = True,
     **kwargs,
 ):
     """
     Plot MAD-normalized metrics from ht_mad table.
-    Works with or without batch column.
     
     Parameters:
         ht_mad: Hail Table with MAD-normalized metrics
@@ -539,13 +566,21 @@ def plot_mad_metrics(
         n_bins: Number of histogram bins
         lower_threshold: Lower threshold for outlier detection (default -4.0 MADs)
         upper_threshold: Upper threshold for outlier detection (default 4.0 MADs)
+        use_batch: Whether to use batch stratification if batch column exists (default True)
     """
+    
     os.makedirs(plot_outdir, exist_ok=True)
     
-    pd_ht = ht_mad.to_pandas()
+    # Check if batch column exists AND if user wants to use it
+    has_batch = 'batch' in ht_mad.row
+    use_batch_stratification = has_batch and use_batch
     
-    # Check if batch column exists
-    has_batch = 'batch' in pd_ht.columns
+    # If use_batch=False and batch exists, remove it before converting to pandas
+    if has_batch and not use_batch:
+        print("Batch column exists but use_batch=False - ignoring batch stratification")
+        ht_mad = ht_mad.drop('batch')
+    
+    pd_ht = ht_mad.to_pandas()
     
     # Define metrics
     metrics = [
@@ -563,25 +598,33 @@ def plot_mad_metrics(
     # Filter to only existing metrics
     metrics = [m for m in metrics if m in pd_ht.columns]
     
-    # Colors
-    all_batches = pd_ht['batch'].unique() if has_batch else ['all']
-    default_colors = ["#F0E442", "#D55E00", "#0072B2", "#009E73", "#E69F00", "#56B4E9"]
-    batch_colors = dict(zip(
-        all_batches,
-        default_colors * (len(all_batches) // len(default_colors) + 1)
-    ))
+    if not metrics:
+        raise ValueError("No valid metrics found in table")
     
-    plots = []
-    plots_by_metric = defaultdict(list)
-    
-    if has_batch:
-        # Plot by batch
-        for batch, subdf in pd_ht.groupby('batch'):
+    if use_batch_stratification:
+        print(f"Creating batch-stratified plots for {len(pd_ht['batch'].unique())} batches")
+        
+        # Colors
+        all_batches = sorted(pd_ht['batch'].unique())
+        default_colors = ["#F0E442", "#D55E00", "#0072B2", "#009E73", "#E69F00", "#56B4E9"]
+        batch_colors = dict(zip(
+            all_batches,
+            (default_colors * (len(all_batches) // len(default_colors) + 1))[:len(all_batches)]
+        ))
+        
+        # Create plots for grid (don't save these individually)
+        grid_plots = []
+        plots_by_metric = defaultdict(list)
+        
+        for batch in all_batches:
+            subdf = pd_ht[pd_ht['batch'] == batch]
+            
             for metric in metrics:
                 data = subdf[metric]
                 color = batch_colors.get(batch, "#0072B2")
                 
-                p = plot_sampleqc_metric(
+                # Create plot for grid
+                p_grid = plot_sampleqc_metric(
                     data,
                     metric,
                     lower_threshold=lower_threshold,
@@ -593,11 +636,11 @@ def plot_mad_metrics(
                     text_size=text_size,
                 )
                 
-                plots.append(p)
-                plots_by_metric[metric].append(p)
+                grid_plots.append(p_grid)
+                plots_by_metric[metric].append(p_grid)
                 
-                # Save individual plot
-                p = plot_sampleqc_metric(
+                # Create SEPARATE plot for individual save
+                p_individual = plot_sampleqc_metric(
                     data,
                     metric,
                     lower_threshold=lower_threshold,
@@ -609,12 +652,14 @@ def plot_mad_metrics(
                     plot_title=f"{metric} (MAD-normalized) - {batch}",
                     text_size=text_size,
                 )
+                
+                # Save individual plot
                 plot_name = f"MAD_hist_{metric}_{batch}.html"
                 bkplot.output_file(os.path.join(plot_outdir, plot_name))
-                bkplot.save(p)
+                bkplot.save(p_individual)
             
             # Add batch label
-            plots.append(
+            grid_plots.append(
                 Div(
                     text=f"<b>{batch}</b>",
                     width=10,
@@ -636,17 +681,35 @@ def plot_mad_metrics(
             for metric in metrics
         ] + [None]
         
-        grid = bklayouts.gridplot(col_titles + plots, ncols=len(metrics) + 1)
+        grid = bklayouts.gridplot(col_titles + grid_plots, ncols=len(metrics) + 1)
         plot_outfile = os.path.join(plot_outdir, "mad_metrics_by_batch.html")
         
     else:
-        # Plot all samples together (no batch)
-        plots_list = []
+        # Plot all samples together (no batch stratification)
+        print(f"Creating global plots for all {len(pd_ht)} samples")
+        
+        grid_plots = []
         
         for metric in metrics:
             data = pd_ht[metric]
             
-            p = plot_sampleqc_metric(
+            # Create plot for grid
+            p_grid = plot_sampleqc_metric(
+                data,
+                metric,
+                lower_threshold=lower_threshold,
+                upper_threshold=upper_threshold,
+                n_bins=n_bins,
+                color="#0072B2",
+                plot_width=plot_width,
+                plot_height=plot_height,
+                text_size=text_size,
+            )
+            
+            grid_plots.append(p_grid)
+            
+            # Create SEPARATE plot for individual save
+            p_individual = plot_sampleqc_metric(
                 data,
                 metric,
                 lower_threshold=lower_threshold,
@@ -659,16 +722,15 @@ def plot_mad_metrics(
                 text_size=text_size,
             )
             
-            plots_list.append(p)
-            
             # Save individual plot
             plot_name = f"MAD_hist_{metric}_all.html"
             bkplot.output_file(os.path.join(plot_outdir, plot_name))
-            bkplot.save(p)
+            bkplot.save(p_individual)
         
-        grid = bklayouts.gridplot(plots_list, ncols=3)
+        grid = bklayouts.gridplot(grid_plots, ncols=3)
         plot_outfile = os.path.join(plot_outdir, "mad_metrics_all.html")
     
+    # Save combined grid
     bkplot.output_file(plot_outfile)
     bkplot.save(grid)
     
@@ -683,7 +745,7 @@ def main():
     # = STEP PARAMETERS = #
     runmode=config["step2"]["stratified_sample_qc"]["sample_qc_method"]
     n_neighbors=config["step2"]["stratified_sample_qc"]["nn_args"]["n_neighbors"]
-    use_batch=config["step2"]["stratified_sample_qc"]["nn_args"]["use_batch"]
+    use_batch=config["step2"]["stratified_sample_qc"]["use_batch"]
     # = STEP DEPENDENCIES = #
     raw_mt_file = config["step1"]["validate_gtcheck"]["mt_gtcheck_validated"]
     pop_ht_file = config["step2"]["predict_pops"]["pop_ht_outfile"]
@@ -719,8 +781,7 @@ def main():
     elif runmode=="nn":
         pca_ht=hl.read_table(path_spark(pc_scores_file))
         ########
-        mt_with_qc=hl.sample_qc(mt)
-        qc_ht=mt_with_qc.cols()
+        qc_ht=run_sample_qc(raw_mt_file)
         ########
         nn_ht=get_nearest_neighbour_strata(qc_ht, pca_ht, n_neighbors, use_batch)
         qc_metrics_ht=qc_metrics_with_nn(qc_ht, nn_ht)
@@ -732,15 +793,14 @@ def main():
 
         # plot population metrics
         print("=== Plotting population metrics ===")
-        plot_mad_metrics(mad_ht, **config["step2"]["plot_sample_qc_metrics"])
+        plot_mad_metrics(mad_ht, use_batch=use_batch, **config["step2"]["plot_sample_qc_metrics"])
 
     elif runmode=="lm":
         pca_ht=hl.read_table(path_spark(pc_scores_file))
         ########
-        mt_with_qc=hl.sample_qc(mt)
-        qc_ht=mt_with_qc.cols()
+        qc_ht=run_sample_qc(raw_mt_file)
         ########
-        mad_ht=run_linear_model(qc_ht, pca_ht)
+        mad_ht=run_linear_model(qc_ht, pca_ht, use_batch)
         #add file save and plot creation
         mad_ht.write(path_spark(qc_filter_file), overwrite=True)
         mad_ht.export(path_spark(output_text_file), delimiter="\t")
@@ -748,7 +808,7 @@ def main():
 
         # plot population metrics
         print("=== Plotting population metrics ===")
-        plot_mad_metrics(mad_ht, **config["step2"]["plot_sample_qc_metrics"])
+        plot_mad_metrics(mad_ht, use_batch=use_batch, **config["step2"]["plot_sample_qc_metrics"])
 
 if __name__ == "__main__":
     main()
