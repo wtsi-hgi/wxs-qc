@@ -275,24 +275,47 @@ Please see config files "prune_pc_relate" for more details.
 python 2-sample_qc/2-prune_related_samples.py
 ```
 
-While this step identifies related samples, we keep them in the dataset since step 2.3 uses PCA score projection for population clustering. The relatedness information can be used to validate pedigree data and detect sample mislabeling.
+While this step identifies related samples, we keep them in the dataset 
+since step 2.3 uses PCA score projection for population clustering. 
+The relatedness information can be used to validate pedigree data and detect sample mislabeling.
 
 
-### Predict super-populations
+### Predict super-populations using PCA
+
+**Warning:** The PCA superpopulation prediction and stratified filtering can incorrectly mark as outliers 
+samples whose ancestries are not represented in the 1000 Genomes data 
+(which is a common case for non-European populations). 
+Also, stratified filtering produces false outliers for superpopulations with <100 samples.  
+If you have samples with potentially missed ancestries (usually non-European), 
+datasets with subpopulations, and/or a small number of samples, 
+we suggest using the nearest-neighbours or linear-model approaches, as described below.
 
 Merge 1kg MatrixTable with WxS MatrixTable and make LD pruning.
+To merge samples, we intersect variants between the two datasets.
+Therefore, we run PCA on the subset of high-quality variants from the experimental dataset,
+and the 1000 Genomes dataset.
 
 ```shell
 python 2-sample_qc/3-population_pca_prediction.py --merge-and-ldprune
 ```
 
-Run PCA.
+Run PCA. and PC projection.
+At this step we run PAC only for 1000 genomes samples,
+and then use PC projection to predict super-populations in the experimental dataset.
+This approach, compared to the direct PCA of the merged dataset,
+makes PC axes more stable and not distorted by related samples or unusual ancestry. 
+As a result, we can handle datasets with any number of related individuals, 
+and PCs from different studies are more comparable.
 
 ```shell
 python 2-sample_qc/3-population_pca_prediction.py --pca
 ```
 
 Plot 1KG PCA. On this step, all dataset samples should be labelled as `N/A`.
+
+Since the set of variations for the PCA run is unique for each dataset, 
+the PCA results for 1000 genomes can differ between runs. However, for the suggested cohort sizes, 
+the number of high-quality variants in the dataset is big enough to make PCA results visually comparable.
 
 ```shell
 python 2-sample_qc/3-population_pca_prediction.py --pca-plot
@@ -374,6 +397,11 @@ python 2-sample_qc/5-filter_fail_sample_qc.py
 The VariantQC steps trains and runs a random forest model to estimate variation quality
 and rank all variations by this estimation.
 
+Historically, this step was designed for “classic” variant callers, 
+which produce a large set of variant-level statistics. 
+In the development version, we’re updating this part to support DeepVariant and other neural network-based callers, 
+which provide a very brief set of statistics.
+
 To train the predicting model, we need a set of True-Positive (TP) and False-positive (FP) variations.
 Because for a new dataset we don't have the real TP and FP, we use the following approach:
 
@@ -414,6 +442,15 @@ python 3-variant_qc/1-split_and_family_annotate.py --all
 
 ### Generate RF test data
 Next, we combine all the data and generate the input table to run the random forest on.
+
+The random model uses a set of variant-level statistics, populated after the joint calling step.
+We have tested the pipeline only on data produced by [GATK v4](https://gatk.broadinstitute.org/hc/en-us) caller.
+Therefore, the list of statistics we use for the random foresm model is hardcoded in the file
+[constants.py](../utils/constants.py)
+
+To adapt the variant QC for your variant caller (FreeBayes, Strelka2, Octopus, etc),
+put the annoations available in the `INFO` field of your VCF file in the 
+`INFO_FEATURES` of the `constants.py` file.
 
 ```shell
 python 3-variant_qc/2-create_rf_ht.py

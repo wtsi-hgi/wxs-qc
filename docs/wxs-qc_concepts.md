@@ -41,10 +41,19 @@ our pipeline can handle datasets with any number of related individuals without 
 
 ## Variant QC
 
-The VariantQC step uses the approach used for gnomAD v2 (Karczewski et al. 2020) and the first stages of gnomAD v3:
-use a set of open resources to label variations as likely True-Positives and likely False-Positives,
-train a random forest (RF) model on these data,
-use RF model score to group variants into several bins based on their reliability.  
+The VariantQC step uses the approach used for gnomAD v2 (Karczewski et al. 2020) and the first stages of gnomAD v3.
+
+We use a set of open resources to label variations as likely True-Positives (TP) and likely False-Positives (FP). 
+Then we train a random forest (RF) model to predict TP and FP variants based on variant-level statistics, 
+use RF model score to group variants into several bins based on their reliability.
+
+Historically, this step was designed for “classic” variant callers, which require recalibrating the call correctness. 
+In the development version, we’re updating this part to support DeepVariant 
+and other neural network-based callers, which provide a very brief set of variant-level statistics.
+
+We have tested this extensively only on [GATK v4](https://gatk.broadinstitute.org/hc/en-us) HaplotypeCaller. 
+However, by altering the inputs to the RF model, 
+the variant QC could be adapted for other variant callers (FreeBayes, Strelka2, etc).
 
 ## Genotype QC
 
