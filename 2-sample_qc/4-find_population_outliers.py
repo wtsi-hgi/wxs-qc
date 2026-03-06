@@ -25,9 +25,14 @@ def run_sample_qc(raw_mt_file):
         )
     )
     qc_ht=mt_with_sampleqc.cols()
-    return qc_ht
+    return mt_with_sampleqc, qc_ht
 
-def run_linear_model(qc_ht, pca_ht, use_batch):
+def run_linear_model(
+        qc_ht: hl.Table,
+        pca_ht: hl.Table,
+        use_batch: bool,
+        **kwargs,
+    ):
     """
     Returns:
       residuals_df: raw residuals (wide format)
@@ -162,12 +167,13 @@ def get_nearest_neighbour_strata (
 def qc_metrics_with_nn (
         qc_ht: hl.Table,
         nn_ht: hl.Table,
+        compute_stratified_metrics_filter_args: dict,
         **kwargs,
     ) -> hl.Table:
     qc_ht = qc_ht.annotate(
         nearest_neighbors=nn_ht[qc_ht.key].nearest_neighbors
     )
-    metrics = [
+    qc_metrics = [
         "heterozygosity_rate",
         "n_snp",
         "r_ti_tv",
@@ -180,14 +186,9 @@ def qc_metrics_with_nn (
     ]
     filter_ht = compute_stratified_metrics_filter(
         qc_ht,
-        qc_metrics={metric: qc_ht.sample_qc[metric] for metric in metrics},
-        lower_threshold=4.0,
-        upper_threshold=4.0,
-        metric_threshold={
-            "r_het_hom_var": (math.inf, 4.0),
-            "heterozygosity_rate": (math.inf, 4.0),
-        },
+        qc_metrics={metric: qc_ht.sample_qc[metric] for metric in qc_metrics},
         comparison_sample_expr=qc_ht.nearest_neighbors,
+        **compute_stratified_metrics_filter_args
     )
     filter_ht = filter_ht.select_globals(**nn_ht.index_globals())
     return filter_ht
@@ -737,6 +738,37 @@ def plot_mad_metrics(
     print(f"Plots saved to {plot_outdir}")
     print(f"Combined plot: {plot_outfile}")
 
+#work on this
+def stratified_sample_qc_nn(
+    raw_mt_file: str,
+    pca_file: hl.Table,
+    n_neighbors: int,#make it easy in config
+    use_batch: bool,#make it easy in config
+    compute_stratified_metrics_filter_args: dict,
+    **kwargs,
+):
+    pca_ht=hl.read_table(path_spark(pca_file))
+    mt_with_sampleqc, qc_ht=run_sample_qc(raw_mt_file)
+    ########
+    nn_ht=get_nearest_neighbour_strata(qc_ht, pca_ht, n_neighbors, use_batch)
+    qc_metrics_ht=qc_metrics_with_nn(qc_ht, nn_ht, compute_stratified_metrics_filter_args)
+    mad_ht=get_mad_table(qc_ht, qc_metrics_ht)
+    return mt_with_sampleqc, qc_metrics_ht, mad_ht
+
+def stratified_sample_qc_lm(
+    raw_mt_file: str,
+    pca_file: hl.Table,
+    use_batch: bool,#make it easy in config
+    compute_stratified_metrics_filter_args: dict,
+    **kwargs,
+):
+    pca_ht=hl.read_table(path_spark(pca_file))
+    mt_with_sampleqc, qc_metrics_ht=run_sample_qc(raw_mt_file)
+    ########
+    mad_ht=run_linear_model(qc_metrics_ht, pca_ht, use_batch)
+    #mad_ht=modify_mad_ht(mad_ht, compute_stratified_metrics_filter_args)#made this function
+    return mt_with_sampleqc, qc_metrics_ht, mad_ht
+
 def main():
     # = STEP SETUP = #
     config = parse_config()
@@ -779,14 +811,9 @@ def main():
         plot_sample_qc_metrics(pop_ht, **config["step2"]["plot_sample_qc_metrics"])
 
     elif runmode=="nn":
-        pca_ht=hl.read_table(path_spark(pc_scores_file))
-        ########
-        qc_ht=run_sample_qc(raw_mt_file)
-        ########
-        nn_ht=get_nearest_neighbour_strata(qc_ht, pca_ht, n_neighbors, use_batch)
-        qc_metrics_ht=qc_metrics_with_nn(qc_ht, nn_ht)
-        mad_ht=get_mad_table(qc_ht, qc_metrics_ht)
-        #add file save and plot creation
+        mt_with_sampleqc, qc_metrics_ht, mad_ht=stratified_sample_qc_nn(raw_mt_file, pc_scores_file, **config["step2"]["stratified_sample_qc"])
+        mt_with_sampleqc.write(path_spark(mt_qc_outfile), overwrite=True)
+        qc_metrics_ht.write(path_spark(ht_qc_cols_outfile), overwrite=True)
         mad_ht.write(path_spark(qc_filter_file), overwrite=True)
         mad_ht.export(path_spark(output_text_file), delimiter="\t")
         mad_ht.globals.export(path_spark(output_globals_json))
@@ -796,12 +823,10 @@ def main():
         plot_mad_metrics(mad_ht, use_batch=use_batch, **config["step2"]["plot_sample_qc_metrics"])
 
     elif runmode=="lm":
-        pca_ht=hl.read_table(path_spark(pc_scores_file))
-        ########
-        qc_ht=run_sample_qc(raw_mt_file)
-        ########
-        mad_ht=run_linear_model(qc_ht, pca_ht, use_batch)
+        mt_with_sampleqc, qc_metrics_ht, mad_ht=stratified_sample_qc_lm(raw_mt_file, pc_scores_file, **config["step2"]["stratified_sample_qc"])
         #add file save and plot creation
+        mt_with_sampleqc.write(path_spark(mt_qc_outfile), overwrite=True)
+        qc_metrics_ht.write(path_spark(ht_qc_cols_outfile), overwrite=True)
         mad_ht.write(path_spark(qc_filter_file), overwrite=True)
         mad_ht.export(path_spark(output_text_file), delimiter="\t")
         mad_ht.globals.export(path_spark(output_globals_json))
