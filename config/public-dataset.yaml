@@ -253,7 +253,7 @@ step2:
     compute_stratified_metrics_filter_args:
       lower_threshold: 4.0 # Using a broad interval to make all samples pass QC
       upper_threshold: 4.0
-      metric_threshold: {'r_het_hom_var': (-math.inf, 4.0), 'heterozygosity_rate': (-math.inf, 4.0)}
+      metric_threshold: {'r_het_hom_var': (math.inf, 4.0), 'heterozygosity_rate': (math.inf, 4.0)}
     output_text_file: '${cvars.anndir}/stratified_sample_qc.tsv.bgz' # output
     output_stratified_metrics_json_file: '${cvars.anndir}/stratified_metrics.json' # output
     output_nn_file: '${cvars.anndir}/nearest_neighbours.tsv.bgz' # output

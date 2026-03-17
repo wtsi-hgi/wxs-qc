@@ -61,13 +61,20 @@ def modify_metric_dict(compute_stratified_metrics_filter_args: dict):
         }
     return compute_stratified_metrics_filter_args
 
+def modify_metric_names(compute_stratified_metrics_filter_args: dict):
+    metric_dict=compute_stratified_metrics_filter_args["metric_threshold"]
+    if metric_dict!=None:
+        for key in list(compute_stratified_metrics_filter_args['metric_threshold'].keys()):
+            compute_stratified_metrics_filter_args['metric_threshold'][key + '_residual'] = compute_stratified_metrics_filter_args['metric_threshold'].pop(key)
+    return compute_stratified_metrics_filter_args
+
 def get_threshold_dict (compute_stratified_metrics_filter_args: dict, qc_metrics: list):
     threshold_dict={}
     for metric in qc_metrics:
-        threshold_dict[metric]=(compute_stratified_metrics_filter_args['lower_threshold'], compute_stratified_metrics_filter_args['upper_threshold'])
+        threshold_dict[metric]=(-compute_stratified_metrics_filter_args['lower_threshold'], compute_stratified_metrics_filter_args['upper_threshold'])
     if compute_stratified_metrics_filter_args['metric_threshold'] != None:
         for metric in compute_stratified_metrics_filter_args['metric_threshold'].keys():
-            threshold_dict[metric]=compute_stratified_metrics_filter_args['metric_threshold'][metric]
+            threshold_dict[metric]=(-compute_stratified_metrics_filter_args['metric_threshold'][metric][0], compute_stratified_metrics_filter_args['metric_threshold'][metric][1])
     return threshold_dict
 
 def compute_mad_score(metric, median, mad):
@@ -356,6 +363,7 @@ def stratified_sample_qc_lr(
     #modifying compute_stratified_metrics_filter_args
     compute_stratified_metrics_filter_args=modify_metric_dict(compute_stratified_metrics_filter_args)
     threshold_dict=get_threshold_dict(compute_stratified_metrics_filter_args, qc_metrics)
+    compute_stratified_metrics_filter_args_lr=modify_metric_names(compute_stratified_metrics_filter_args)
 
     print("=== Runnig stratified metrics filter ===")
     # Using gnomAD function to calculate stratified metrics
@@ -363,12 +371,12 @@ def stratified_sample_qc_lr(
         sample_qc_res_ht,
         qc_metrics=dict(sample_qc_res_ht.row_value),
         strata={"batch": sample_qc_ht[sample_qc_res_ht.key].batch} if use_batch else None,
-        **compute_stratified_metrics_filter_args,
+        **compute_stratified_metrics_filter_args_lr,
         )
 
     #generating table with MADs for plots
-    mad_ht=get_mad_ht (sample_qc_res_ht, sample_qc_ht, filter_ht, use_batch, 'lr', qc_metrics)
 
+    mad_ht=get_mad_ht (sample_qc_res_ht, sample_qc_ht, filter_ht, use_batch, 'lr', qc_metrics)
     #annotating sample_qc_ht with qc_metrics_stats and stratified_metrics_filter results
     globals = hl.eval(filter_ht.globals.qc_metrics_stats)
     sample_qc_ht = sample_qc_ht.annotate_globals(qc_metrics_stats=globals)
@@ -947,6 +955,7 @@ def main():
         }
         with open(output_stratified_metrics_json, 'w') as f:
             json.dump(metrics_stats_output, f, default=str)
+        mad_ht.write(path_spark(mad_file), overwrite=True)
         # plot metrics
         print("=== Plotting metrics ===")
         plot_mad_metrics(mad_ht, qc_metrics, color_scheme=None, **config["step2"]["plot_sample_qc_metrics"], use_strata=use_batch, metric_thresholds=threshold_dict)

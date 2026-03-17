@@ -235,7 +235,7 @@ step2:
     annotated_mt_file: '${cvars.mtdir}/gatk_unprocessed_with_pop.mt' # output
 
   stratified_sample_qc:
-    sample_qc_method: 'nn' #pop -stratification based on population; nn - nearest neighbours; lm - linear model
+    sample_qc_method: 'lr' #pop -stratification based on population; nn - nearest neighbours; lm - linear model
     ht_qc_cols_outfile: '${cvars.mtdir}/mt_stratified_sampleqc.ht' # output
     qc_filter_file: '${cvars.mtdir}/mt_stratified_QC_filters.ht' # output
     mad_file: '${cvars.mtdir}/mad.ht' # output
@@ -247,13 +247,13 @@ step2:
     # Additional parameters to pass to LR:
     use_pc_square: True
     # Use batch in nn or lr or lm. True or Falce
-    use_batch: False
+    use_batch: True
     # Additional parameters to pass to gnomAD sampleQC function:
     # https://broadinstitute.github.io/gnomad_methods/api_reference/sample_qc/filtering.html#gnomad.sample_qc.filtering.compute_stratified_metrics_filter
     compute_stratified_metrics_filter_args:
       lower_threshold: 4.0 # Using a broad interval to make all samples pass QC
       upper_threshold: 4.0
-      metric_threshold: {'r_het_hom_var': [-math.inf, 4.0], 'heterozygosity_rate': [-math.inf, 4.0]}
+      metric_threshold: {'r_het_hom_var': [math.inf, 4.0], 'heterozygosity_rate': [math.inf, 4.0]}
     output_text_file: '${cvars.anndir}/stratified_sample_qc.tsv.bgz' # output
     output_stratified_metrics_json_file: '${cvars.anndir}/stratified_sample_qc.qc_metrics_stats.json' # output
     output_nn_file: '${cvars.anndir}/nearest_neighbours.tsv.bgz' # output
