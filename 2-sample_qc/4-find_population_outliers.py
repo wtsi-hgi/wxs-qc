@@ -26,9 +26,20 @@ def run_filtering_and_sample_qc(
     min_genotype_quality: float,
     min_vaf: float,
     **kwargs,
-):
+) -> hl.MatrixTable:
     mt = mt.filter_rows(mt.locus.in_autosome())
+    """
+    Filter MT entries based on DP/GQ/VAF and run sample QC
+    param hl.MatrixTable mt: input MatrixTable
+    param int min_depth: minimum depth threshold for filtering
+    param float min_genotype_quality: minimum genotype quality threshold
+    param float min_vaf: minimum variant allele fraction threshold for het calls
 
+    ### Config fields
+    step2.stratified_sample_qc.min_depth : int : minimum DP threshold
+    step2.stratified_sample_qc.min_genotype_quality : float : minimum GQ threshold
+    step2.stratified_sample_qc.min_vaf : float : minimum VAF threshold
+    """
     # filter MT by depth/gq/vaf
     if min_depth > 0 or min_genotype_quality > 0 or min_vaf > 0:
         vaf = mt.AD[1] / hl.sum(mt.AD)
@@ -52,7 +63,18 @@ def run_filtering_and_sample_qc(
     )
     return mt_with_sampleqc
 
-def modify_metric_dict(compute_stratified_metrics_filter_args: dict):
+def modify_metric_dict(compute_stratified_metrics_filter_args: dict) -> dict:
+    """
+    Convert metric_threshold values from strings to numeric values
+    param dict compute_stratified_metrics_filter_args: arguments for stratified metrics filter
+
+    ### Config fields
+    step2.stratified_sample_qc.metric_threshold : dict : metric-specific thresholds
+
+    ### Indirect config fields
+    step2.stratified_sample_qc.upper_threshold : float : default upper threshold
+    step2.stratified_sample_qc.metric_threshold : dict : metric-specific overrides
+    """
     metric_dict=compute_stratified_metrics_filter_args["metric_threshold"]
     if metric_dict!=None:
         compute_stratified_metrics_filter_args["metric_threshold"] = {
@@ -61,14 +83,35 @@ def modify_metric_dict(compute_stratified_metrics_filter_args: dict):
         }
     return compute_stratified_metrics_filter_args
 
-def modify_metric_names(compute_stratified_metrics_filter_args: dict):
+def modify_metric_names(compute_stratified_metrics_filter_args: dict) -> dict:
+    """
+    Append '_residual' suffix to metric names in metric_threshold to run compute_stratified_metrics_filter with residuals
+    param dict compute_stratified_metrics_filter_args: arguments for stratified metrics filter
+
+    ### Config fields
+    step2.stratified_sample_qc.metric_threshold : dict : metric-specific thresholds
+
+    ### Indirect config fields
+    step2.stratified_sample_qc.upper_threshold : float : default upper threshold
+    step2.stratified_sample_qc.metric_threshold : dict : metric-specific overrides
+    """
     metric_dict=compute_stratified_metrics_filter_args["metric_threshold"]
     if metric_dict!=None:
         for key in list(compute_stratified_metrics_filter_args['metric_threshold'].keys()):
             compute_stratified_metrics_filter_args['metric_threshold'][key + '_residual'] = compute_stratified_metrics_filter_args['metric_threshold'].pop(key)
     return compute_stratified_metrics_filter_args
 
-def get_threshold_dict (compute_stratified_metrics_filter_args: dict, qc_metrics: list):
+def get_threshold_dict (compute_stratified_metrics_filter_args: dict, qc_metrics: list) -> dict:
+    """
+    Generate threshold dictionary for plotting
+    param dict compute_stratified_metrics_filter_args: arguments with threshold settings
+    param list qc_metrics: list of QC metrics
+
+    ### Config fields
+    step2.stratified_sample_qc.lower_threshold : float : default lower threshold
+    step2.stratified_sample_qc.upper_threshold : float : default upper threshold
+    step2.stratified_sample_qc.metric_threshold : dict : metric-specific overrides
+    """
     threshold_dict={}
     for metric in qc_metrics:
         threshold_dict[metric]=(-compute_stratified_metrics_filter_args['lower_threshold'], compute_stratified_metrics_filter_args['upper_threshold'])
@@ -78,6 +121,12 @@ def get_threshold_dict (compute_stratified_metrics_filter_args: dict, qc_metrics
     return threshold_dict
 
 def compute_mad_score(metric, median, mad):
+    """
+    Compute MAD-normalized score for a metric
+    param metric: metric value
+    param float median: median of the metric
+    param float mad: median absolute deviation
+    """
     return hl.if_else(
         mad == 0,
         hl.if_else(metric == median, 0.0, hl.float64('inf')),#recheck how this will work
@@ -91,7 +140,17 @@ def get_mad_ht (
         run_with_strata: bool,
         qc_type: str,
         qc_metrics: list,
-):
+) -> hl.Table:
+    """
+    Compute MAD-normalized QC metrics table for plotting
+    param hl.Table metric_stat_ht: table with raw QC metrics or residuals
+    param hl.Table qc_ht: sample QC table with annotations
+    param hl.Table filter_ht: output from stratified metrics filter
+    param bool run_with_strata: whether to compute MAD per strata
+    param str qc_type: type of QC ('pop', 'nn', 'lr')
+    param list qc_metrics: list of QC metrics
+    """
+    #get dicts with median and mad for each strata or per sample if nn used
     if qc_type=="pop" or qc_type=="lr":
         qc_stats_raw = filter_ht.globals.collect()[0].qc_metrics_stats
         qc_metrics_mad_info = {}
@@ -124,18 +183,17 @@ def get_mad_ht (
                     'median': metric_data.median,
                     'mad': metric_data.mad
                 }
-
+    stats_dict = hl.literal(qc_metrics_mad_info)
+    #run stats annotation with strata if it's used
     if run_with_strata:
         if qc_type=="pop":
             metric_stat_ht = metric_stat_ht.annotate(strata=qc_ht[metric_stat_ht.s].assigned_pop)
         else:
             metric_stat_ht = metric_stat_ht.annotate(strata=qc_ht[metric_stat_ht.s].batch)
-
+    #rename QC metrics for lr
     if qc_type=="lr":
         qc_metrics=[metric + "_residual" for metric in qc_metrics]
-
-    stats_dict = hl.literal(qc_metrics_mad_info)
-
+    #computing MAD-normalized QC metrics per sample
     if qc_type=="pop" or (qc_type=="lr" and run_with_strata):
         mad_scores_ht = metric_stat_ht.annotate(
             **{
@@ -169,6 +227,7 @@ def get_mad_ht (
                 for metric in qc_metrics
             }
         )
+    #cleaning final table
     mad_scores_ht=mad_scores_ht.drop(*qc_metrics)
     mad_scores_ht = mad_scores_ht.select(**{col.removesuffix('_mad'): mad_scores_ht[col] for col in mad_scores_ht.row_value})
     return mad_scores_ht
@@ -177,7 +236,7 @@ def get_mad_ht (
 #pop
 #######################################
 # TODO: rename to annotate_with_pop
-def annotate_mt(raw_mt_file: str, pop_ht_file: str):
+def annotate_mt(raw_mt_file: str, pop_ht_file: str) -> hl.MatrixTable:
     """
     Annotate mt with superpopulation and sequencing runid
     :param str raw_mt_file: raw mt file
@@ -209,7 +268,7 @@ def stratified_sample_qc_pop(
     min_vaf: float,
     compute_stratified_metrics_filter_args: dict,
     **kwargs,
-):
+)-> tuple[hl.MatrixTable, hl.Table, hl.Table, dict]:
     """
     Run sample QC and stratify by population
     param str annotated_mt_file: population and run id annotated MT file
@@ -275,7 +334,29 @@ def stratified_sample_qc_nn(
     min_vaf: float,
     compute_stratified_metrics_filter_args: dict,
     **kwargs,
-):
+)-> tuple[hl.MatrixTable, hl.Table, hl.Table, hl.Table, hl.Table, bool, dict]:
+    """
+    Run sample QC using nearest neighbors
+    param str raw_mt_file: input MT file
+    param str pca_score_file: PCA scores file
+    param list qc_metrics: QC metrics to analyse
+    param int n_neighbors: number of nearest neighbors
+    param bool use_batch: whether to stratify by batch
+    param int min_depth: minimum DP threshold
+    param float min_genotype_quality: minimum GQ threshold
+    param float min_vaf: minimum VAF threshold
+    param dict compute_stratified_metrics_filter_args: arguments for stratified filtering
+
+    ### Config fields
+    step2.stratified_sample_qc.n_neighbors : int : number of neighbors
+    step2.stratified_sample_qc.use_batch : bool : use batch for stratification
+    step2.stratified_sample_qc.min_depth : int : minimum DP threshold
+    step2.stratified_sample_qc.min_genotype_quality : float : minimum GQ threshold
+    step2.stratified_sample_qc.min_vaf : float : minimum VAF threshold
+
+    ### Indirect config fields
+    step2.prune_plot_pca.union_pca_scores_file : input path : PCA scores
+    """
     pca_scores=hl.read_table(path_spark(pca_score_file))
     mt=hl.read_matrix_table(path_spark(raw_mt_file))
     #filtering variants and running sample QC
@@ -338,7 +419,28 @@ def stratified_sample_qc_lr(
     compute_stratified_metrics_filter_args: dict,
     use_pc_square: bool,
     **kwargs,
-):
+) -> tuple[hl.MatrixTable, hl.Table, hl.Table, hl.Table, bool, dict]:
+    """
+    Run sample QC using regression-based residuals
+    param str raw_mt_file: input MT file
+    param str pca_score_file: PCA scores file
+    param list qc_metrics: QC metrics to analyse
+    param bool use_batch: whether to stratify by batch
+    param int min_depth: minimum DP threshold
+    param float min_genotype_quality: minimum GQ threshold
+    param float min_vaf: minimum VAF threshold
+    param dict compute_stratified_metrics_filter_args: arguments for stratified filtering
+    param bool use_pc_square: whether to include squared PCs in regression
+
+    ### Config fields
+    step2.stratified_sample_qc.use_batch : bool : use batch for stratification
+    step2.stratified_sample_qc.min_depth : int : minimum DP threshold
+    step2.stratified_sample_qc.min_genotype_quality : float : minimum GQ threshold
+    step2.stratified_sample_qc.min_vaf : float : minimum VAF threshold
+
+    ### Indirect config fields
+    step2.prune_plot_pca.union_pca_scores_file : input path : PCA scores
+    """
     pca_scores=hl.read_table(path_spark(pca_score_file))
     mt=hl.read_matrix_table(path_spark(raw_mt_file))
     #filtering variants and running sample QC
@@ -385,172 +487,6 @@ def stratified_sample_qc_lr(
     print(f"=== Samples passing lr filtering: {checkpoint}")
     # return the mad_ht for plotting in the next step
     return mt_with_sampleqc, sample_qc_ht, mad_ht, sample_qc_res_ht, use_batch, threshold_dict
-
-#######################################
-#lm
-#######################################
-def safe_eval(s):
-    """Convert string like '-math.inf' to actual number; return numbers as-is."""
-    if isinstance(s, str):
-        s=eval(s, {"math": math})
-    return s
-
-def run_linear_model(
-        qc_ht: hl.Table,
-        pca_ht: hl.Table,
-        use_batch: bool,
-        compute_stratified_metrics_filter_args: dict,
-        **kwargs,
-    ):
-    """
-    Returns:
-      residuals_df: raw residuals (wide format)
-      madnorm_df: MAD-normalized residuals (wide format)
-    
-    Note: 'batch' column is optional. If present, batch effects will be regressed out.
-    """
-    qc_df = qc_ht.to_pandas()
-    pc_df = pca_ht.to_pandas()
-    # -----------------------------
-    # Expand PCA scores dynamically
-    # -----------------------------
-    pc_expanded = pd.DataFrame(
-        pc_df["scores"].tolist(),
-        index=pc_df.index
-    )
-    pc_cols = [f"PC{i}" for i in range(1, pc_expanded.shape[1] + 1)]
-    pc_expanded.columns = pc_cols
-    pc_expanded["s"] = pc_df["s"]
-    
-    # -----------------------------
-    # Merge QC + PCA
-    # -----------------------------
-    qc_df = qc_df.merge(pc_expanded, on="s", how="left")
-    
-    # -----------------------------
-    # Check if batch column exists
-    # -----------------------------
-    has_batch = "batch" in qc_df.columns
-    
-    # -----------------------------
-    # Metrics
-    # -----------------------------
-    metrics = [
-        "heterozygosity_rate",
-        "n_snp",
-        "r_ti_tv",
-        "n_transition",
-        "n_transversion",
-        "r_insertion_deletion",
-        "n_insertion",
-        "n_deletion",
-        "r_het_hom_var"
-    ]
-    metrics_full = [f"sample_qc.{m}" for m in metrics]
-    
-    # -----------------------------
-    # Output containers (wide)
-    # -----------------------------
-    if use_batch and not has_batch:
-        print("no batch information, batch won't be used for qc")
-
-    if has_batch and use_batch:
-        #residuals_df = qc_df[["s", "batch"]].copy()
-        madnorm_df = qc_df[["s", "batch"]].copy()
-    else:
-        #residuals_df = qc_df[["s"]].copy()
-        madnorm_df = qc_df[["s"]].copy()
-    
-    # -----------------------------
-    # Loop over metrics
-    # -----------------------------
-    for m, m_full in zip(metrics, metrics_full):
-        valid = qc_df[m_full].notna()
-        data = qc_df.loc[valid].copy()
-        
-        if data.empty:
-            continue
-        
-        # Design matrix - start with PCs
-        X_pc = data[pc_cols].fillna(0)
-        
-        # Add batch dummies if batch column exists
-        if has_batch:
-            batch_dummies = pd.get_dummies(
-                data["batch"],
-                prefix="batch",
-                drop_first=True
-            )
-            X = pd.concat([X_pc, batch_dummies], axis=1)
-        else:
-            X = X_pc
-        
-        y = data[m_full]
-        
-        # Fit model
-        model = LinearRegression()
-        model.fit(X, y)
-        residuals = y - model.predict(X)
-        
-        # MAD normalization
-        med = np.median(residuals)
-        mad = np.median(np.abs(residuals - med))
-        if mad == 0:
-            madnorm = residuals - med
-        else:
-            madnorm = (residuals - med) / (1.4826 * mad)
-        
-        # Insert back into wide tables
-        #residuals_df.loc[valid, m] = residuals
-        madnorm_df.loc[valid, m] = madnorm
-        madnorm_df.loc[data.index, m] = madnorm.values
-
-    g_lower_threshold=compute_stratified_metrics_filter_args["lower_threshold"]
-    g_upper_threshold=compute_stratified_metrics_filter_args["upper_threshold"]
-    metric_threshold=compute_stratified_metrics_filter_args["metric_threshold"]
-    #print(type(metric_threshold))
-    #specific_thresholds=eval(metric_threshold, {"math": math})
-    s_lower_thresholds = {k: v[0] for k, v in metric_threshold.items()}
-    s_upper_thresholds = {k: v[1] for k, v in metric_threshold.items()}
-    thresholds = {
-        m: {
-            "lower": safe_eval(s_lower_thresholds.get(m, g_lower_threshold)),
-            "upper": safe_eval(s_upper_thresholds.get(m, g_upper_threshold))
-        }
-        for m in metrics
-    }
-    for metric, t in thresholds.items():
-        madnorm_df[f"fail_{metric}"] = (madnorm_df[metric] < t["lower"]) | (madnorm_df[metric] > t["upper"])
-    fail_cols = [f"fail_{m}" for m in metrics]
-    madnorm_df["qc_metrics_filters"] = madnorm_df.apply(
-        lambda row: {col.replace("fail_", "") for col in fail_cols if row[col]},
-        axis=1
-    )
-    fail_cols.append("qc_metrics_filters")
-    mad_ht = hl.Table.from_pandas(madnorm_df, key='s')
-    mad_ht_subset = mad_ht.select(*fail_cols)
-    qc_ht = qc_ht.annotate(**mad_ht_subset[qc_ht.key])
-    mad_ht = mad_ht.drop(*fail_cols)
-    return mad_ht, qc_ht
-
-def stratified_sample_qc_lm(
-    raw_mt_file: str,
-    pca_file: str,
-    use_batch: bool,
-    min_depth: int,
-    min_genotype_quality: float,
-    min_vaf: float,
-    compute_stratified_metrics_filter_args: dict,
-    **kwargs,
-):
-    pca_ht=hl.read_table(path_spark(pca_file))
-    mt=hl.read_matrix_table(path_spark(raw_mt_file))
-    mt_with_sampleqc=run_filtering_and_sample_qc(mt, min_depth, min_genotype_quality, min_vaf)
-    qc_metrics_ht=mt_with_sampleqc.cols()#sample_qc_ht=mt_with_sampleqc.cols()
-    ########
-    mad_ht, qc_metrics_ht=run_linear_model(qc_metrics_ht, pca_ht, use_batch, compute_stratified_metrics_filter_args)
-    #mad_ht=modify_mad_ht(mad_ht, compute_stratified_metrics_filter_args)#made this function
-    return mt_with_sampleqc, qc_metrics_ht, mad_ht
 
 #######################################
 #plots
@@ -649,8 +585,6 @@ def plot_sampleqc_metric(
         p.title.text_font_size = text_size
     p.xaxis.axis_label = metric
     return p
-
-import math
 
 def plot_mad_metrics(
     ht_mad: hl.Table,
@@ -973,17 +907,6 @@ def main():
         # plot metrics
         print("=== Plotting metrics ===")
         plot_mad_metrics(mad_ht, qc_metrics, **config["step2"]["plot_sample_qc_metrics"], use_strata=use_batch, metric_thresholds=threshold_dict)
-
-    elif runmode=="lm":
-        mt_with_sampleqc, qc_metrics_ht, mad_ht=stratified_sample_qc_lm(raw_mt_file, pc_scores_file, **config["step2"]["stratified_sample_qc"])
-        mt_with_sampleqc.cols().write(path_spark(ht_qc_cols_outfile), overwrite=True)
-        qc_metrics_ht.write(path_spark(qc_filter_file), overwrite=True)
-        qc_metrics_ht.export(path_spark(output_text_file), delimiter="\t")
-        # plot population metrics
-        print("=== Plotting population metrics ===")
-        use_batch=config["step2"]["stratified_sample_qc"]["use_batch"]
-        plot_mad_metrics(mad_ht, use_batch, **config["step2"]["plot_sample_qc_metrics"])
-
 
 if __name__ == "__main__":
     main()
