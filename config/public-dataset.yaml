@@ -43,6 +43,8 @@ general:
     vep_consequences:    '${general.metadata_dir}/${general.dataset_name}.all_consequences_with_gene_and_csq.tsv.bgz'
     pedigree:            '${general.metadata_dir}/${general.dataset_name}.trios.fam'
     giab_sample_id: 'NA12878'
+    # control samples are excluded from sample QC to remain in variant QC
+    control_samples: ['NA12878']
 
   rf_model_id: 'wxs-qc_public'
 

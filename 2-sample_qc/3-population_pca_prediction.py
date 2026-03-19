@@ -165,7 +165,7 @@ def main():
     tmp_dir = config["general"]["tmp_dir"]
 
     # = STEP PARAMETERS = #
-    ## No parameters for this step
+    control_list=config["step2"]["general"]["metadata"]["control_samples"]
 
     # = STEP DEPENDENCIES = #
     mtfile = path_spark(config["step2"]["impute_sex"]["sex_mt_outfile"])
@@ -188,6 +188,8 @@ def main():
 
     if args.merge_and_ldprune:
         mt = hl.read_matrix_table(mtfile)
+        #removing controll samples
+        mt= filtering.remove_samples(mt, control_list)
         kg_mt = hl.read_matrix_table(kg_mt_file)
         pruned_mt = merge_1kg_and_ldprune(mt, kg_mt, **config["step2"]["merge_1kg_and_ldprune"])
         pruned_mt.write(pruned_mt_file, overwrite=True)

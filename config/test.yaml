@@ -43,7 +43,8 @@ general:
     vep_consequences:    '${general.metadata_dir}/${general.dataset_name}.all_consequences_with_gene_and_csq.tsv.bgz'
     pedigree:            null
     giab_sample_id: 'NA12878'
-
+    # control samples are excluded from sample QC to remain in variant QC
+    control_samples: ["GM12878_NS6K", "GM12878_NSX", "GM24143_NS6K", "GM24143_NSX", "GM24149_NS6K", "GM24149_NSX", "GM24385_NS6K", "GM24385_NSX", "GM24631_NS6K", "GM24631_NSX"]
   rf_model_id: 'wxs-qc_public'
 
 # Block of cvars variables - use to provide shorter alternatives for long names

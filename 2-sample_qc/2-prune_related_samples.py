@@ -5,7 +5,7 @@ import os
 from utils.utils import parse_config, path_local, path_spark
 import bokeh.plotting as bkplt
 import bokeh.layouts as bklayouts
-from wes_qc import hail_utils, hail_patches, constants
+from wes_qc import hail_utils, hail_patches, constants, filtering
 from gnomad.sample_qc.ancestry import pc_project
 
 def prune_mt(mt: hl.MatrixTable, ld_prune_args, **kwargs) -> hl.MatrixTable:
@@ -138,7 +138,7 @@ def main():
     tmp_dir = config["general"]["tmp_dir"]
 
     # = STEP PARAMETERS = #
-    ## No parameters for this step
+    control_list=config["step2"]["general"]["metadata"]["control_samples"]
 
     # = STEP DEPENDENCIES = #
     mt_infile = config["step2"]["impute_sex"]["sex_mt_outfile"]
@@ -156,7 +156,8 @@ def main():
 
     # load input mt
     mt = hl.read_matrix_table(path_spark(mt_infile))
-
+    #removing control samples
+    mt= filtering.remove_samples(mt, control_list)
     # ld prune to get a table of variants which are not correlated
     pruned_mt = prune_mt(mt, **config["step2"]["prune"])
     pruned_mt.write(path_spark(mtoutfile), overwrite=True)

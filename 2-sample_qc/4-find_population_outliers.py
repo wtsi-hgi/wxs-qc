@@ -5,7 +5,7 @@ import hail as hl
 import pandas as pd
 from typing import Optional
 
-from wes_qc import hail_utils, constants
+from wes_qc import hail_utils, constants,filtering
 from utils.utils import parse_config, path_spark
 from gnomad.sample_qc.filtering import determine_nearest_neighbors, compute_qc_metrics_residuals, compute_stratified_metrics_filter
 import bokeh.plotting as bkplot
@@ -22,6 +22,7 @@ import json
 #######################################
 def run_filtering_and_sample_qc(
     mt: hl.MatrixTable,
+    control_list: list,
     min_depth: int,
     min_genotype_quality: float,
     min_vaf: float,
@@ -40,6 +41,8 @@ def run_filtering_and_sample_qc(
     step2.stratified_sample_qc.min_genotype_quality : float : minimum GQ threshold
     step2.stratified_sample_qc.min_vaf : float : minimum VAF threshold
     """
+    # removing control samples
+    mt = filtering.remove_samples(mt, control_list)
     # filter MT by depth/gq/vaf
     if min_depth > 0 or min_genotype_quality > 0 or min_vaf > 0:
         vaf = mt.AD[1] / hl.sum(mt.AD)
@@ -262,6 +265,7 @@ def annotate_mt(raw_mt_file: str, pop_ht_file: str) -> hl.MatrixTable:
 def stratified_sample_qc_pop(
     mt: hl.MatrixTable,
     qc_metrics: list,
+    control_list: list,
     min_depth: int,
     min_genotype_quality: float,
     min_vaf: float,
@@ -292,7 +296,7 @@ def stratified_sample_qc_pop(
     step2.stratified_sample_qc.qc_filter_file : output path : used in main
     """
     #filtering variants and running sample QC
-    mt_with_sampleqc=run_filtering_and_sample_qc(mt, min_depth, min_genotype_quality, min_vaf)
+    mt_with_sampleqc=run_filtering_and_sample_qc(mt, control_list, min_depth, min_genotype_quality, min_vaf)
     sample_qc_ht=mt_with_sampleqc.cols()
 
     #modifying compute_stratified_metrics_filter_args
@@ -330,6 +334,7 @@ def stratified_sample_qc_nn(
     raw_mt_file: str,
     pca_score_file: str,
     qc_metrics: list,
+    control_list: list,
     use_batch: bool,
     min_depth: int,
     min_genotype_quality: float,
@@ -363,7 +368,7 @@ def stratified_sample_qc_nn(
     pca_scores=hl.read_table(path_spark(pca_score_file))
     mt=hl.read_matrix_table(path_spark(raw_mt_file))
     #filtering variants and running sample QC
-    mt_with_sampleqc=run_filtering_and_sample_qc(mt, min_depth, min_genotype_quality, min_vaf)
+    mt_with_sampleqc=run_filtering_and_sample_qc(mt, control_list, min_depth, min_genotype_quality, min_vaf)
     sample_qc_ht=mt_with_sampleqc.cols()#sample_qc_ht=mt_with_sampleqc.cols()
 
     #checking if batch column exists when a user wants to use it for stratification
@@ -421,6 +426,7 @@ def stratified_sample_qc_lr(
     raw_mt_file: str,
     pca_score_file: str,
     qc_metrics: list,
+    control_list: list,
     use_batch: bool,
     min_depth: int,
     min_genotype_quality: float,
@@ -453,7 +459,7 @@ def stratified_sample_qc_lr(
     pca_scores=hl.read_table(path_spark(pca_score_file))
     mt=hl.read_matrix_table(path_spark(raw_mt_file))
     #filtering variants and running sample QC
-    mt_with_sampleqc=run_filtering_and_sample_qc(mt, min_depth, min_genotype_quality, min_vaf)
+    mt_with_sampleqc=run_filtering_and_sample_qc(mt, control_list, min_depth, min_genotype_quality, min_vaf)
     sample_qc_ht=mt_with_sampleqc.cols()#sample_qc_ht=mt_with_sampleqc.cols()
 
     #checking if batch column exists when a user wants to use it for stratification
@@ -847,6 +853,10 @@ def main():
 
     # = STEP PARAMETERS = #
     runmode=config["step2"]["stratified_sample_qc"]["sample_qc_method"]
+    control_list=config["step2"]["general"]["metadata"]["control_samples"]
+    if control_list is None:
+        control_list=[]
+
     # = STEP DEPENDENCIES = #
     raw_mt_file = config["step1"]["validate_gtcheck"]["mt_gtcheck_validated"]
     pop_ht_file = config["step2"]["predict_pops"]["pop_ht_outfile"]
@@ -880,7 +890,7 @@ def main():
         mt = annotate_mt(raw_mt_file, pop_ht_file)
         mt.write(path_spark(annotated_mt_file), overwrite=True)
         # run sample QC and stratify by population
-        mt_with_sampleqc, sample_qc_ht, mad_ht, threshold_dict = stratified_sample_qc_pop(mt, qc_metrics, **config["step2"]["stratified_sample_qc"])
+        mt_with_sampleqc, sample_qc_ht, mad_ht, threshold_dict = stratified_sample_qc_pop(mt, qc_metrics, control_list, **config["step2"]["stratified_sample_qc"])
         mt_with_sampleqc.cols().write(path_spark(ht_qc_cols_outfile), overwrite=True)
         sample_qc_ht.write(path_spark(qc_filter_file), overwrite=True)
         sample_qc_ht.export(path_spark(output_text_file), delimiter="\t")
@@ -894,7 +904,7 @@ def main():
 
     elif runmode=="nn":
         # run sample QC and stratify by batch if specified
-        mt_with_sampleqc, sample_qc_ht, qc_metrics_stats, mad_ht, nn_ht, use_batch, threshold_dict=stratified_sample_qc_nn(raw_mt_file, pc_scores_file, qc_metrics, **config["step2"]["stratified_sample_qc"])
+        mt_with_sampleqc, sample_qc_ht, qc_metrics_stats, mad_ht, nn_ht, use_batch, threshold_dict=stratified_sample_qc_nn(raw_mt_file, pc_scores_file, qc_metrics, control_list, **config["step2"]["stratified_sample_qc"])
         mt_with_sampleqc.cols().write(path_spark(ht_qc_cols_outfile), overwrite=True)
         sample_qc_ht.write(path_spark(qc_filter_file), overwrite=True)
         sample_qc_ht.export(path_spark(output_text_file), delimiter="\t")
@@ -917,7 +927,7 @@ def main():
 
     elif runmode=="lr":
         # run sample QC and stratify by batch if specified
-        mt_with_sampleqc, qc_metrics_ht, mad_ht, sample_qc_res_ht, use_batch, threshold_dict=stratified_sample_qc_lr(raw_mt_file, pc_scores_file, qc_metrics, **config["step2"]["stratified_sample_qc"])
+        mt_with_sampleqc, qc_metrics_ht, mad_ht, sample_qc_res_ht, use_batch, threshold_dict=stratified_sample_qc_lr(raw_mt_file, pc_scores_file, qc_metrics, control_list, **config["step2"]["stratified_sample_qc"])
         mt_with_sampleqc.cols().write(path_spark(ht_qc_cols_outfile), overwrite=True)
         qc_metrics_ht.write(path_spark(qc_filter_file), overwrite=True)
         qc_metrics_ht.export(path_spark(output_text_file), delimiter="\t")

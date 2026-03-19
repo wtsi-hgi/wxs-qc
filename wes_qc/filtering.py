@@ -115,3 +115,10 @@ def filter_by_bed(ht: hl.Table, intervals: hl.Table) -> hl.Table:
     Filter a Hail Table by a BED file
     """
     return ht.filter(hl.is_defined(intervals[ht.locus]))
+
+
+def remove_samples(mt: hl.MatrixTable, sample_list: list)->hl.MatrixTable:
+    if sample_list is not None and sample_list != []:
+        samples_to_remove_set = hl.literal(set(sample_list))
+        mt = mt.filter_cols(~samples_to_remove_set.contains(mt.s))
+    return mt
