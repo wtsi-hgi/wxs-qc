@@ -65,22 +65,23 @@ def run_filtering_and_sample_qc(
 
 def modify_metric_dict(compute_stratified_metrics_filter_args: dict) -> dict:
     """
-    Convert metric_threshold values from strings to numeric values
+    Convert metric threshold values from strings to numeric values
     param dict compute_stratified_metrics_filter_args: arguments for stratified metrics filter
 
     ### Config fields
     step2.stratified_sample_qc.metric_threshold : dict : metric-specific thresholds
-
-    ### Indirect config fields
     step2.stratified_sample_qc.upper_threshold : float : default upper threshold
-    step2.stratified_sample_qc.metric_threshold : dict : metric-specific overrides
+    step2.stratified_sample_qc.lower_threshold : float : default upper threshold
+
     """
-    metric_dict=compute_stratified_metrics_filter_args["metric_threshold"]
+    metric_dict=compute_stratified_metrics_filter_args.get("metric_threshold", None)
     if metric_dict!=None:
         compute_stratified_metrics_filter_args["metric_threshold"] = {
             k: tuple(eval(v_i, {"math": math}) if isinstance(v_i, str) else v_i for v_i in v)
             for k, v in metric_dict.items()
         }
+    compute_stratified_metrics_filter_args["upper_threshold"] = math.inf if compute_stratified_metrics_filter_args.get("upper_threshold") == "math.inf" else compute_stratified_metrics_filter_args.get("upper_threshold")
+    compute_stratified_metrics_filter_args["lower_threshold"] = math.inf if compute_stratified_metrics_filter_args.get("lower_threshold") == "math.inf" else compute_stratified_metrics_filter_args.get("lower_threshold")
     return compute_stratified_metrics_filter_args
 
 def modify_metric_names(compute_stratified_metrics_filter_args: dict) -> dict:
@@ -92,10 +93,8 @@ def modify_metric_names(compute_stratified_metrics_filter_args: dict) -> dict:
     step2.stratified_sample_qc.metric_threshold : dict : metric-specific thresholds
 
     ### Indirect config fields
-    step2.stratified_sample_qc.upper_threshold : float : default upper threshold
-    step2.stratified_sample_qc.metric_threshold : dict : metric-specific overrides
     """
-    metric_dict=compute_stratified_metrics_filter_args["metric_threshold"]
+    metric_dict=compute_stratified_metrics_filter_args.get("metric_threshold", None)
     if metric_dict!=None:
         for key in list(compute_stratified_metrics_filter_args['metric_threshold'].keys()):
             compute_stratified_metrics_filter_args['metric_threshold'][key + '_residual'] = compute_stratified_metrics_filter_args['metric_threshold'].pop(key)
@@ -115,7 +114,7 @@ def get_threshold_dict (compute_stratified_metrics_filter_args: dict, qc_metrics
     threshold_dict={}
     for metric in qc_metrics:
         threshold_dict[metric]=(-compute_stratified_metrics_filter_args['lower_threshold'], compute_stratified_metrics_filter_args['upper_threshold'])
-    if compute_stratified_metrics_filter_args['metric_threshold'] != None:
+    if compute_stratified_metrics_filter_args.get('metric_threshold', None) != None:
         for metric in compute_stratified_metrics_filter_args['metric_threshold'].keys():
             threshold_dict[metric]=(-compute_stratified_metrics_filter_args['metric_threshold'][metric][0], compute_stratified_metrics_filter_args['metric_threshold'][metric][1])
     return threshold_dict
@@ -299,6 +298,10 @@ def stratified_sample_qc_pop(
     #modifying compute_stratified_metrics_filter_args
     compute_stratified_metrics_filter_args=modify_metric_dict(compute_stratified_metrics_filter_args)
     threshold_dict=get_threshold_dict(compute_stratified_metrics_filter_args, qc_metrics)
+    if "comparison_sample_expr" in compute_stratified_metrics_filter_args.keys():
+        print ("=== Warning! 'comparison_sample_expr' was provided but will be ignored in 'compute_stratified_metrics_filter'=== ")
+        compute_stratified_metrics_filter_args.pop("comparison_sample_expr", None)
+
     print("=== Runnig stratified metrics filter ===")
     # Using gnomAD function to calculate stratified metrics
     filter_ht = compute_stratified_metrics_filter(
@@ -327,12 +330,13 @@ def stratified_sample_qc_nn(
     raw_mt_file: str,
     pca_score_file: str,
     qc_metrics: list,
-    n_neighbors: int,
     use_batch: bool,
     min_depth: int,
     min_genotype_quality: float,
     min_vaf: float,
     compute_stratified_metrics_filter_args: dict,
+    determine_nearest_neighbors_args: dict,
+
     **kwargs,
 )-> tuple[hl.MatrixTable, hl.Table, hl.Table, hl.Table, hl.Table, bool, dict]:
     """
@@ -340,15 +344,14 @@ def stratified_sample_qc_nn(
     param str raw_mt_file: input MT file
     param str pca_score_file: PCA scores file
     param list qc_metrics: QC metrics to analyse
-    param int n_neighbors: number of nearest neighbors
     param bool use_batch: whether to stratify by batch
     param int min_depth: minimum DP threshold
     param float min_genotype_quality: minimum GQ threshold
     param float min_vaf: minimum VAF threshold
     param dict compute_stratified_metrics_filter_args: arguments for stratified filtering
+    param dict determine_nearest_neighbors_args: arguments for Determing nearest neighbors
 
     ### Config fields
-    step2.stratified_sample_qc.n_neighbors : int : number of neighbors
     step2.stratified_sample_qc.use_batch : bool : use batch for stratification
     step2.stratified_sample_qc.min_depth : int : minimum DP threshold
     step2.stratified_sample_qc.min_genotype_quality : float : minimum GQ threshold
@@ -367,13 +370,16 @@ def stratified_sample_qc_nn(
     if use_batch and 'batch' not in sample_qc_ht.row:
         print("=== WARNING! Batch annotation is not found, batch won't be used for stratified qc ===")
         use_batch=False
-    print(f"=== Determing {n_neighbors} nearest neighbors ===")
+    print(f"=== Determing nearest neighbors ===")
+    if determine_nearest_neighbors_args is None:
+        determine_nearest_neighbors_args={}
+    determine_nearest_neighbors_args["strata"]={"batch": sample_qc_ht.batch} if use_batch else None
+    determine_nearest_neighbors_args["add_neighbor_distances"]=True
     # Using gnomAD function to determine nearest neighbors
     nn_ht = determine_nearest_neighbors(
         sample_qc_ht,
         pca_scores[sample_qc_ht.key].scores,
-        n_neighbors=n_neighbors,
-        strata={"batch": sample_qc_ht.batch} if use_batch else None
+        **determine_nearest_neighbors_args
     )
 
     #annotating sample_qc_ht with nearest neighbors information
@@ -383,6 +389,9 @@ def stratified_sample_qc_nn(
     #modifying compute_stratified_metrics_filter_args
     compute_stratified_metrics_filter_args=modify_metric_dict(compute_stratified_metrics_filter_args)
     threshold_dict=get_threshold_dict(compute_stratified_metrics_filter_args, qc_metrics)
+    if "comparison_sample_expr" in compute_stratified_metrics_filter_args.keys():
+        print ("=== Warning! 'comparison_sample_expr' was provided but will be ignored in 'compute_stratified_metrics_filter' because this pipeline sets that argument internally to 'sample_qc_ht.nearest_neighbors' === ")
+        compute_stratified_metrics_filter_args.pop("comparison_sample_expr", None)
 
     print("=== Runnig stratified metrics filter ===")
     # Using gnomAD function to calculate stratified metrics
@@ -417,7 +426,7 @@ def stratified_sample_qc_lr(
     min_genotype_quality: float,
     min_vaf: float,
     compute_stratified_metrics_filter_args: dict,
-    use_pc_square: bool,
+    compute_qc_metrics_residuals_args: dict,
     **kwargs,
 ) -> tuple[hl.MatrixTable, hl.Table, hl.Table, hl.Table, bool, dict]:
     """
@@ -430,7 +439,7 @@ def stratified_sample_qc_lr(
     param float min_genotype_quality: minimum GQ threshold
     param float min_vaf: minimum VAF threshold
     param dict compute_stratified_metrics_filter_args: arguments for stratified filtering
-    param bool use_pc_square: whether to include squared PCs in regression
+    param dict compute_qc_metrics_residuals_args: arguments for residual computing
 
     ### Config fields
     step2.stratified_sample_qc.use_batch : bool : use batch for stratification
@@ -453,19 +462,31 @@ def stratified_sample_qc_lr(
         use_batch=False
     #annotating sample_qc_ht with PCs
     sample_qc_ht = sample_qc_ht.annotate(scores=pca_scores[sample_qc_ht.key].scores)
+    #modifying compute_qc_metrics_residuals_args
     print("=== Runnig residual calculation ===")
+    if compute_qc_metrics_residuals_args is None:
+        compute_qc_metrics_residuals_args={}
+    compute_qc_metrics_residuals_args["strata"]={"batch": sample_qc_ht.batch} if use_batch else None
+    if "regression_sample_inclusion_expr" in compute_qc_metrics_residuals_args.keys():
+        print ("=== Warning! 'regression_sample_inclusion_expr' was provided but will be ignored in 'compute_qc_metrics_residuals'=== ")
+        compute_qc_metrics_residuals_args.pop("regression_sample_inclusion_expr", None)
+
     # Using gnomAD function to calculate residuals
     sample_qc_res_ht=compute_qc_metrics_residuals(
         sample_qc_ht,
         sample_qc_ht.scores,
         qc_metrics={metric: sample_qc_ht.sample_qc[metric] for metric in qc_metrics},
-        strata={"batch": sample_qc_ht.batch} if use_batch else None,
-        use_pc_square=use_pc_square)
+        **compute_qc_metrics_residuals_args
+    )
 
-    #modifying compute_stratified_metrics_filter_args
+    #modifying compute_stratified_metrics_filter_args_lr
     compute_stratified_metrics_filter_args=modify_metric_dict(compute_stratified_metrics_filter_args)
     threshold_dict=get_threshold_dict(compute_stratified_metrics_filter_args, qc_metrics)
     compute_stratified_metrics_filter_args_lr=modify_metric_names(compute_stratified_metrics_filter_args)
+
+    if "comparison_sample_expr" in compute_stratified_metrics_filter_args_lr.keys():
+        print ("=== Warning! 'comparison_sample_expr' was provided but will be ignored in 'compute_stratified_metrics_filter'=== ")
+        compute_stratified_metrics_filter_args_lr.pop("comparison_sample_expr", None)
 
     print("=== Runnig stratified metrics filter ===")
     # Using gnomAD function to calculate stratified metrics
@@ -474,7 +495,7 @@ def stratified_sample_qc_lr(
         qc_metrics=dict(sample_qc_res_ht.row_value),
         strata={"batch": sample_qc_ht[sample_qc_res_ht.key].batch} if use_batch else None,
         **compute_stratified_metrics_filter_args_lr,
-        )
+    )
 
     #generating table with MADs for plots
 
