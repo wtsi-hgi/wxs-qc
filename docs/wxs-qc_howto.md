@@ -188,6 +188,10 @@ Specify the corresponding input file in the `general->metadata` config for each 
   A tab-separated TSV file, having at least two columns: `sample_id` and `self_reported_sex`.
   The `sample_id` column contains IDs of your samples (same as in your input VCFs).
   The `self_reported_sex` contains sex definition: `female`, `male` or `undefined`.
+* _batch_ - a two-column tab delimited file specifying batch for each sample.
+  If present, WxS-QC applies sample QC statistics for each batch indiviually. 
+  Is useful when your data contain subsets sequenced using different wel-lab protocols,
+  The example dataset contains no batches.
 
 If you don't have some (or even any) of these annotations,
 put `null` instead of the filename in the config file.
@@ -259,48 +263,74 @@ a conflict between self-reported sex and genetically imputed sex, and saves it i
 
 
 ### Identify samples from related individuals with PCRelate
-This step outputs a relatedness graph, a table of total statistics of relatedness, and a list of related samples.
-Please see config files "prune_pc_relate" for more details.
+This step identifies related samples using Hail pc-relate() function.
+Next, it runs PCA on
+
+### Summary of `2-sample_qc/2-prune_related_samples.py`
+
+This script identifies related individuals is the dataset to 
+ensure they do not bias population structure analysis on later stages. 
+
+It performs **LD pruning** to obtain a set of independent variants,
+thenuses the Hail [PC-Relate](https://hail.is/docs/0.2/methods/relatedness.html#hail.methods.pc_relate) 
+function to calculate kinship coefficients and IBD (Identity By Descent). 
+Based on these scores, it identifies a **maximal independent set** of unrelated individuals 
+and generates a list of related samples that exceed the kinship threshold.
+
+Next, the script performs a **preliminary PCA** for unrelated samples, 
+projects the related samples onto this PCA space.
 
 ```shell
 python 2-sample_qc/2-prune_related_samples.py
 ```
+ 
+The step outputs related sample infor in PLink format, 
+the list of relates samples and PCA scores for subsequent population prediction. 
 
-While this step identifies related samples, we keep them in the dataset since step 2.3 uses PCA score projection for population clustering. The relatedness information can be used to validate pedigree data and detect sample mislabeling.
+It also plots the Koch's relatedness plots (Kinship vs. IBD2) 
+and PC1/PC2 sample scatterplot.
 
 
-### Predict super-populations
+### PCA-based super-population prediction
 
-Merge 1kg MatrixTable with WxS MatrixTable and make LD pruning.
+This script predicts the super-population of each sample 
+by comparing the study dataset with a reference 1000 Genomes panel. 
+First, merge the study data with the reference 1000 Genomes data,
+and run LD pruning.
+
+If you want to use the nearest neighbours or linear regression sample QC method 
+you can completely skip this step.
 
 ```shell
 python 2-sample_qc/3-population_pca_prediction.py --merge-and-ldprune
 ```
 
-Run PCA.
-
+Perform PCA on the reference 1000 Genome samples to define the ancestral coordinate space,
+and plot the results.
 ```shell
 python 2-sample_qc/3-population_pca_prediction.py --pca
-```
-
-Plot 1KG PCA. On this step, all dataset samples should be labelled as `N/A`.
-
-```shell
 python 2-sample_qc/3-population_pca_prediction.py --pca-plot
 ```
+On this step, all dataset samples should be labelled as `N/A`.
 
-Run population prediction.
+Project the study samples onto these principal components,
+run a **Random Forest classifier** to assign populations,
+and plot the results.
+The plot step PCA clustering for merged dataset (1000 genomes + the dataset), and for the dataset only.
+You can specify the number of PCA components you want in the config file.
+
+The projection ensures that the study cohort’s structure is measured against 
+a known global reference without biasing the principal components themselves.
 
 ```shell
 python 2-sample_qc/3-population_pca_prediction.py --assign_pops
-```
-
-Plot PCA clustering for merged dataset (1000 genomes + the dataset), and for the dataset only.
-You can specify the number of PCA components you want in the config file.
-
-```shell
 python 2-sample_qc/3-population_pca_prediction.py --pca-plot-assigned
 ```
+
+The script outputs population assignment tables and PCA plots.
+Review graphs to ensure that the superpopulation structue matches your expectations.
+
+
 ### Identify outliers
 
 Now that we have the predicted populations that each sample belongs to,

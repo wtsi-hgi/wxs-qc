@@ -39,7 +39,7 @@ general:
     verifybamid_selfsm:  '${general.metadata_dir}/${general.dataset_name}.verify_bam_id_result.selfSM.tsv'  # Set to null if you don't have freemix data
     self_reported_sex:   '${general.metadata_dir}/${general.dataset_name}.self_reported_sex.tsv'
     #Set batch_file to null if you don't have batch information. All samples will be marked as batch1.
-    batch_file:          '${general.metadata_dir}/${general.dataset_name}.batch.tsv'
+    batch_file:          null #'${general.metadata_dir}/${general.dataset_name}.batch.tsv'
     vep_consequences:    '${general.metadata_dir}/${general.dataset_name}.all_consequences_with_gene_and_csq.tsv.bgz'
     pedigree:            '${general.metadata_dir}/${general.dataset_name}.trios.fam'
     giab_sample_id: 'NA12878'
@@ -195,7 +195,7 @@ step2:
     pca_scores_file: '${cvars.mtdir}/mt_pca_scores.unrelated_samples.ht' # output
     pca_loadings_file: '${cvars.mtdir}/mt_pca_loadings.unrelated_samples.ht' # output
     pca_mt_file: '${cvars.mtdir}/mt_pca.mt' # output
-    plot_outfile: '${cvars.pltdir}/pca.html' # output
+    plot_outfile: '${cvars.pltdir}/relatedness_pca.html' # output
 
   # --- Step 2.3 --- #
   merge_1kg_and_ldprune:

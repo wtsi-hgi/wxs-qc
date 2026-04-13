@@ -138,7 +138,7 @@ def main():
     tmp_dir = config["general"]["tmp_dir"]
 
     # = STEP PARAMETERS = #
-    control_list=config["step2"]["general"]["metadata"]["control_samples"]
+    control_list=config["general"]["metadata"]["control_samples"]
 
     # = STEP DEPENDENCIES = #
     mt_infile = config["step2"]["impute_sex"]["sex_mt_outfile"]
