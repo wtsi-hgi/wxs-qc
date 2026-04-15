@@ -14,7 +14,7 @@ def merge_1kg_and_ldprune(
     mt: hl.MatrixTable,
     kg_mt: hl.MatrixTable,
     long_range_ld_file: str,
-    merged_filtered_mt_outfile: str,
+    pruned_mt_outfile: str,
     r2_threshold: float,
     call_rate_threshold: float,
     af_threshold: float,
@@ -26,7 +26,7 @@ def merge_1kg_and_ldprune(
     :param mt: input matrix table
     :param kg_mt: 1kg matrix table
     :param long_range_ld_file: Long range LD file
-    :param merged_filtered_mt_outfile: Merged and filtered matrix output file
+    :param pruned_mt_outfile: pruned reference matrix output file
     :param r2_threshold: Correlation threshold for LD pruning
     :param call_rate_threshold: Call rate threshold for filtering
     :param af_threshold: Allele frequency threshold for filtering
@@ -54,17 +54,21 @@ def merge_1kg_and_ldprune(
     )  # Dropping row fields that are not present in the 1kg matrix
     mt_filtered = mt_filtered.select_cols()  # dropping all column fields
     mt_filtered = mt_filtered.annotate_cols(known_pop=hl.missing(hl.tstr))
-    # merging matrices
-    mt_merged = mt_filtered.union_cols(kg_mt)
-    # saving the merged matrix
-    mt_merged = mt_merged.checkpoint(merged_filtered_mt_outfile, overwrite=True)
+    # keeping shared variants
+    mt_filtered = mt_filtered.semi_join_rows(kg_mt.rows())
+    kg_mt = kg_mt.semi_join_rows(mt_filtered.rows())
 
-    # prunning of the linked Variants
-    pruned_ht = hl.ld_prune(mt_merged.GT, r2=r2_threshold)
-    pruned_mt = mt_merged.filter_rows(hl.is_defined(pruned_ht[mt_merged.row_key]))
+    # prunning of the linked Variants in kg_mt
+    pruned_ht = hl.ld_prune(kg_mt.GT, r2=r2_threshold)
+    pruned_mt = kg_mt.filter_rows(hl.is_defined(pruned_ht[kg_mt.row_key]))
     pruned_mt = pruned_mt.select_entries(GT=hl.unphased_diploid_gt_index_call(pruned_mt.GT.n_alt_alleles()))
+    pruned_mt = pruned_mt.checkpoint(pruned_mt_outfile, overwrite=True)
 
-    return pruned_mt
+    # merging matrices
+    mt_merged = mt_filtered.union_cols(pruned_mt)
+    # saving the merged matrix
+
+    return mt_merged
 
 
 def pop_pca(
@@ -173,7 +177,7 @@ def main():
     kg_pop_file = path_spark(config["step0"]["create_1kg_mt"]["kg_pop_file"])
 
     # = STEP OUTPUTS = #
-    pruned_mt_file = path_spark(config["step2"]["merge_1kg_and_ldprune"]["filtered_and_pruned_mt_outfile"])
+    merged_mt_file = path_spark(config["step2"]["merge_1kg_and_ldprune"]["pruned_and_merged_mt_outfile"])
     pca_1kg_scores_file = path_spark(config["step2"]["pop_pca"]["pca_1kg_scores_file"])
     pca_1kg_loadings_file = path_spark(config["step2"]["pop_pca"]["pca_1kg_loadings_file"])
     pca_union_scores_file = path_spark(config["step2"]["pop_pca"]["pca_union_scores_file"])
@@ -192,11 +196,11 @@ def main():
         mt= filtering.remove_samples(mt, control_list)
         kg_mt = hl.read_matrix_table(kg_mt_file)
         pruned_mt = merge_1kg_and_ldprune(mt, kg_mt, **config["step2"]["merge_1kg_and_ldprune"])
-        pruned_mt.write(pruned_mt_file, overwrite=True)
+        pruned_mt.write(merged_mt_file, overwrite=True)
 
     # run pca
     if args.pca:
-        filtered_mt = hl.read_matrix_table(pruned_mt_file)
+        filtered_mt = hl.read_matrix_table(merged_mt_file)
         pca_1kg_scores, pca_1kg_loadings, union_PCA_scores = pop_pca(filtered_mt, **config["step2"]["pop_pca"])
         pca_1kg_scores.write(pca_1kg_scores_file, overwrite=True)
         pca_1kg_loadings.write(pca_1kg_loadings_file, overwrite=True)

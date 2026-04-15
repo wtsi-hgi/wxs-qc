@@ -200,12 +200,12 @@ step2:
   # --- Step 2.3 --- #
   merge_1kg_and_ldprune:
     long_range_ld_file: '${cvars.resdir}/long_ld_regions.hg38.bed'
-    merged_filtered_mt_outfile: '${cvars.mtdir}/merged_with_1kg_filtered.mt'
+    pruned_mt_outfile: '${cvars.mtdir}/1kg_filtered_ldpruned.mt'
     call_rate_threshold: 0.99
     af_threshold: 0.05
     hwe_threshold: 0.00001 #1e-5
     r2_threshold: 0.2
-    filtered_and_pruned_mt_outfile: '${cvars.mtdir}/merged_with_1kg_filtered_ldpruned.mt'
+    pruned_and_merged_mt_outfile: '${cvars.mtdir}/merged_with_1kg_filtered_ldpruned.mt'
 
   pop_pca:
     pca_1kg_scores_file: '${cvars.mtdir}/pop_pca_1kg_scores.ht'
