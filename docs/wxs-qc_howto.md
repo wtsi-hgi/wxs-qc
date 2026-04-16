@@ -249,9 +249,9 @@ Also, you can specify the IQR range for outliers and change the plot size if nee
 
 The sample QC stage implements three different variants of sample QC.
 You can choose it in the `general -> sample_qc_method` section of the config file:
-  * pop - Stratified QC with PCA-assigned superpopulations (from gnomAD v3 + de novo PCA projection)
-  * nn - Nearest neighbours (from gnomAD v4)
-  * lr - linera regression (from gnomAD v4)
+  * `pop` - Stratified QC with PCA-assigned superpopulations (from gnomAD v3 + de novo PCA projection)
+  * `nn` - Nearest neighbours (from gnomAD v4)
+  * `lr` - Linear regression (from gnomAD v4)
 
 For all methods we calculate a set of key quality metrics:
 * number of SNPs
@@ -269,6 +269,9 @@ Depending on the chosen method the step outputs can slightly differ.
 
 You can use one of these method, or try all of it and compare results.
 
+The control samples, named in the `general -> metadata -> control_samples` section,
+are kept in the dataset despite any results of the sample QC check.
+
 #### Superpopulation Stratified Outlier Detection (pop)
 This method, originally used in gnomAD v3, performs outlier detection within predefined superpopulation groups 
 (e.g., EUR, AFR, EAS), identified on the 
@@ -284,6 +287,13 @@ function description.
 You can set up the number of PCA components for the script
 `3-population_pca_prediction.py`
 in the section `step2 -> pop_pca` of the config file.
+
+**Warning:**
+It is a well known issue that some ancestries are not represented in 1000 Genomes and gnomAD v3 reference panels. 
+The _Nearest Neighbours_ and _Linear Regression_ methods from gnomAD v4 were specially introduced
+to correctly perform sample QC for samples with ancestries not represented in the panel.
+Also, the pop method requires significant (20+) number of samples for each superpopulation.
+Use the _pop_ method only for large cohorts with common ancestries covered by 1000 Genomes reference panel.
 
 #### Nearest Neighbors (nn)
 The Nearest Neighbors method, introduced in gnomAD v4, 
@@ -426,9 +436,15 @@ saves them in the folder defined by the `plot_sample_qc_metrics`:`plot_outdir`
 config parameter (a set of individual plots and one combined plot for all metrics and populations).
 To change default number of bins, use the `n_bins` config parameter.
 
+The sampleQC metrics and results for each sample are saved in the 
+`annotations/stratified_sample_qc.tsv.gz` table.
+
 Depending on the chosen method the step outputs can slightly differ:
-* `pop` plots histograms for each metric and each superpopulation individually.
+* `pop` plots histograms for each metric and each superpopulation individually
 * `nn` and `lr` plot only 1 histogram per metric, because each sample is compared to its own average
+  Also, they store method-specific sample information in files
+  `annotations/nearest_neighbours.tsv.gz` and `annotations/residuals.tsv.gz` respectively.
+* `lr` additionally stores the linear regression parameters in the `annotations/lms.json` file.
 
 ### Filter out samples which fail QC
 
@@ -448,6 +464,9 @@ are in the implementation.
 ```shell
 python 2-sample_qc/5-filter_fail_sample_qc.py
 ```
+
+Samples that fail sample QC are saved in the file
+`annotations/samples_failing_qc.tsv`
 
 ## Stage 3. Variant QC
 
