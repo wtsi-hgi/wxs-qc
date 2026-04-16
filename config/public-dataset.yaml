@@ -45,8 +45,12 @@ general:
     giab_sample_id: 'NA12878'
     # control samples are excluded from sample QC to remain in variant QC
     control_samples: ['NA12878']
-
-  rf_model_id: 'wxs-qc_public'
+  # Sample QC method (see the details in docs/wxs-qc_howto.md ):
+  # * pop - Stratified QC with PCA-assigned superpopulations (from gnomAD v3 + de novo PCA projection)
+  # * nn - Nearest neighbours (from gnomAD v4)
+  # * lr - linera regression (from gnomAD v4)
+  sample_qc_method: 'pop'
+  rf_model_id: 'wxs-qc_public' # Random forest model ID for Variant QC
 
 # Block of cvars variables - use to provide shorter alternatives for long names
 cvars:
@@ -237,7 +241,7 @@ step2:
     annotated_mt_file: '${cvars.mtdir}/gatk_unprocessed_with_pop.mt' # output
 
   stratified_sample_qc:
-    sample_qc_method: 'lr' #pop -stratification based on population; nn - nearest neighbours; lm - linear model
+    sample_qc_method: '${general.sample_qc_method}'  # The sampleQC method from general
     ht_qc_cols_outfile: '${cvars.mtdir}/mt_stratified_sampleqc.ht' # output
     qc_filter_file: '${cvars.mtdir}/mt_stratified_QC_filters.ht' # output
     mad_file: '${cvars.mtdir}/mad.ht' # output
@@ -245,23 +249,18 @@ step2:
     min_genotype_quality: 10
     min_vaf: 0.2
     # Use batch in nn or lr. True or Falce
-    use_batch: True
+    use_batch: False # The public dataset has no batches inside
 
     # Additional parameters to pass to gnomAD determine_nearest_neighbors function:
     # https://broadinstitute.github.io/gnomad_methods/api_reference/sample_qc/filtering.html#gnomad.sample_qc.filtering.compute_qc_metrics_residuals
     compute_qc_metrics_residuals_args: #do not specify strata and regression_sample_inclusion_expr in compute_qc_metrics_residuals_args
-    #  use_pc_square: True # Optional parmeter. To use default value keep this line commented.
-    #  n_pcs: 10 # Optional parmeter. To use default value keep this line commented.
+      n_pcs: 10 # Number of PCA components
 
     # Additional parameters to pass to gnomAD determine_nearest_neighbors function:
     #https://broadinstitute.github.io/gnomad_methods/api_reference/sample_qc/filtering.html#gnomad.sample_qc.filtering.determine_nearest_neighbors
-    determine_nearest_neighbors_args: #do not specify add_neighbor_distances and strata in determine_nearest_neighbors_args
-    #  n_pcs: 10 # Optional parmeter. To use default value keep this line commented.
-    #  n_neighbors: 50 # Optional parmeter. To use default value keep this line commented.
-    #  n_jobs: -1 # Optional parmeter. To use default value keep this line commented.
-    #  distance_metric: “euclidean” # Optional parmeter. To use default value keep this line commented.
-    #  use_approximation: False # Optional parmeter. To use default value keep this line commented.
-    #  n_trees: 10 # Optional parmeter. To use default value keep this line commented.
+    determine_nearest_neighbors_args: #do not specify add_neighbor_distances and strata here
+      n_pcs: 10 # Number of PCA components.
+      n_neighbors: 20 # Number of neighbours to calculate average values
 
     # Additional parameters to pass to gnomAD sampleQC function:
     # https://broadinstitute.github.io/gnomad_methods/api_reference/sample_qc/filtering.html#gnomad.sample_qc.filtering.compute_stratified_metrics_filter
@@ -278,7 +277,7 @@ step2:
 
   plot_sample_qc_metrics:
     n_bins: 20
-    plot_outdir: '${cvars.pltdir}/stratified_sample_qc_metrics'
+    plot_outdir: '${cvars.pltdir}/stratified_sample_qc_metrics_${general.sample_qc_method}'
 
   # --- Step 2.5 --- #
   remove_sample_qc_fails:

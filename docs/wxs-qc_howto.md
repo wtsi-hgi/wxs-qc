@@ -247,6 +247,72 @@ Also, you can specify the IQR range for outliers and change the plot size if nee
 
 ## Stage 2. Sample QC
 
+The sample QC stage implements three different variants of sample QC.
+You can choose it in the `general -> sample_qc_method` section of the config file:
+  * pop - Stratified QC with PCA-assigned superpopulations (from gnomAD v3 + de novo PCA projection)
+  * nn - Nearest neighbours (from gnomAD v4)
+  * lr - linera regression (from gnomAD v4)
+
+For all methods we calculate a set of key quality metrics:
+* number of SNPs
+* heterozygosity rate, heterozygous/homozygous ratio
+* number of transitions and transversions, transition/transversion ratio.
+* number of deletions and insertions, insertion/deletion ratе
+
+We flag outliers as samples that deviate significantly (typically more than 4 Median Absolute Deviations) 
+from the median of their reference group.
+The MAD level can be configured individually per metric on the step
+[Identify outliers](#identify-outliers)
+
+The difference between methods is how they define a reference group for each sample.
+Depending on the chosen method the step outputs can slightly differ.
+
+You can use one of these method, or try all of it and compare results.
+
+#### Superpopulation Stratified Outlier Detection (pop)
+This method, originally used in gnomAD v3, performs outlier detection within predefined superpopulation groups 
+(e.g., EUR, AFR, EAS), identified on the 
+[PCA-based super-population prediction](#pca-based-super-population-prediction) step.
+
+This approach works the best for groups with similar genetic background, 
+which futs into a reference superpopulations from 1000Genomes data.
+More information can be found in the [gnomAD v3 documentation](https://broadinstitute.org/gnomad/news/2020-10-gnomad-v3-1/).
+For metric description, see the
+[Hail sample_qc()](https://hail.is/docs/0.2/methods/genetics.html#hail.methods.sample_qc)
+function description.
+
+You can set up the number of PCA components for the script
+`3-population_pca_prediction.py`
+in the section `step2 -> pop_pca` of the config file.
+
+#### Nearest Neighbors (nn)
+The Nearest Neighbors method, introduced in gnomAD v4, 
+offers a more granular approach to population stratification. 
+Instead of grouping samples into pre-defined superpopulations, 
+it identifies a set of "genomic neighbors" for each sample based on their coordinates in Principal Component (PC) space. 
+Then it compares QC metrics for a given sample against the distribution of those same metrics among its closest genetic neighbors. 
+
+This method is particularly effective for samples with admixed or rare ancestries 
+that do not fit neatly into major superpopulations. 
+Further details on this approach are available in the [gnomAD v4 blog post](https://broadinstitute.org/gnomad/news/2023-11-gnomad-v4-0/).
+
+You can set ll the parameters for this function in the section
+`step2 -> stratified_sample_qc -> determine_nearest_neighbors_args`
+
+
+#### Linear Regression Residuals (lr)
+This method uses a regression-based approach to account for the continuous relationship between genetic ancestry 
+(represented by PCs) and QC metrics. 
+It fits linear model to predict each QC metric from the sample's Principal Components as independent variables. 
+The "residuals" (difference between the observed metric value and the value predicted by the model)
+represent the portion of the metric variation that cannot be explained by ancestry. 
+
+Samples with extreme residuals are flagged as outliers, as their metric values deviate significantly 
+from what would be expected given their genetic background. 
+This method provides a robust way to normalize metrics across a continuous ancestry spectrum. 
+Relevant technical details can be found in the 
+[gnomAD methods documentation](https://broadinstitute.github.io/gnomad_methods/api_reference/sample_qc/filtering.html#gnomad.sample_qc.filtering.compute_qc_metrics_residuals).
+
 ### Run sex imputation
 
 ```shell
@@ -295,11 +361,11 @@ and PC1/PC2 sample scatterplot.
 
 This script predicts the super-population of each sample 
 by comparing the study dataset with a reference 1000 Genomes panel. 
-First, merge the study data with the reference 1000 Genomes data,
-and run LD pruning.
-
 If you want to use the nearest neighbours or linear regression sample QC method 
 you can completely skip this step.
+
+First, merge the study data with the reference 1000 Genomes data,
+and run LD pruning.
 
 ```shell
 python 2-sample_qc/3-population_pca_prediction.py --merge-and-ldprune
@@ -333,18 +399,7 @@ Review graphs to ensure that the superpopulation structue matches your expectati
 
 ### Identify outliers
 
-Now that we have the predicted populations that each sample belongs to,
-we run sample QC stratified by population and identify outliers.
-
-We test the following metrics, calculated by Hail:
-* number of SNPs
-* heterozygosity rate, heterozygous/homozygous ratio
-* number of transitions and transversions, transition/transversion ratio.
-* number of deletions and insertions, insertion/deletion ratе
-
-For metric description, see the
-[Hail sample_qc()](https://hail.is/docs/0.2/methods/genetics.html#hail.methods.sample_qc)
-function description.
+Run the outlier depicting with the chose method:
 
 ```shell
 python 2-sample_qc/4-find_population_outliers.py
@@ -370,6 +425,10 @@ The script plots distribution histograms for all metrics, and
 saves them in the folder defined by the `plot_sample_qc_metrics`:`plot_outdir`
 config parameter (a set of individual plots and one combined plot for all metrics and populations).
 To change default number of bins, use the `n_bins` config parameter.
+
+Depending on the chosen method the step outputs can slightly differ:
+* `pop` plots histograms for each metric and each superpopulation individually.
+* `nn` and `lr` plot only 1 histogram per metric, because each sample is compared to its own average
 
 ### Filter out samples which fail QC
 
