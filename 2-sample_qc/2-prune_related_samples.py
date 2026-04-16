@@ -73,8 +73,8 @@ def run_pc_project(mt_ref, mt_study, pca_components):
     return union_pca_scores, pca_scores, pca_loadings
 
 def prune_pc_relate(
-    mt: hl.MatrixTable, prune_args: dict, king_args: dict, pca_components: int, pc_relate_args: dict, **kwargs
-) -> (hl.Table, hl.Table, hl.Table):
+    mt: hl.MatrixTable, prune_args: dict, king_args: dict, pca_components: int, pc_relate_args: dict, relatedness_column: str, relatedness_threshold: float, **kwargs
+) -> (hl.Table, hl.Table, hl.Table, hl.Table, hl.Table):
     print("=== Running KING")
     related_mt, unrelated_mt, pruned_mt= run_king(mt, king_args, prune_args)
     print("=== Running PCA")
@@ -170,9 +170,9 @@ def main():
     mt = hl.read_matrix_table(path_spark(mt_infile))
     #removing control samples
     mt= filtering.remove_samples(mt, control_list)
-    mt_filtered.write(path_spark(config["step2"]["filter_before_pruning"]["filtered_mt_outfile"]), overwrite=True)
     #filter matrix to have good variants
     filtered_mt = run_filtering(mt, **config["step2"]["filter_before_pruning"])
+    filtered_mt.write(path_spark(config["step2"]["filter_before_pruning"]["filtered_mt_outfile"]), overwrite=True)
 
     # run pcrelate
     related_samples_to_remove_ht, scores, unrelated_scores, loadings, relatedness_ht = prune_pc_relate(
