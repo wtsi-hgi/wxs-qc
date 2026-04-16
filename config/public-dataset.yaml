@@ -162,17 +162,32 @@ step2:
     conflicting_sex_report_file: '${cvars.anndir}/conflicting_sex.tsv' # output
 
   # --- Step 2.2 --- #
+  filter_before_pruning:
+    long_range_ld_file: '${cvars.resdir}/long_ld_regions.hg38.bed'
+    filtered_mt_outfile: '${cvars.mtdir}/filtered_for_PCA.mt'
+    call_rate_threshold: 0.99
+    af_threshold: 0.05
+    hwe_threshold: 0.00001 #1e-5
+    r2_threshold: 0.2
+  king:
+    king_output_file: '${cvars.mtdir}/king.ht'
+    unrelated_king_file: '${cvars.mtdir}/unrelated_king.mt' # output
+    related_king_file: '${cvars.mtdir}/related_king.mt' # output
+    kinship_threshold: 0.0442 
+    divergence_threshold: -0.0442
   prune:
     pruned_mt_file: '${cvars.mtdir}/mt_ldpruned.mt' # output
+    pruned_unrelated_pcrelate_file: '${cvars.mtdir}/mt_unrelated_ldpruned_pcrelate.mt' # output
     ld_prune_args: # https://hail.is/docs/0.2/methods/genetics.html#hail.methods.ld_prune
       r2: 0.2
       # bp_window_size:
       # memory_per_core:
       # keep_higher_maf:
       # block_size:
-
   prune_pc_relate:
+    unrelated_samples_scores_file: '${cvars.mtdir}/mt_pruned.unrelated_samples.pca_scores.ht' # output
     scores_file: '${cvars.mtdir}/mt_pruned.pca_scores.ht' # output
+    pca_loadings_file_pc_relate: '${cvars.mtdir}/mt_pruned.pca_loadings.ht' # output
     samples_to_remove_file: '${cvars.mtdir}/mt_related_samples_to_remove.ht' # output
     samples_to_remove_tsv: '${cvars.anndir}/related_samples_to_remove.tsv' # output in the TSV table
     pca_components: 10
