@@ -5,8 +5,8 @@ import os
 from utils.utils import parse_config, path_local, path_spark
 import bokeh.plotting as bkplt
 import bokeh.layouts as bklayouts
-from wes_qc import hail_utils, hail_patches, constants
-
+from wes_qc import hail_utils, hail_patches, constants, filtering
+from gnomad.sample_qc.ancestry import pc_project
 
 def prune_mt(mt: hl.MatrixTable, ld_prune_args, **kwargs) -> hl.MatrixTable:
     """
@@ -103,31 +103,34 @@ def run_population_pca(
     Runs PCA and creates a matrix table of non-related individuals with PCA scores
     Remove related samples from PC relate from pruned MT and run PCA
     """
-
     print("=== Running population PCA")
-    print("=== Removing related samples")
-    pca_mt = pruned_mt.filter_cols(hl.is_defined(samples_to_remove[pruned_mt.col_key]), keep=False)
-    variants, samples = pca_mt.count()
-    print(f"=== Survived {samples} samples after relatedness step.")
-
-    plink_mt = pca_mt.annotate_cols(uid=pca_mt.s).key_cols_by("uid")
+    print("=== Spliting samples")
+    unrelated_mt = pruned_mt.filter_cols(hl.is_defined(samples_to_remove[pruned_mt.col_key]), keep=False)
+    related_mt = pruned_mt.filter_cols(hl.is_defined(samples_to_remove[pruned_mt.col_key]))
+    variants, samples = unrelated_mt.count()
+    print(f"=== {samples} samples for PCA")
+    variants, samples = related_mt.count()
+    print(f"=== {samples} samples for PC projection")
+    #Why do we need plink files?
+    plink_mt = unrelated_mt.annotate_cols(uid=unrelated_mt.s).key_cols_by("uid")
     hl.export_plink(dataset=plink_mt, output=path_spark(plink_outfile), fam_id=plink_mt.uid, ind_id=plink_mt.uid)
-
     print("=== Running PCA")
-    pca_evals, pca_scores, pca_loadings = hl.hwe_normalized_pca(pca_mt.GT, k=pca_components, compute_loadings=True)
-    pca_af_ht = pca_mt.annotate_rows(pca_af=hl.agg.mean(pca_mt.GT.n_alt_alleles()) / 2).rows()
+    pca_evals, pca_scores, pca_loadings = hl.hwe_normalized_pca(unrelated_mt.GT, k=pca_components, compute_loadings=True)
+    pca_af_ht = unrelated_mt.annotate_rows(pca_af=hl.agg.mean(unrelated_mt.GT.n_alt_alleles()) / 2).rows()
     pca_loadings = pca_loadings.annotate(pca_af=pca_af_ht[pca_loadings.key].pca_af)
-    pca_mt = pca_mt.annotate_cols(scores=pca_scores[pca_mt.col_key].scores)
-
+    print("=== Running PC projection")
+    projection_pca_scores = pc_project(related_mt, pca_loadings, loading_location="loadings", af_location="pca_af")
+    union_pca_scores = pca_scores.union(projection_pca_scores)
+    
+    
+    pca_mt = pruned_mt.annotate_cols(scores=union_pca_scores[pruned_mt.col_key].scores)
     print("=== Plotting PC1 vs PC2")
     os.makedirs(os.path.dirname(plot_outfile), exist_ok=True)
     p = hl.plot.scatter(pca_mt.scores[0], pca_mt.scores[1], title="PCA", xlabel="PC1", ylabel="PC2")
     print(f"=== Saving Relatedness PCA plot to {plot_outfile}")
     bkplt.output_file(plot_outfile)
     bkplt.save(p)
-
-    return pca_mt, pca_scores, pca_loadings
-
+    return pca_mt, union_pca_scores, pca_scores, pca_loadings
 
 def main():
     # = STEP SETUP = #
@@ -135,7 +138,7 @@ def main():
     tmp_dir = config["general"]["tmp_dir"]
 
     # = STEP PARAMETERS = #
-    ## No parameters for this step
+    control_list=config["general"]["metadata"]["control_samples"]
 
     # = STEP DEPENDENCIES = #
     mt_infile = config["step2"]["impute_sex"]["sex_mt_outfile"]
@@ -153,7 +156,8 @@ def main():
 
     # load input mt
     mt = hl.read_matrix_table(path_spark(mt_infile))
-
+    #removing control samples
+    mt= filtering.remove_samples(mt, control_list)
     # ld prune to get a table of variants which are not correlated
     pruned_mt = prune_mt(mt, **config["step2"]["prune"])
     pruned_mt.write(path_spark(mtoutfile), overwrite=True)
@@ -174,10 +178,11 @@ def main():
     plot_relatedness(relatedness_ht, **config["step2"]["prune_pc_relate"])
 
     # run PCA
-    pca_mt, pca_scores, pca_loadings = run_population_pca(
+    pca_mt, union_pca_scores, pca_scores, pca_loadings = run_population_pca(
         pruned_mt, related_samples_to_remove_ht, **config["step2"]["prune_plot_pca"]
     )
     pca_mt.write(path_spark(config["step2"]["prune_plot_pca"]["pca_mt_file"]), overwrite=True)
+    union_pca_scores.write(path_spark(config["step2"]["prune_plot_pca"]["union_pca_scores_file"]), overwrite=True)
     pca_scores.write(path_spark(config["step2"]["prune_plot_pca"]["pca_scores_file"]), overwrite=True)
     pca_loadings.write(path_spark(config["step2"]["prune_plot_pca"]["pca_loadings_file"]), overwrite=True)  # output
 

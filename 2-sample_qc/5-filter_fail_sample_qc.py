@@ -66,7 +66,7 @@ def main():
     tmp_dir = config["general"]["tmp_dir"]
 
     # = STEP DEPENDENCIES = #
-    annotated_mt_file = config["step2"]["annotate_with_pop"]["annotated_mt_file"]  # annotated but unfiltered mt
+    raw_mt_file = config["step1"]["validate_gtcheck"]["mt_gtcheck_validated"] # Raw mt file
     qc_filter_ht_file = config["step2"]["stratified_sample_qc"]["qc_filter_file"]  # Results of stratified filtering
     samples_to_remove_file = config["step2"]["sample_qc_combine_results"]["samples_to_remove_file"]
 
@@ -79,7 +79,7 @@ def main():
     # = STEP LOGIC = #
     hail_utils.init_hl(tmp_dir)
 
-    mt = hl.read_matrix_table(path_spark(annotated_mt_file))
+    mt = hl.read_matrix_table(path_spark(raw_mt_file))
     sample_qc_ht = hl.read_table(path_spark(qc_filter_ht_file))
     print("=== Removing samples failed stratified sample QC ===")
     mt, fails = remove_sample_qc_fails(mt, sample_qc_ht)
