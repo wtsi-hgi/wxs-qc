@@ -37,10 +37,10 @@ def load_vcfs_to_mt(config):
     print(f"info: Found {len(vcfs)} VCFs in {indir}")
     # create and save MT
     if header:
-        print("info: Loading VCFs with header")
+        print("info: Loading VCFs with custom header")
         mt = hl.import_vcf(vcfs, array_elements_required=False, force_bgz=True, header_file=header)
     else:
-        print("info: Loading VCFs WITHOUT header")
+        print("info: Loading VCFs")
         mt = hl.import_vcf(vcfs, array_elements_required=False, force_bgz=True)
 
     mt_out_file = path_spark(outfile)

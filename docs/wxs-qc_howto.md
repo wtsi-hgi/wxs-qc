@@ -383,8 +383,6 @@ and PC1/PC2 sample scatterplot.
 
 This script predicts the super-population of each sample 
 by comparing the study dataset with a reference 1000 Genomes panel. 
-If you want to use the nearest neighbours or linear regression sample QC method 
-you can completely skip this step.
 
 First, we merge the study data with the reference 1000 Genomes data,
 and run LD pruning.

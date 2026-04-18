@@ -871,6 +871,7 @@ def main():
     output_nn_file = config["step2"]["stratified_sample_qc"]["output_nn_file"]
     output_residuals_file = config["step2"]["stratified_sample_qc"]["output_residuals_file"]
     output_lms_json = config["step2"]["stratified_sample_qc"]["output_lms_json_file"]
+
     # = STEP LOGIC = #
     _ = hail_utils.init_hl(tmp_dir)
     qc_metrics = [

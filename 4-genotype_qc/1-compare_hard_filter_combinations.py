@@ -35,7 +35,8 @@ def clean_mt(mt: hl.MatrixTable) -> hl.MatrixTable:
     Reduces matrixtable by cleaning all fields not required for hardfilter evaluation
     """
     mt = mt.select_entries(mt.GT, mt.HetAB, mt.DP, mt.GQ)
-    mt = mt.drop(mt.assigned_pop, *mt.row_value)
+
+    mt = mt.drop(*mt.row_value)
     mt = mt.annotate_rows(info=hl.Struct())
     mt = mt.annotate_rows(
         type=hl.case()
