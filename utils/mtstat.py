@@ -1,5 +1,6 @@
 """Print number of samples and variants in a Hail matrix table."""
 import argparse
+import sys
 
 import hail as hl
 
@@ -17,10 +18,10 @@ def main():
         samples = mt.s.collect()
         for sample in samples:
             print(sample)
-    else:
-        variants, n_samples = mt.count()
-        print(f"Samples:  {n_samples}")
-        print(f"Variants: {variants}")
+
+    variants, n_samples = mt.count()
+    print(f"Samples:  {n_samples}", file=sys.stderr)
+    print(f"Variants: {variants}", file=sys.stderr)
 
 
 if __name__ == "__main__":
