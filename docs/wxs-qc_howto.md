@@ -256,55 +256,50 @@ Also, you can specify the IQR range for outliers and change the plot size if nee
 
 ## Stage 2. Sample QC
 
-The sample QC stage implements three different variants of sample QC.
+The WxS-QC pipeline implements three different methods for sample QC.
 You can choose it in the `general -> sample_qc_method` section of the config file:
-  * `pop` - Stratified QC with PCA-assigned superpopulations (from gnomAD v3 + de novo PCA projection)
-  * `nn` - Nearest neighbours (from gnomAD v4)
+  * `pop` - Stratified QC with PCA-assigned superpopulations with PCA projection (from gnomAD v3)
+  * `nn` - Nearest neighbors (from gnomAD v4)
   * `lr` - Linear regression (from gnomAD v4)
 
 For all methods we calculate a set of key quality metrics:
 * number of SNPs
 * heterozygosity rate, heterozygous/homozygous ratio
 * number of transitions and transversions, transition/transversion ratio.
-* number of deletions and insertions, insertion/deletion ratе
+* number of deletions and insertions, insertion/deletion rate
 
-We flag outliers as samples that deviate significantly (typically more than 4 Median Absolute Deviations) 
+We flag as outliers the samples that deviate significantly (typically more than four Median Absolute Deviations) 
 from the median of their reference group.
 The MAD level can be configured individually per metric on the step
-[Identify outliers](#identify-outliers)
-
+[Identify outliers](#identify-outliers).
 The difference between methods is how they define a reference group for each sample.
-Depending on the chosen method the step outputs can slightly differ.
-
-You can use one of these method, or try all of it and compare results.
+Depending on the chosen method, the step outputs can slightly differ.
+You can try all of it and compare results.
 
 The control samples, named in the `general -> metadata -> control_samples` section,
 are kept in the dataset despite any results of the sample QC check.
 
 #### Superpopulation Stratified Outlier Detection (pop)
 This method, originally used in gnomAD v3, performs outlier detection within predefined superpopulation groups 
-(e.g., EUR, AFR, EAS), identified on the 
-[PCA-based super-population prediction](#pca-based-super-population-prediction) step.
+(e.g., EUR, AFR, EAS, ...), identified on the 
+PCA-based super-population prediction.
 
-This approach works the best for groups with similar genetic background, 
-which fits into a reference superpopulations from 1000Genomes data.
-More information can be found in the [gnomAD v3 documentation](https://broadinstitute.org/gnomad/news/2020-10-gnomad-v3-1/).
+This approach works the best for groups with a similar genetic background, 
+which fits into a reference superpopulations from 1000 Genomes data.
+More information can be found in the [gnomAD v3 documentation](https://gnomad.broadinstitute.org/news/2019-10-gnomad-v3-0/).
 For metric description, see the
 [Hail sample_qc()](https://hail.is/docs/0.2/methods/genetics.html#hail.methods.sample_qc)
 function description.
-
 You can set up the number of PCA components for the script
 `3-population_pca_prediction.py`
 in the section `step2 -> pop_pca` of the config file.
 
-**Warning:**
 **Warning:** The PCA superpopulation prediction and stratified filtering can incorrectly mark as outliers 
 samples whose ancestries are not represented in the 1000 Genomes data 
 (which is a common case for non-European populations). 
 Also, stratified filtering produces false outliers for superpopulations with <100 samples in each subpopulation.  
-Use the _pop_ method only for large cohorts with common ancestries covered by 1000 Genomes reference panel.
-
-The _Nearest Neighbours_ and _Linear Regression_ methods from gnomAD v4 were specially introduced
+Use the _pop_ method only for large cohorts with ancestries covered by 1000 Genomes reference panel.
+The _Nearest Neighbors_ and _Linear Regression_ methods were specially introduced
 to correctly perform sample QC for samples with ancestries not represented in the panel.
 
 #### Nearest Neighbors (nn)
@@ -316,7 +311,7 @@ Then it compares QC metrics for a given sample against the distribution of those
 
 This method is particularly effective for samples with admixed or rare ancestries 
 that do not fit neatly into major superpopulations. 
-Further details on this approach are available in the [gnomAD v4 blog post](https://broadinstitute.org/gnomad/news/2023-11-gnomad-v4-0/).
+Further details on this approach are available in the [gnomAD v4 post](https://gnomad.broadinstitute.org/news/2023-11-gnomad-v4-0/).
 
 You can set ll the parameters for this function in the section
 `step2 -> stratified_sample_qc -> determine_nearest_neighbors_args`
@@ -325,12 +320,11 @@ You can set ll the parameters for this function in the section
 #### Linear Regression Residuals (lr)
 This method uses a regression-based approach to account for the continuous relationship between genetic ancestry 
 (represented by PCs) and QC metrics. 
-It fits linear model to predict each QC metric from the sample's Principal Components as independent variables. 
+It fits a linear model to predict each QC metric from the sample's principal components as independent variables. 
 The "residuals" (difference between the observed metric value and the value predicted by the model)
 represent the portion of the metric variation that cannot be explained by ancestry. 
+Samples with extreme residuals are flagged as outliers.
 
-Samples with extreme residuals are flagged as outliers, as their metric values deviate significantly 
-from what would be expected given their genetic background. 
 This method provides a robust way to normalize metrics across a continuous ancestry spectrum. 
 Relevant technical details can be found in the 
 [gnomAD methods documentation](https://broadinstitute.github.io/gnomad_methods/api_reference/sample_qc/filtering.html#gnomad.sample_qc.filtering.compute_qc_metrics_residuals).
@@ -351,10 +345,6 @@ a conflict between self-reported sex and genetically imputed sex, and saves it i
 
 
 ### Identify samples from related individuals with PC-Relate
-This step identifies related samples .
-Next, it runs PCA on
-
-### Summary of `2-sample_qc/2-prune_related_samples.py`
 
 This script identifies related individuals is the dataset
 to ensure they do not bias population structure analysis on later stages. 
@@ -372,10 +362,8 @@ projects the related samples onto this PCA space.
 python 2-sample_qc/2-prune_related_samples.py
 ```
  
-The step outputs related sample info in PLink format, 
-the list of relates samples and PCA scores for subsequent population prediction. 
+The step outputs related sample info in PLink format, the list of related samples, and PCA scores. 
 The relatedness information can be used to validate pedigree data and detect sample mislabeling.
-
 It also plots the Koch's relatedness plots (Kinship vs. IBD2) 
 and PC1/PC2 sample scatterplot.
 
@@ -435,8 +423,7 @@ Review graphs to ensure that the superpopulation structure matches your expectat
 
 ### Identify outliers
 
-Now that we have the predicted populations that each sample belongs to,
-we run sample QC stratified by population and identify outliers.
+Now we run sample QC stratified by the reference group (depending on the chosen method) and identify outliers.
 
 We test the following metrics, calculated by Hail:
 * number of SNPs
@@ -455,9 +442,8 @@ python 2-sample_qc/4-find_population_outliers.py
 WxS-QC pipeline identifies outliers using the gnomAD function
 [`compute_stratified_metrics_filter()`](https://broadinstitute.github.io/gnomad_methods/api_reference/sample_qc/filtering.html#gnomad.sample_qc.filtering.compute_stratified_metrics_filter).
 By default, this function designates as outliers any samples
-that deviate more than 4 Median Absolute Deviations (MAD)
+that deviate more than four Median Absolute Deviations (MAD)
 from the average by any metric.
-
 If you need to adjust this behavior,
 modify the `compute_stratified_metrics_filter_args` section in the configuration file.
 Any parameters added to this section are transferred to the `compute_stratified_metrics_filter()` function.
@@ -467,18 +453,17 @@ The script outputs the full list of samples with calculated metrics
 (the `stratified_sample_qc`:`output_text_file` config parameter),
 statistics, and outlier intervals for all metrics in JSON format
 (the `stratified_sample_qc`:`output_globals_json_file` config parameter).
-
-The script plots distribution histograms for all metrics, and
+The script also plots distribution histograms for all metrics, and
 saves them in the folder defined by the `plot_sample_qc_metrics`:`plot_outdir`
 config parameter (a set of individual plots and one combined plot for all metrics and populations).
 To change default number of bins, use the `n_bins` config parameter.
 
 The sampleQC metrics and results for each sample are saved in the 
-`annotations/stratified_sample_qc.tsv.gz` table.
+`annotations/stratified_sample_qc.{method}.tsv.gz` table.
 
-Depending on the chosen method the step outputs can slightly differ:
+Depending on the chosen method, the step outputs can slightly differ:
 * `pop` plots histograms for each metric and each superpopulation individually
-* `nn` and `lr` plot only 1 histogram per metric, because each sample is compared to its own average
+* `nn` and `lr` plot only one histogram per metric, because each sample is compared to its own average
   Also, they store method-specific sample information in files
   `annotations/nearest_neighbours.tsv.gz` and `annotations/residuals.tsv.gz` respectively.
 * `lr` additionally stores the linear regression parameters in the `annotations/lms.json` file.
@@ -494,9 +479,7 @@ This is a plain text file without a header, containing one sample per line.
 
 If you don't want t remove any additional samples, put `null` in the config instead of sample file name.
 
-**Note:** automatic removing of samples failing FreeMix
-and more convenient combined sample statistics
-are in the implementation.
+**Note:** more convenient combined sample statistics are in the implementation.
 
 ```shell
 python 2-sample_qc/5-filter_fail_sample_qc.py
