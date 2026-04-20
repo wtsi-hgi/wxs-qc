@@ -11,14 +11,10 @@ from wes_qc import hail_utils, filtering, visualize
 
 
 def merge_1kg_and_ldprune(
-    mt: hl.MatrixTable,
+    mt_filtered: hl.MatrixTable,
     kg_mt: hl.MatrixTable,
-    long_range_ld_file: str,
     pruned_mt_outfile: str,
     r2_threshold: float,
-    call_rate_threshold: float,
-    af_threshold: float,
-    hwe_threshold: float,
     **kwargs,
 ) -> hl.MatrixTable:
     """
@@ -32,11 +28,6 @@ def merge_1kg_and_ldprune(
     :param af_threshold: Allele frequency threshold for filtering
     :param hwe_threshold: Hardy-Weinberg equilibrium threshold for filtering
     """
-
-    # filter sample matrix
-    mt_filtered = filtering.filter_matrix_for_ldprune(
-        mt, path_spark(long_range_ld_file), call_rate_threshold, af_threshold, hwe_threshold
-    )
 
     # removing and adding needed entries to replicate filtered_mt_file structure
     mt_filtered = mt_filtered.drop(
@@ -172,7 +163,8 @@ def main():
     control_list=config["general"]["metadata"]["control_samples"]
 
     # = STEP DEPENDENCIES = #
-    mtfile = path_spark(config["step2"]["impute_sex"]["sex_mt_outfile"])
+    #mtfile = path_spark(config["step2"]["impute_sex"]["sex_mt_outfile"])
+    mtfile = path_spark(config["step2"]["filtered_mt_outfile"])
     kg_mt_file = path_spark(config["step0"]["create_1kg_mt"]["kg_out_mt"])
     kg_pop_file = path_spark(config["step0"]["create_1kg_mt"]["kg_pop_file"])
 
@@ -192,8 +184,6 @@ def main():
 
     if args.merge_and_ldprune:
         mt = hl.read_matrix_table(mtfile)
-        #removing controll samples
-        mt= filtering.remove_samples(mt, control_list)
         kg_mt = hl.read_matrix_table(kg_mt_file)
         pruned_mt = merge_1kg_and_ldprune(mt, kg_mt, **config["step2"]["merge_1kg_and_ldprune"])
         pruned_mt.write(merged_mt_file, overwrite=True)

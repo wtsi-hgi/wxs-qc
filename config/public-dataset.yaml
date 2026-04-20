@@ -164,11 +164,10 @@ step2:
   # --- Step 2.2 --- #
   filter_before_pruning:
     long_range_ld_file: '${cvars.resdir}/long_ld_regions.hg38.bed'
-    filtered_mt_outfile: '${cvars.mtdir}/filtered_for_PCA.mt'
     call_rate_threshold: 0.99
     af_threshold: 0.05
     hwe_threshold: 0.00001 #1e-5
-    r2_threshold: 0.2
+  filtered_mt_outfile: '${cvars.mtdir}/filtered_for_PCA.mt'
   king:
     king_output_file: '${cvars.mtdir}/king.ht'
     unrelated_king_file: '${cvars.mtdir}/unrelated_king.mt' # output
@@ -204,7 +203,7 @@ step2:
     relatedness_plotfile: '${cvars.pltdir}/relatedness_plot.html'
 
   prune_plot_pca:
-    plink_outfile: '${cvars.anndir}/mt_unrelated.plink'
+    #plink_outfile: '${cvars.anndir}/mt_unrelated.plink'
     pca_components: 10
     union_pca_scores_file: '${cvars.mtdir}/mt_pca_scores.ht' # output
     pca_scores_file: '${cvars.mtdir}/mt_pca_scores.unrelated_samples.ht' # output
@@ -214,11 +213,7 @@ step2:
 
   # --- Step 2.3 --- #
   merge_1kg_and_ldprune:
-    long_range_ld_file: '${cvars.resdir}/long_ld_regions.hg38.bed'
     pruned_mt_outfile: '${cvars.mtdir}/1kg_filtered_ldpruned.mt'
-    call_rate_threshold: 0.99
-    af_threshold: 0.05
-    hwe_threshold: 0.00001 #1e-5
     r2_threshold: 0.2
     pruned_and_merged_mt_outfile: '${cvars.mtdir}/merged_with_1kg_filtered_ldpruned.mt'
 
