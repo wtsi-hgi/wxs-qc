@@ -59,7 +59,7 @@ def run_king(mt: hl.MatrixTable, king_args: dict, prune_args: dict) -> (hl.Matri
     pruned_unrelated_mt.write(path_spark(king_args["unrelated_king_file"]), overwrite=True)
     related_mt = related_mt.semi_join_rows(pruned_unrelated_mt.rows())
     related_mt.write(path_spark(king_args["related_king_file"]), overwrite=True)
-    return related_mt, pruned_unrelated_mt, pruned_mt
+    return related_mt, pruned_unrelated_mt
 
 def run_pc_project(mt_ref, mt_study, pca_components):
     print("=== Running PCA")
@@ -76,10 +76,11 @@ def prune_pc_relate(
     mt: hl.MatrixTable, prune_args: dict, king_args: dict, pca_components: int, pc_relate_args: dict, relatedness_column: str, relatedness_threshold: float, **kwargs
 ) -> (hl.Table, hl.Table, hl.Table, hl.Table, hl.Table):
     print("=== Running KING")
-    related_mt, unrelated_mt, pruned_mt= run_king(mt, king_args, prune_args)
+    related_mt, unrelated_mt = run_king(mt, king_args, prune_args)
     print("=== Running PCA")
     union_pca_scores, pca_scores, pca_loadings = run_pc_project(unrelated_mt, related_mt, pca_components)
     print("=== Calculating relatedness")
+    pruned_mt = related_mt.union_cols(unrelated_mt)
     relatedness_ht = hl.pc_relate(pruned_mt.GT, scores_expr=union_pca_scores[pruned_mt.col_key].scores, **pc_relate_args)
     # prune individuals to be left with unrelated - creates a table containing one column - samples to remove
     pairs = relatedness_ht.filter(relatedness_ht[relatedness_column] > relatedness_threshold)

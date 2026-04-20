@@ -69,24 +69,50 @@ step0:
     vcfheader: '${general.onekg_resource_dir}/header_20201028.txt' # not available for the test data, this parameter is ignored
     kg_pop_file: '${cvars.resdir}/igsr_samples.tsv'
     kg_unprocessed: '${cvars.mtdir}/kg_unprocessed.mt'
-    pruned_kg_file: '${cvars.mtdir}/kg_pruned_ld.mt'
+    filtered_kg_file: '${cvars.mtdir}/kg_filtered.mt'
+    #pruned_kg_file: '${cvars.mtdir}/kg_pruned_ld.mt'
     long_range_ld_file: '${cvars.resdir}/long_ld_regions.hg38.bed'
-    relatedness_ht_file: '${cvars.mtdir}/kg_relatedness.ht'
     samples_to_remove_file: '${cvars.mtdir}/kg_related_samples_to_remove.ht'
-    scores_file: '${cvars.mtdir}/kg_pruned.pca_scores.ht'
+
+    king_params:
+      king_kg_file: '${cvars.mtdir}/king_kg.ht'
+      unrelated_kg_king_file: '${cvars.mtdir}/unrelated_kg_king.mt' # output
+      related_kg_king_file: '${cvars.mtdir}/related_kg_king.mt' # output
+      kinship_threshold: 0.0442 
+    prune_params:
+      pruned_kg_file: '${cvars.mtdir}/kg_pruned_ld.mt' # output
+      ld_prune_args: # https://hail.is/docs/0.2/methods/genetics.html#hail.methods.ld_prune
+        r2: 0.2
+        # bp_window_size:
+        # memory_per_core:
+        # keep_higher_maf:
+        # block_size:
+
+    pc_relate_params:
+      unrelated_samples_scores_file: '${cvars.mtdir}/kg.king_unrelated_samples.pca_scores.ht' # output
+      pca_loadings_file_pc_relate: '${cvars.mtdir}/kg.king_unrelated_samples.pca_loadings.ht' # output
+      scores_file: '${cvars.mtdir}/kg_filtered.pca_scores.ht'
+      relatedness_ht_file: '${cvars.mtdir}/kg_relatedness.ht'
+      #samples_to_remove_file: '${cvars.mtdir}/kg_related_samples_to_remove.ht' # output
+      #samples_to_remove_tsv: '${cvars.anndir}/related_samples_to_remove.tsv' # output in the TSV table
+      pca_components: 10
+      pc_relate_args: # https://hail.is/docs/0.2/methods/relatedness.html#hail.methods.pc_relate
+        min_individual_maf: 0.05
+        block_size: 4096
+        min_kinship: 0.05
+        statistics: 'kin2'
+        # k:
+        # include_self_kinship:
+      relatedness_column: 'kin'
+      relatedness_threshold: 0.125
+      #relatedness_outfile: '${cvars.anndir}/relatedness.tsv.gz'
+      #relatedness_plotfile: '${cvars.pltdir}/relatedness_plot.html'
 
     kg_out_mt: '${cvars.mtdir}/kg_wes_regions.mt' # output
-    call_rate_threshold: 0.99
-    af_threshold: 0.05
-    hwe_threshold: 0.00001 #1e-5
-    r2_threshold: 0.2
-    hl_pc_related_kwargs:
-      min_individual_maf: 0.05
-      block_size: 4096
-      min_kinship: 0.05
-      statistics: "kin2"
-    pca_components: 10
-    kin_threshold: 0.125
+    filter_params:
+      call_rate_threshold: 0.99
+      af_threshold: 0.05
+      hwe_threshold: 0.00001 #1e-5
 
   generate_truthset_ht:
     omni: '${cvars.resdir}/1000G_omni2.5.hg38.vcf.gz'
@@ -173,7 +199,6 @@ step2:
     unrelated_king_file: '${cvars.mtdir}/unrelated_king.mt' # output
     related_king_file: '${cvars.mtdir}/related_king.mt' # output
     kinship_threshold: 0.0442 
-    divergence_threshold: -0.0442
   prune:
     pruned_mt_file: '${cvars.mtdir}/mt_ldpruned.mt' # output
     pruned_unrelated_pcrelate_file: '${cvars.mtdir}/mt_unrelated_ldpruned_pcrelate.mt' # output
