@@ -279,6 +279,10 @@ You can try all of it and compare results.
 The control samples, named in the `general -> metadata -> control_samples` section,
 are kept in the dataset despite any results of the sample QC check.
 
+**Warning:** 
+All sampleQC methods design to work with relatively big population-level datasets.
+We recommend having >=120 independent samples (200+ per ancestry/stratum is preferable) to obtain reliable results.
+
 #### Superpopulation Stratified Outlier Detection (pop)
 This method, originally used in gnomAD v3, performs outlier detection within predefined superpopulation groups 
 (e.g., EUR, AFR, EAS, ...), identified on the 
@@ -346,7 +350,7 @@ a conflict between self-reported sex and genetically imputed sex, and saves it i
 
 ### Identify samples from related individuals with PC-Relate
 
-This script identifies related individuals is the dataset
+This script identifies related individuals in the dataset
 to ensure they do not bias population structure analysis on later stages. 
 
 It performs **LD pruning** to obtain a set of independent variants,
