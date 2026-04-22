@@ -2,9 +2,9 @@
 
 The **WxS-QC** is a powerful, scalable, and convenient pipeline for
 the QC of human germline short-variant WGS and WES cohorts for population-scale analyses.
-The pileine is based on deeply refactored gnomAD v3 and v4 quality control pipelines,
-contains several methods we have developed de novo,
-is suitable for both rare-variant discovery and common-variant association studies,
+The pipeline is based on deeply refactored gnomAD v3 and v4 quality control pipelines,
+and contains several methods we have developed de novo.
+It is suitable for both rare-variant discovery and common-variant association studies,
 and is aligned with current best practices in WGS/WES germline cohort QC.
 
 ### Pipeline capabilities
@@ -63,8 +63,9 @@ If there are any unstaged changes in the branch, you will be asked to commit or 
 
 The code is written by members of **Wellcome Sanger HGI group**
 (https://www.sanger.ac.uk/group/human-genetics-informatics-hgi/)
-based on the **gnomAD QC v3** pipeline by **Broad institute**
-(https://github.com/broadinstitute/gnomad_qc/tree/main/gnomad_qc/v3).
+based on the **gnomAD QC v3** and **gnomAD QC v4** pipeline by **Broad institute**
+(https://github.com/broadinstitute/gnomad_qc/tree/main/gnomad_qc/v3,
+https://github.com/broadinstitute/gnomad_qc/tree/main/gnomad_qc/v4).
 
 
 ## Developer's howto
