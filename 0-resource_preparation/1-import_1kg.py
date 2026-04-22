@@ -18,8 +18,8 @@ import hail as hl  # type: ignore
 
 from wes_qc.hail_utils import path_spark
 from wes_qc.config import get_config
-from wes_qc import filtering, hail_utils
-
+from wes_qc import filtering, hail_utils, hail_patches
+from gnomad.sample_qc.ancestry import pc_project
 
 def create_1kg_mt(vcf_indir: str, kg_pop_file: str, **kwargs: dict) -> hl.MatrixTable:
     """
@@ -163,13 +163,13 @@ def prune_pc_relate(
     print("=== Running KING")
     related_mt, unrelated_mt= run_king(mt, king_params, prune_params)
     print("=== Running PCA")
-    union_pca_scores, pca_scores, pca_loadings = run_pc_project(unrelated_mt, related_mt, **pc_relate_params)
+    union_pca_scores, pca_scores, pca_loadings = run_pc_project(unrelated_mt, related_mt, pc_relate_params["pca_components"])
     union_pca_scores.write(path_spark(pc_relate_params["scores_file"]), overwrite=True)
     pca_scores.write(path_spark(pc_relate_params["unrelated_samples_scores_file"]), overwrite=True)
     pca_loadings.write(path_spark(pc_relate_params["pca_loadings_file_pc_relate"]), overwrite=True)
     print("=== Calculating relatedness")
     pruned_mt = related_mt.union_cols(unrelated_mt)#check If i should use this or just prune the whole filtered mt
-    relatedness_ht = hl.pc_relate(pruned_mt.GT, scores_expr=union_pca_scores[pruned_mt.col_key].scores, **pc_relate_args)
+    relatedness_ht = hl.pc_relate(pruned_mt.GT, scores_expr=union_pca_scores[pruned_mt.col_key].scores, **pc_relate_params["pc_relate_args"])
     relatedness_ht.write(path_spark(pc_relate_params["relatedness_ht_file"]), overwrite=True)
     # prune individuals to be left with unrelated - creates a table containing one column - samples to remove
     pairs = relatedness_ht.filter(relatedness_ht[pc_relate_params["relatedness_column"]] > pc_relate_params["relatedness_threshold"])

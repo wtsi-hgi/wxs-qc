@@ -93,8 +93,6 @@ step0:
       pca_loadings_file_pc_relate: '${cvars.mtdir}/kg.king_unrelated_samples.pca_loadings.ht' # output
       scores_file: '${cvars.mtdir}/kg_filtered.pca_scores.ht'
       relatedness_ht_file: '${cvars.mtdir}/kg_relatedness.ht'
-      #samples_to_remove_file: '${cvars.mtdir}/kg_related_samples_to_remove.ht' # output
-      #samples_to_remove_tsv: '${cvars.anndir}/related_samples_to_remove.tsv' # output in the TSV table
       pca_components: 10
       pc_relate_args: # https://hail.is/docs/0.2/methods/relatedness.html#hail.methods.pc_relate
         min_individual_maf: 0.05

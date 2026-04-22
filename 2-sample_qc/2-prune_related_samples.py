@@ -80,6 +80,18 @@ def prune_pc_relate(
     print("=== Running PCA")
     union_pca_scores, pca_scores, pca_loadings = run_pc_project(unrelated_mt, related_mt, pca_components)
     print("=== Calculating relatedness")
+    related_mt = related_mt.drop(#For some reason unrelated_mt doesn't have these
+        "AD",
+        "DP",
+        "GQ",
+        "MIN_DP",
+        "PGT",
+        "PID",
+        "PL",
+        "PS",
+        "SB",
+        "RGQ"
+    )
     pruned_mt = related_mt.union_cols(unrelated_mt)
     relatedness_ht = hl.pc_relate(pruned_mt.GT, scores_expr=union_pca_scores[pruned_mt.col_key].scores, **pc_relate_args)
     # prune individuals to be left with unrelated - creates a table containing one column - samples to remove
@@ -173,6 +185,7 @@ def main():
     #filter matrix to have good variants
     filtered_mt = run_filtering(mt, **config["step2"]["filter_before_pruning"])
     filtered_mt.write(path_spark(config["step2"]["filtered_mt_outfile"]), overwrite=True)
+
     # run pcrelate
     related_samples_to_remove_ht, scores, unrelated_scores, loadings, relatedness_ht = prune_pc_relate(
         filtered_mt, config["step2"]["prune"], config["step2"]["king"], **config["step2"]["prune_pc_relate"]
@@ -180,9 +193,11 @@ def main():
     scores_file1 = config["step2"]["prune_pc_relate"]["scores_file"]
     scores_file2 = config["step2"]["prune_pc_relate"]["unrelated_samples_scores_file"]
     loadings_file = config["step2"]["prune_pc_relate"]["pca_loadings_file_pc_relate"]
+    
     scores.write(path_spark(scores_file1), overwrite=True)  # output
     unrelated_scores.write(path_spark(scores_file2), overwrite=True)  # output
     loadings.write(path_spark(loadings_file), overwrite=True)  # output
+    
     related_samples_to_remove_ht.write(
         path_spark(config["step2"]["prune_pc_relate"]["samples_to_remove_file"]), overwrite=True
     )
