@@ -32,7 +32,6 @@ def export_vcfs(
         mt.medium_pass_count,
         mt.relaxed_pass_count,
         mt.adj,
-        mt.assigned_pop,
         mt.sum_AD,
     )
     mt = mt.annotate_rows(info=mt.info.drop("fraction_pass_medium_filters", "fraction_pass_relaxed_filters"))

@@ -44,7 +44,6 @@ def export_vcfs(
         mt.medium_pass_count,
         mt.relaxed_pass_count,
         mt.adj,
-        mt.assigned_pop,
         mt.sum_AD,
     )
 
