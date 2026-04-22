@@ -1,4 +1,4 @@
-# WxS-QC - a quality control pipeline for human germline short-variant WGS and WEE cohorts
+# WxS-QC - a quality control pipeline for human germline short-variant WGS and WES cohorts
 
 The **WxS-QC** is a powerful, scalable, and convenient pipeline for
 the QC of human germline short-variant WGS and WES cohorts for population-scale analyses.
