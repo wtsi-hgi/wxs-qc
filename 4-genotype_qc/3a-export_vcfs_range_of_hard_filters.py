@@ -35,7 +35,8 @@ def export_vcfs(
             filter_metric = f"{filter_level}_{metric}"
             mt = mt.annotate_rows(info=mt.info.annotate(**{filter_metric: mt[filter_metric]}))
             mt = mt.drop(mt[filter_metric])
-
+    #remove variants if their relaxed_AC equals 0 after filtering
+    mt=mt.filter_rows(mt.info.relaxed_AC == [0], keep=False)
     mt = mt.drop(
         mt.a_index,
         mt.was_split,
