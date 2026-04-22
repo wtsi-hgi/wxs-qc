@@ -41,6 +41,7 @@ general:
     #Set batch_file to null if you don't have batch information. All samples will be marked as batch1.
     batch_file:          null #'${general.metadata_dir}/${general.dataset_name}.batch.tsv'
     vep_consequences:    '${general.metadata_dir}/${general.dataset_name}.all_consequences_with_gene_and_csq.tsv.bgz'
+    # Set pedigree to null, if you don't want to run transmitted/untransmitted singletons statistics calculations
     pedigree:            '${general.metadata_dir}/${general.dataset_name}.trios.fam'
     giab_sample_id: 'NA12878'
     # control samples are excluded from sample QC to remain in variant QC
@@ -378,7 +379,8 @@ step3:
 
   # --- Step 3.5 --- #
   add_cq_annotation:
-    synonymous_file: '${cvars.metadir}/${general.dataset_name}.synonymous_variants.tsv.bgz'
+    # Put here `null`, if you don't want to run transmitted/untransmitted singletons statistics calculations
+    cqfile: '${general.metadata.vep_consequences}'
 
   dnm_and_family_annotation:
     dnm_htfile: '${cvars.mtdir}/denovo_table.ht'
@@ -428,7 +430,6 @@ step3:
   # --- Step 3.9 --- #
   annotate_mt_with_cq_rf_score_and_bin:
     mtfile: '${cvars.mtdir}/mt_varqc_splitmulti.mt'
-    cqfile: '${cvars.metadir}/${general.dataset_name}.all_consequences.tsv.bgz'
     mtoutfile_after_varqc: '${cvars.mtdir}/mt_after_var_qc.mt'
 
 
@@ -471,7 +472,10 @@ step4:
   # --- Step 4.2 --- #
   annotate_cq_rf:
     mtfile: '${cvars.mtdir}/mt_varqc_splitmulti.mt'
+    # Put here `null`, if you don't want add VEP consequences annotation
     cqfile: '${general.metadata.vep_consequences}'
+    # Put here `null`, if you don't want add VEP consequences annotation. Othrewise specify to have correct header in the output VCFs
+    csq_header: '${general.metadata_dir}/${general.dataset_name}.csq_header.txt'
 
   apply_hard_filters:
     # Set to true if you want to apply different hard filters for sex chromosomes in male samples (depth threshold will be halfed for sex chromosome).
@@ -521,6 +525,7 @@ step4:
   # used as an output of the whole step
   mtoutfile_annot: '${cvars.mtdir}/mt_hard_filter_combinations.mt'
 
+  
   # --- Step 4.3a --- #
   export_vcfs_a:
     mtfile: '${cvars.mtdir}/mt_hard_filter_combinations.mt'

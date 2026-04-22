@@ -21,13 +21,12 @@ def remove_samples(mt: hl.MatrixTable, exclude_file: str):
     return mt
 
 
-def annotate_cq_rf(mt: hl.MatrixTable, rf_htfile: str, cqfile: str) -> hl.MatrixTable:
+def annotate_rf(mt: hl.MatrixTable, rf_htfile: str, ) -> hl.MatrixTable:
     """
-    Annotate with RF bin, consequence, gene name, hgnc id, and pass/fail for 3 combinations of filters for SNPs,
+    Annotate with RF bin and pass/fail for 3 combinations of filters for SNPs,
     3 combinations of filters for indels and missingness for each set of filters
     :param hl.MatrixTable mtfile: Input matrixtable
     :param str rf_htfile: random forest hail table file
-    :param str cqfile: consequence file
     :return hl.matrixTable:
     """
     rf_ht = hl.read_table(path_spark(rf_htfile))
@@ -37,6 +36,15 @@ def annotate_cq_rf(mt: hl.MatrixTable, rf_htfile: str, cqfile: str) -> hl.Matrix
     mt = mt.annotate_rows(info=mt.info.annotate(rf_score=rf_ht[mt.row_key].score))
     mt = mt.annotate_rows(info=mt.info.annotate(rf_bin=rf_ht[mt.row_key].bin))
 
+    return mt
+
+def annotate_cq(mt: hl.MatrixTable, cqfile: str) -> hl.MatrixTable:
+    """
+    Annotate with consequence, gene name, and hgnc id
+    :param hl.MatrixTable mtfile: Input matrixtable
+    :param str cqfile: consequence file
+    :return hl.matrixTable:
+    """
     cq_ht = hl.import_table(
         path_spark(cqfile),
         types={
@@ -74,7 +82,6 @@ def annotate_cq_rf(mt: hl.MatrixTable, rf_htfile: str, cqfile: str) -> hl.Matrix
     )
 
     return mt
-
 
 def annotate_ac(mt: hl.MatrixTable, filter_name: str) -> hl.MatrixTable:
     assert filter_name in ("stringent", "medium", "relaxed")
@@ -310,7 +317,9 @@ def main():
 
     # annotate mt with consequence, gene, rf bin
     print("=== Annotating mt with consequence, gene, rf bin ===")
-    mt_annot = annotate_cq_rf(mt, rf_htfile, cqfile)
+    mt_annot = annotate_rf(mt, rf_htfile)
+    if cqfile is not None:
+        mt_annot = annotate_ac(mt_annot, cqfile)
     print("=== Applying hard filters ===")
     if diff_sex_chromosome_filter:
         print("=== Sex chromosome-specific filtering ENABLED ===")

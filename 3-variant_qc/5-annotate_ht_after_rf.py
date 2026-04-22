@@ -14,35 +14,43 @@ def add_cq_annotation(ht: hl.Table, synonymous_file: str) -> hl.Table:
     ;param str synonymous_file: text file containing synonymous variants
     ;param str ht_cq_fle: Output hail table file annotated with synonymous variants
     """
-    # DEBUG: test if file:// prefix is needed for this function
-    synonymous_ht = hl.import_table(
-        path_spark(synonymous_file),
-        types={"f0": "str", "f1": "int32", "f2": "str", "f3": "str", "f4": "str", "f5": "str"},
-        no_header=True,
-    )
-    synonymous_ht = synonymous_ht.annotate(chr=synonymous_ht.f0)
-    synonymous_ht = synonymous_ht.annotate(pos=synonymous_ht.f1)
-    synonymous_ht = synonymous_ht.annotate(rs=synonymous_ht.f2)
-    synonymous_ht = synonymous_ht.annotate(ref=synonymous_ht.f3)
-    synonymous_ht = synonymous_ht.annotate(alt=synonymous_ht.f4)
-    synonymous_ht = synonymous_ht.annotate(consequence=synonymous_ht.f5)
-    synonymous_ht = synonymous_ht.key_by(
-        locus=hl.locus(synonymous_ht.chr, synonymous_ht.pos), alleles=[synonymous_ht.ref, synonymous_ht.alt]
-    )
-    synonymous_ht = synonymous_ht.drop(
-        synonymous_ht.f0,
-        synonymous_ht.f1,
-        synonymous_ht.f2,
-        synonymous_ht.f3,
-        synonymous_ht.f4,
-        synonymous_ht.chr,
-        synonymous_ht.pos,
-        synonymous_ht.ref,
-        synonymous_ht.alt,
-    )
-    synonymous_ht = synonymous_ht.key_by(synonymous_ht.locus, synonymous_ht.alleles)
+    if pedfile is not None:
+        # DEBUG: test if file:// prefix is needed for this function
+        synonymous_ht = hl.import_table(
+            path_spark(synonymous_file),
+            types={"f0": "str", "f1": "int32", "f2": "str", "f3": "str", "f4": "str", "f6": "str"},
+            no_header=True,
+        )
+        synonymous_ht = synonymous_ht.annotate(chr=synonymous_ht.f0)
+        synonymous_ht = synonymous_ht.annotate(pos=synonymous_ht.f1)
+        synonymous_ht = synonymous_ht.annotate(rs=synonymous_ht.f2)
+        synonymous_ht = synonymous_ht.annotate(ref=synonymous_ht.f3)
+        synonymous_ht = synonymous_ht.annotate(alt=synonymous_ht.f4)
+        synonymous_ht = synonymous_ht.annotate(consequence=synonymous_ht.f6)
 
-    ht_cq = ht.annotate(consequence=synonymous_ht[ht.key].consequence)
+        synonymous_ht = synonymous_ht.filter(synonymous_ht.consequence == "synonymous_variant")
+
+        synonymous_ht = synonymous_ht.key_by(
+            locus=hl.locus(synonymous_ht.chr, synonymous_ht.pos), alleles=[synonymous_ht.ref, synonymous_ht.alt]
+        )
+        synonymous_ht = synonymous_ht.drop(
+            synonymous_ht.f0,
+            synonymous_ht.f1,
+            synonymous_ht.f2,
+            synonymous_ht.f3,
+            synonymous_ht.f4,
+            synonymous_ht.f6,
+            synonymous_ht.chr,
+            synonymous_ht.pos,
+            synonymous_ht.ref,
+            synonymous_ht.alt,
+        )
+        synonymous_ht = synonymous_ht.key_by(synonymous_ht.locus, synonymous_ht.alleles)
+
+        ht_cq = ht.annotate(consequence=synonymous_ht[ht.key].consequence)
+    else:
+        print("=== No pedigree data found: skipping synonymous variant annotation ===")
+        ht = ht.annotate(consequence=hl.missing(hl.tstr))
     return ht_cq
 
 
@@ -175,7 +183,7 @@ def dnm_and_family_annotation(
         print("=== Annotating with family stats and DNMs ===")
         ht = dnm_and_family_annotation_with_tables(ht, dnm_htfile, fam_stats_htfile, trio_stats_htfile)
     else:
-        print("=== No pedifree data found: annotating with missing family stats and DNMs ===")
+        print("=== No pedigree data found: annotating with missing family stats and DNMs ===")
         ht = dnm_and_family_annotation_with_missing(ht)
     return ht
 
@@ -249,7 +257,7 @@ def count_trans_untransmitted_singletons(mt_trios: Optional[hl.MatrixTable], ht:
         variant_untransmitted_annot = mt3.rows()[ht.key].variant_untransmitted_singletons
         ht = ht.annotate(variant_untransmitted_singletons=variant_untransmitted_annot)
     else:
-        print("=== No pedifree data found: skipping transmitted/untransmitted calculations")
+        print("=== No pedigree data found: skipping transmitted/untransmitted calculations")
         ht = ht.annotate(variant_transmitted_singletons=0, variant_untransmitted_singletons=0)
     return ht
 
@@ -285,7 +293,7 @@ def main():
     # = STEP PARAMETERS = #
     pedfile: str = config["step3"]["pedfile"]
     model_id: str = config["general"]["rf_model_id"]
-    synonymous_file: str = config["step3"]["add_cq_annotation"]["synonymous_file"]
+    synonymous_file: str = config["step3"]["add_cq_annotation"]["cqfile"]
     gnomad_htfile: str = config["step3"]["annotate_gnomad"]["gnomad_htfile"]
 
     # = STEP DEPENDENCIES = #
@@ -308,8 +316,12 @@ def main():
 
     # annotate with synonymous CQs
     ht = hl.read_table(path_spark(htfile))
-    ht = add_cq_annotation(ht, synonymous_file)
-    ht.write(path_spark(ht_cq_file), overwrite=True)
+    if synonymous_file is not None:
+        ht = add_cq_annotation(ht, synonymous_file, pedfile)
+        ht.write(path_spark(ht_cq_file), overwrite=True)
+    else:
+        print("=== No synonymous variant data found: skipping synonymous variant annotation ===")
+        ht = ht.annotate(consequence=hl.missing(hl.tstr))
 
     # ht = hl.read_table(path_spark(ht_cq_file))
     ht = dnm_and_family_annotation(ht, dnm_htfile, fam_stats_htfile, trio_stats_htfile, pedfile)

@@ -22,7 +22,7 @@ def get_options():
 
 
 def annotate_mt_with_cq_rf_score_and_bin(
-    mtfile: str, rf_htfile: str, snv_threshold: int, indel_threshold: int, cqfile: str, filtered_mtfile: str
+    mtfile: str, rf_htfile: str, snv_threshold: int, indel_threshold: int, filtered_mtfile: str
 ):
     """
     Annotate matrixtable with RF score and bin then filter SNVs and indels according to threshold
@@ -42,23 +42,6 @@ def annotate_mt_with_cq_rf_score_and_bin(
     # annotate mt with score and bin
     mt = mt.annotate_rows(info=mt.info.annotate(rf_score=rf_ht[mt.row_key].score))
     mt = mt.annotate_rows(info=mt.info.annotate(rf_bin=rf_ht[mt.row_key].bin))
-
-    # annotate with VEP consequence
-    cq_ht = hl.import_table(
-        path_spark(cqfile),
-        types={"f0": "str", "f1": "int32", "f2": "str", "f3": "str", "f4": "str", "f5": "str"},
-        no_header=True,
-    )
-    cq_ht = cq_ht.annotate(chr=cq_ht.f0)
-    cq_ht = cq_ht.annotate(pos=cq_ht.f1)
-    cq_ht = cq_ht.annotate(rs=cq_ht.f2)
-    cq_ht = cq_ht.annotate(ref=cq_ht.f3)
-    cq_ht = cq_ht.annotate(alt=cq_ht.f4)
-    cq_ht = cq_ht.annotate(consequence=cq_ht.f5)
-    cq_ht = cq_ht.key_by(locus=hl.locus(cq_ht.chr, cq_ht.pos), alleles=[cq_ht.ref, cq_ht.alt])
-    cq_ht = cq_ht.drop(cq_ht.f0, cq_ht.f1, cq_ht.f2, cq_ht.f3, cq_ht.f4, cq_ht.chr, cq_ht.pos, cq_ht.ref, cq_ht.alt)
-    cq_ht = cq_ht.key_by(cq_ht.locus, cq_ht.alleles)
-    mt = mt.annotate_rows(info=mt.info.annotate(consequence=cq_ht[mt.row_key].consequence))
 
     # filter by SNV and indel thresholds
     mt_filtered = mt.filter_rows(
@@ -86,14 +69,13 @@ def main():
     rf_dir = path_spark(config["general"]["var_qc_rf_dir"])
     htfile = os.path.join(rf_dir, model_id, "_gnomad_score_binning_tmp.ht")
     mtfile = config["step3"]["annotate_mt_with_cq_rf_score_and_bin"]["mtfile"]
-    cqfile = config["step3"]["annotate_mt_with_cq_rf_score_and_bin"]["cqfile"]
 
     # = STEP OUTPUTS = #
     mtoutfile_after_varqc = config["step3"]["annotate_mt_with_cq_rf_score_and_bin"]["mtoutfile_after_varqc"]
 
     # = STEP LOGIC = #
     _ = hail_utils.init_hl(tmp_dir)
-    annotate_mt_with_cq_rf_score_and_bin(mtfile, htfile, args.snv, args.indel, cqfile, mtoutfile_after_varqc)
+    annotate_mt_with_cq_rf_score_and_bin(mtfile, htfile, args.snv, args.indel, mtoutfile_after_varqc)
 
 
 if __name__ == "__main__":
