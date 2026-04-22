@@ -474,6 +474,10 @@ step4:
     cqfile: '${general.metadata.vep_consequences}'
 
   apply_hard_filters:
+    # Set to true if you want to apply different hard filters for sex chromosomes in male samples (depth threshold will be halfed for sex chromosome).
+    sex_chromosome_specific_filtering: True
+    # A file similar to self_reported_sex with resolved annotation conflicts. This file is used when sex_chromosome_specific_filtering is true
+    sex_annotation_file: '${general.metadata_dir}/${general.dataset_name}.self_reported_sex.tsv'
     hard_filters:
       snp:
         relaxed:
