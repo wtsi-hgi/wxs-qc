@@ -71,17 +71,20 @@ step0:
     kg_pop_file: '${cvars.resdir}/igsr_samples.tsv'
     kg_unprocessed: '${cvars.mtdir}/kg_unprocessed.mt'
     filtered_kg_file: '${cvars.mtdir}/kg_filtered.mt'
-    #pruned_kg_file: '${cvars.mtdir}/kg_pruned_ld.mt'
     long_range_ld_file: '${cvars.resdir}/long_ld_regions.hg38.bed'
     samples_to_remove_file: '${cvars.mtdir}/kg_related_samples_to_remove.ht'
+    filter_params:
+      call_rate_threshold: 0.99
+      af_threshold: 0.05
+      hwe_threshold: 0.00001 #1e-5
 
     king_params:
-      king_kg_file: '${cvars.mtdir}/king_kg.ht'
-      unrelated_kg_king_file: '${cvars.mtdir}/unrelated_kg_king.mt' # output
-      related_kg_king_file: '${cvars.mtdir}/related_kg_king.mt' # output
+      king_output_file: '${cvars.mtdir}/king_kg.ht'
+      unrelated_king_file: '${cvars.mtdir}/unrelated_kg_king.mt' # output
+      related_king_file: '${cvars.mtdir}/related_kg_king.mt' # output
       kinship_threshold: 0.0442 
     prune_params:
-      pruned_kg_file: '${cvars.mtdir}/kg_pruned_ld.mt' # output
+      pruned_mt_file: '${cvars.mtdir}/kg_pruned_ld.mt' # output
       ld_prune_args: # https://hail.is/docs/0.2/methods/genetics.html#hail.methods.ld_prune
         r2: 0.2
         # bp_window_size:
@@ -93,7 +96,6 @@ step0:
       unrelated_samples_scores_file: '${cvars.mtdir}/kg.king_unrelated_samples.pca_scores.ht' # output
       pca_loadings_file_pc_relate: '${cvars.mtdir}/kg.king_unrelated_samples.pca_loadings.ht' # output
       scores_file: '${cvars.mtdir}/kg_filtered.pca_scores.ht'
-      relatedness_ht_file: '${cvars.mtdir}/kg_relatedness.ht'
       pca_components: 10
       pc_relate_args: # https://hail.is/docs/0.2/methods/relatedness.html#hail.methods.pc_relate
         min_individual_maf: 0.05
@@ -104,14 +106,8 @@ step0:
         # include_self_kinship:
       relatedness_column: 'kin'
       relatedness_threshold: 0.125
-      #relatedness_outfile: '${cvars.anndir}/relatedness.tsv.gz'
-      #relatedness_plotfile: '${cvars.pltdir}/relatedness_plot.html'
 
     kg_out_mt: '${cvars.mtdir}/kg_wes_regions.mt' # output
-    filter_params:
-      call_rate_threshold: 0.99
-      af_threshold: 0.05
-      hwe_threshold: 0.00001 #1e-5
 
   generate_truthset_ht:
     omni: '${cvars.resdir}/1000G_omni2.5.hg38.vcf.gz'
@@ -187,32 +183,29 @@ step2:
     conflicting_sex_report_file: '${cvars.anndir}/conflicting_sex.tsv' # output
 
   # --- Step 2.2 --- #
-  filter_before_pruning:
-    long_range_ld_file: '${cvars.resdir}/long_ld_regions.hg38.bed'
+  long_range_ld_file: '${cvars.resdir}/long_ld_regions.hg38.bed'
+  filter_params:
     call_rate_threshold: 0.99
     af_threshold: 0.05
     hwe_threshold: 0.00001 #1e-5
   filtered_mt_outfile: '${cvars.mtdir}/filtered_for_PCA.mt'
-  king:
+  king_params:
     king_output_file: '${cvars.mtdir}/king.ht'
     unrelated_king_file: '${cvars.mtdir}/unrelated_king.mt' # output
     related_king_file: '${cvars.mtdir}/related_king.mt' # output
     kinship_threshold: 0.0442 
-  prune:
+  prune_params:
     pruned_mt_file: '${cvars.mtdir}/mt_ldpruned.mt' # output
-    pruned_unrelated_pcrelate_file: '${cvars.mtdir}/mt_unrelated_ldpruned_pcrelate.mt' # output
     ld_prune_args: # https://hail.is/docs/0.2/methods/genetics.html#hail.methods.ld_prune
       r2: 0.2
       # bp_window_size:
       # memory_per_core:
       # keep_higher_maf:
       # block_size:
-  prune_pc_relate:
+  pc_relate_params:
     unrelated_samples_scores_file: '${cvars.mtdir}/mt_pruned.unrelated_samples.pca_scores.ht' # output
-    scores_file: '${cvars.mtdir}/mt_pruned.pca_scores.ht' # output
     pca_loadings_file_pc_relate: '${cvars.mtdir}/mt_pruned.pca_loadings.ht' # output
-    samples_to_remove_file: '${cvars.mtdir}/mt_related_samples_to_remove.ht' # output
-    samples_to_remove_tsv: '${cvars.anndir}/related_samples_to_remove.tsv' # output in the TSV table
+    scores_file: '${cvars.mtdir}/mt_pruned.pca_scores.ht' # output
     pca_components: 10
     pc_relate_args: # https://hail.is/docs/0.2/methods/relatedness.html#hail.methods.pc_relate
       min_individual_maf: 0.05
@@ -223,11 +216,16 @@ step2:
       # include_self_kinship:
     relatedness_column: 'kin'
     relatedness_threshold: 0.125
+
+  relatedness_output:
     relatedness_outfile: '${cvars.anndir}/relatedness.tsv.gz'
     relatedness_plotfile: '${cvars.pltdir}/relatedness_plot.html'
+    samples_to_remove_file: '${cvars.mtdir}/mt_related_samples_to_remove.ht' # output
+    samples_to_remove_tsv: '${cvars.anndir}/related_samples_to_remove.tsv' # output in the TSV table
 
   prune_plot_pca:
     #plink_outfile: '${cvars.anndir}/mt_unrelated.plink'
+    pruned_unrelated_pcrelate_file: '${cvars.mtdir}/mt_unrelated_ldpruned_pcrelate.mt' # output
     pca_components: 10
     union_pca_scores_file: '${cvars.mtdir}/mt_pca_scores.ht' # output
     pca_scores_file: '${cvars.mtdir}/mt_pca_scores.unrelated_samples.ht' # output

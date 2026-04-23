@@ -3,6 +3,7 @@ All fucntions used to filter samples/variants
 """
 
 import hail as hl
+from utils.utils import path_spark
 
 from wes_qc import hail_patches
 
@@ -87,7 +88,7 @@ def filter_vars_for_quality(
 
 def remove_ld_regions(mt: hl.MatrixTable, long_range_ld_file: str) -> hl.MatrixTable:
     # remove long ld regions
-    long_range_ld_to_exclude = hl.import_bed(long_range_ld_file, reference_genome="GRCh38")
+    long_range_ld_to_exclude = hl.import_bed(path_spark(long_range_ld_file), reference_genome="GRCh38")
     mt = mt.filter_rows(hl.is_defined(long_range_ld_to_exclude[mt.locus]), keep=False)
     return mt
 
