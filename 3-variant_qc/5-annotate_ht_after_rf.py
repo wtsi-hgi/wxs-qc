@@ -14,45 +14,40 @@ def add_cq_annotation(ht: hl.Table, synonymous_file: str) -> hl.Table:
     ;param str synonymous_file: text file containing synonymous variants
     ;param str ht_cq_fle: Output hail table file annotated with synonymous variants
     """
-    if pedfile is not None:
-        # DEBUG: test if file:// prefix is needed for this function
-        synonymous_ht = hl.import_table(
-            path_spark(synonymous_file),
-            types={"f0": "str", "f1": "int32", "f2": "str", "f3": "str", "f4": "str", "f6": "str"},
-            no_header=True,
-        )
-        synonymous_ht = synonymous_ht.annotate(chr=synonymous_ht.f0)
-        synonymous_ht = synonymous_ht.annotate(pos=synonymous_ht.f1)
-        synonymous_ht = synonymous_ht.annotate(rs=synonymous_ht.f2)
-        synonymous_ht = synonymous_ht.annotate(ref=synonymous_ht.f3)
-        synonymous_ht = synonymous_ht.annotate(alt=synonymous_ht.f4)
-        synonymous_ht = synonymous_ht.annotate(consequence=synonymous_ht.f6)
+    # DEBUG: test if file:// prefix is needed for this function
+    synonymous_ht = hl.import_table(
+        path_spark(synonymous_file),
+        types={"f0": "str", "f1": "int32", "f2": "str", "f3": "str", "f4": "str", "f6": "str"},
+        no_header=True,
+    )
+    synonymous_ht = synonymous_ht.annotate(chr=synonymous_ht.f0)
+    synonymous_ht = synonymous_ht.annotate(pos=synonymous_ht.f1)
+    synonymous_ht = synonymous_ht.annotate(rs=synonymous_ht.f2)
+    synonymous_ht = synonymous_ht.annotate(ref=synonymous_ht.f3)
+    synonymous_ht = synonymous_ht.annotate(alt=synonymous_ht.f4)
+    synonymous_ht = synonymous_ht.annotate(consequence=synonymous_ht.f6)
 
-        synonymous_ht = synonymous_ht.filter(synonymous_ht.consequence == "synonymous_variant")
+    synonymous_ht = synonymous_ht.filter(synonymous_ht.consequence == "synonymous_variant")
 
-        synonymous_ht = synonymous_ht.key_by(
-            locus=hl.locus(synonymous_ht.chr, synonymous_ht.pos), alleles=[synonymous_ht.ref, synonymous_ht.alt]
-        )
-        synonymous_ht = synonymous_ht.drop(
-            synonymous_ht.f0,
-            synonymous_ht.f1,
-            synonymous_ht.f2,
-            synonymous_ht.f3,
-            synonymous_ht.f4,
-            synonymous_ht.f6,
-            synonymous_ht.chr,
-            synonymous_ht.pos,
-            synonymous_ht.ref,
-            synonymous_ht.alt,
-        )
-        synonymous_ht = synonymous_ht.key_by(synonymous_ht.locus, synonymous_ht.alleles)
+    synonymous_ht = synonymous_ht.key_by(
+        locus=hl.locus(synonymous_ht.chr, synonymous_ht.pos), alleles=[synonymous_ht.ref, synonymous_ht.alt]
+    )
+    synonymous_ht = synonymous_ht.drop(
+        synonymous_ht.f0,
+        synonymous_ht.f1,
+        synonymous_ht.f2,
+        synonymous_ht.f3,
+        synonymous_ht.f4,
+        synonymous_ht.f6,
+        synonymous_ht.chr,
+        synonymous_ht.pos,
+        synonymous_ht.ref,
+        synonymous_ht.alt,
+    )
+    synonymous_ht = synonymous_ht.key_by(synonymous_ht.locus, synonymous_ht.alleles)
 
-        ht_cq = ht.annotate(consequence=synonymous_ht[ht.key].consequence)
-    else:
-        print("=== No pedigree data found: skipping synonymous variant annotation ===")
-        ht = ht.annotate(consequence=hl.missing(hl.tstr))
+    ht_cq = ht.annotate(consequence=synonymous_ht[ht.key].consequence)
     return ht_cq
-
 
 def dnm_and_family_annotation_with_missing(ht_cq: hl.Table) -> hl.Table:
     """
@@ -154,7 +149,6 @@ def dnm_and_family_annotation_with_missing(ht_cq: hl.Table) -> hl.Table:
 
     return ht_cq
 
-
 def dnm_and_family_annotation_with_tables(
     ht_cq: hl.Table, dnm_htfile: str, fam_stats_htfile: str, trio_stats_htfile: str
 ):
@@ -174,93 +168,74 @@ def dnm_and_family_annotation_with_tables(
 
     return ht_cq
 
-
-def dnm_and_family_annotation(
-    ht: hl.Table, dnm_htfile: str, fam_stats_htfile: str, trio_stats_htfile: str, pedfile: str
-) -> hl.Table:
-    if pedfile is not None:
-        # annotate with family stats and DNMs
-        print("=== Annotating with family stats and DNMs ===")
-        ht = dnm_and_family_annotation_with_tables(ht, dnm_htfile, fam_stats_htfile, trio_stats_htfile)
-    else:
-        print("=== No pedigree data found: annotating with missing family stats and DNMs ===")
-        ht = dnm_and_family_annotation_with_missing(ht)
-    return ht
-
-
 # TODO: To messy - a good candidate for refactoring
 def count_trans_untransmitted_singletons(mt_trios: Optional[hl.MatrixTable], ht: hl.Table) -> hl.Table:
     """
     Count untransmitted and transmitted singletons
     """
-    if mt_trios is not None:
-        # Filtering trios matrixtable
-        mt_trios = mt_trios.annotate_rows(consequence=ht[mt_trios.row_key].consequence)
+    # Filtering trios matrixtable
+    mt_trios = mt_trios.annotate_rows(consequence=ht[mt_trios.row_key].consequence)
 
-        # TODO: there is a save step here in Pavlos file, is it needed?
-        # mt_filtered = mt_trios.filter_rows((mt_trios.variant_qc.AC[1] <= 2) & (mt_trios.consequence == "synonymous_variant"))
-        # mt_filtered = mt_trios.filter_entries((mt_trios.variant_qc.AC[1] <= 2) & (mt_trios.consequence == "synonymous_variant"))
-        # TODO: unused step - was not commented out - probably incorrect
-        # mt_filtered = mt_trios.filter_rows(
-        #     (mt_trios.varqc_trios.AC[1] <= 2) & (mt_trios.consequence == "synonymous_variant")
-        # )
+    # TODO: there is a save step here in Pavlos file, is it needed?
+    # mt_filtered = mt_trios.filter_rows((mt_trios.variant_qc.AC[1] <= 2) & (mt_trios.consequence == "synonymous_variant"))
+    # mt_filtered = mt_trios.filter_entries((mt_trios.variant_qc.AC[1] <= 2) & (mt_trios.consequence == "synonymous_variant"))
+    # TODO: unused step - was not commented out - probably incorrect
+    # mt_filtered = mt_trios.filter_rows(
+    #     (mt_trios.varqc_trios.AC[1] <= 2) & (mt_trios.consequence == "synonymous_variant")
+    # )
 
-        mt_filtered = mt_trios.filter_entries(
-            (mt_trios.varqc_trios.AC[1] <= 2) & (mt_trios.consequence == "synonymous_variant")
+    mt_filtered = mt_trios.filter_entries(
+        (mt_trios.varqc_trios.AC[1] <= 2) & (mt_trios.consequence == "synonymous_variant")
+    )
+
+    mt_trans = mt_filtered.filter_entries(mt_filtered.varqc_trios.AC[1] == 2)
+    mt_untrans = mt_filtered.filter_entries(mt_filtered.varqc_trios.AC[1] == 1)
+
+    mt_trans_count = mt_trans.group_cols_by(mt_trans.id).aggregate(
+        transmitted_singletons_count=hl.agg.count_where(
+            # (mt_trans.info.AC[0] == 2) &
+            (mt_trans.proband_entry.GT.is_non_ref())
+            & ((mt_trans.father_entry.GT.is_non_ref()) | (mt_trans.mother_entry.GT.is_non_ref()))
         )
+    )
 
-        mt_trans = mt_filtered.filter_entries(mt_filtered.varqc_trios.AC[1] == 2)
-        mt_untrans = mt_filtered.filter_entries(mt_filtered.varqc_trios.AC[1] == 1)
+    total_transmitted_singletons = mt_trans_count.aggregate_entries(
+        hl.agg.count_where(mt_trans_count.transmitted_singletons_count > 0)
+    )
 
-        mt_trans_count = mt_trans.group_cols_by(mt_trans.id).aggregate(
-            transmitted_singletons_count=hl.agg.count_where(
-                # (mt_trans.info.AC[0] == 2) &
-                (mt_trans.proband_entry.GT.is_non_ref())
-                & ((mt_trans.father_entry.GT.is_non_ref()) | (mt_trans.mother_entry.GT.is_non_ref()))
-            )
+    mt_untrans_count = mt_untrans.group_cols_by(mt_untrans.id).aggregate(
+        untransmitted_singletons_count=hl.agg.count_where(
+            # (mt_untrans.info.AC[0] == 1) &
+            (mt_untrans.proband_entry.GT.is_hom_ref())
+            & ((mt_untrans.father_entry.GT.is_non_ref()) | (mt_untrans.mother_entry.GT.is_non_ref()))
         )
+    )
+    total_untransmitted_singletons = mt_untrans_count.aggregate_entries(
+        hl.agg.count_where(mt_untrans_count.untransmitted_singletons_count > 0)
+    )
 
-        total_transmitted_singletons = mt_trans_count.aggregate_entries(
-            hl.agg.count_where(mt_trans_count.transmitted_singletons_count > 0)
-        )
+    print(f"\nTransmitted singletons:{total_transmitted_singletons}\n")
+    print(f"\nUntransmitted singletons:{total_untransmitted_singletons}\n")
 
-        mt_untrans_count = mt_untrans.group_cols_by(mt_untrans.id).aggregate(
-            untransmitted_singletons_count=hl.agg.count_where(
-                # (mt_untrans.info.AC[0] == 1) &
-                (mt_untrans.proband_entry.GT.is_hom_ref())
-                & ((mt_untrans.father_entry.GT.is_non_ref()) | (mt_untrans.mother_entry.GT.is_non_ref()))
-            )
-        )
-        total_untransmitted_singletons = mt_untrans_count.aggregate_entries(
-            hl.agg.count_where(mt_untrans_count.untransmitted_singletons_count > 0)
-        )
+    if total_untransmitted_singletons > 0:
+        ratio_transmitted_untransmitted = total_transmitted_singletons / total_untransmitted_singletons
+        print(f"\nTrans/Untrans ratio:{ratio_transmitted_untransmitted}\n")
+    mt2 = mt_trans_count.annotate_rows(
+        variant_transmitted_singletons=hl.agg.count_where(mt_trans_count.transmitted_singletons_count == 1)
+    )
+    mt2.variant_transmitted_singletons.summarize()
 
-        print(f"\nTransmitted singletons:{total_transmitted_singletons}\n")
-        print(f"\nUntransmitted singletons:{total_untransmitted_singletons}\n")
+    mt3 = mt_untrans_count.annotate_rows(
+        variant_untransmitted_singletons=hl.agg.count_where(mt_untrans_count.untransmitted_singletons_count == 1)
+    )
+    mt3.variant_untransmitted_singletons.summarize()
 
-        if total_untransmitted_singletons > 0:
-            ratio_transmitted_untransmitted = total_transmitted_singletons / total_untransmitted_singletons
-            print(f"\nTrans/Untrans ratio:{ratio_transmitted_untransmitted}\n")
-        mt2 = mt_trans_count.annotate_rows(
-            variant_transmitted_singletons=hl.agg.count_where(mt_trans_count.transmitted_singletons_count == 1)
-        )
-        mt2.variant_transmitted_singletons.summarize()
+    variant_transmitted_annot = mt2.rows()[ht.key].variant_transmitted_singletons
+    ht = ht.annotate(variant_transmitted_singletons=variant_transmitted_annot)
 
-        mt3 = mt_untrans_count.annotate_rows(
-            variant_untransmitted_singletons=hl.agg.count_where(mt_untrans_count.untransmitted_singletons_count == 1)
-        )
-        mt3.variant_untransmitted_singletons.summarize()
-
-        variant_transmitted_annot = mt2.rows()[ht.key].variant_transmitted_singletons
-        ht = ht.annotate(variant_transmitted_singletons=variant_transmitted_annot)
-
-        variant_untransmitted_annot = mt3.rows()[ht.key].variant_untransmitted_singletons
-        ht = ht.annotate(variant_untransmitted_singletons=variant_untransmitted_annot)
-    else:
-        print("=== No pedigree data found: skipping transmitted/untransmitted calculations")
-        ht = ht.annotate(variant_transmitted_singletons=0, variant_untransmitted_singletons=0)
+    variant_untransmitted_annot = mt3.rows()[ht.key].variant_untransmitted_singletons
+    ht = ht.annotate(variant_untransmitted_singletons=variant_untransmitted_annot)
     return ht
-
 
 def transmitted_singleton_annotation(
     ht: hl.Table,
@@ -316,20 +291,21 @@ def main():
 
     # annotate with synonymous CQs
     ht = hl.read_table(path_spark(htfile))
-    if synonymous_file is not None:
-        ht = add_cq_annotation(ht, synonymous_file, pedfile)
+    if synonymous_file is not None and pedfile is not None:
+        ht = add_cq_annotation(ht, synonymous_file)
         ht.write(path_spark(ht_cq_file), overwrite=True)
+        # ht = hl.read_table(path_spark(ht_cq_file))
+        ht = dnm_and_family_annotation_with_tables(ht, dnm_htfile, fam_stats_htfile, trio_stats_htfile)
+        ht.write(path_spark(family_annot_htfile), overwrite=True)
+
+        # annotate with transmitted singletons
+        # ht = hl.read_table(path_spark(family_annot_htfile))
+        ht = transmitted_singleton_annotation(ht, trio_mtfile, pedfile)
     else:
-        print("=== No synonymous variant data found: skipping synonymous variant annotation ===")
+        print("=== No synonymous variant and/or pedigree data found: skipping transmitted/untransmitted singletons statistics calculations ===")
         ht = ht.annotate(consequence=hl.missing(hl.tstr))
-
-    # ht = hl.read_table(path_spark(ht_cq_file))
-    ht = dnm_and_family_annotation(ht, dnm_htfile, fam_stats_htfile, trio_stats_htfile, pedfile)
-    ht.write(path_spark(family_annot_htfile), overwrite=True)
-
-    # annotate with transmitted singletons
-    # ht = hl.read_table(path_spark(family_annot_htfile))
-    ht = transmitted_singleton_annotation(ht, trio_mtfile, pedfile)
+        ht = dnm_and_family_annotation_with_missing(ht)
+        ht = ht.annotate(variant_transmitted_singletons=0, variant_untransmitted_singletons=0)
     ht.write(path_spark(trans_sing_htfile), overwrite=True)
 
     # annotate with gnomad AF
