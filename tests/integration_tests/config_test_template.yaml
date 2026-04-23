@@ -38,9 +38,14 @@ general:
   metadata:
     verifybamid_selfsm:  '${general.metadata_dir}/${general.dataset_name}.verify_bam_id_result.selfSM.tsv'  # Set to null if you don't have freemix data
     self_reported_sex:   '${general.metadata_dir}/${general.dataset_name}.self_reported_sex.tsv'
-    vep_consequences:   '${general.metadata_dir}/${general.dataset_name}.all_consequences_with_gene_and_csq.tsv.bgz'
-    pedigree:           {PEDIGREE_FILE_NAME} # Set to null if you don't have trios
-    giab_sample_id: 'EGAN00003332049' # Set to null if you don't have control samples
+    #Set batch_file to null if you don't have batch information. All samples will be marked as batch1.
+    batch_file:          null #'${general.metadata_dir}/${general.dataset_name}.batch.tsv'
+    vep_consequences:    '${general.metadata_dir}/${general.dataset_name}.all_consequences_with_gene_and_csq.tsv.bgz'
+    # Set pedigree to null, if you don't want to run transmitted/untransmitted singletons statistics calculations
+    pedigree:            {PEDIGREE_FILE_NAME} # Set to null if you don't have trios
+    giab_sample_id: 'EGAN00003332049'
+    # control samples are excluded from sample QC to remain in variant QC
+    control_samples: ['EGAN00003332049']
 
   rf_model_id: "testhash"
 
@@ -65,24 +70,44 @@ step0:
     vcfheader: '${general.onekg_resource_dir}/header_20201028.txt' # not available for the test data, this parameter is ignored
     kg_pop_file: '${cvars.resdir}/igsr_samples.tsv'
     kg_unprocessed: '${cvars.mtdir}/kg_unprocessed.mt'
-    pruned_kg_file: '${cvars.mtdir}/kg_pruned_ld.mt'
+    filtered_kg_file: '${cvars.mtdir}/kg_filtered.mt'
     long_range_ld_file: '${cvars.resdir}/long_ld_regions.hg38.bed'
-    relatedness_ht_file: '${cvars.mtdir}/kg_relatedness.ht'
     samples_to_remove_file: '${cvars.mtdir}/kg_related_samples_to_remove.ht'
-    scores_file: '${cvars.mtdir}/kg_pruned.pca_scores.ht'
+    filter_params:
+      call_rate_threshold: 0.99
+      af_threshold: 0.05
+      hwe_threshold: 0.00001 #1e-5
+
+    king_params:
+      king_output_file: '${cvars.mtdir}/king_kg.ht'
+      unrelated_king_file: '${cvars.mtdir}/unrelated_kg_king.mt' # output
+      related_king_file: '${cvars.mtdir}/related_kg_king.mt' # output
+      kinship_threshold: 0.0442
+    prune_params:
+      pruned_mt_file: '${cvars.mtdir}/kg_pruned_ld.mt' # output
+      ld_prune_args: # https://hail.is/docs/0.2/methods/genetics.html#hail.methods.ld_prune
+        r2: 0.2
+        # bp_window_size:
+        # memory_per_core:
+        # keep_higher_maf:
+        # block_size:
+
+    pc_relate_params:
+      unrelated_samples_scores_file: '${cvars.mtdir}/kg.king_unrelated_samples.pca_scores.ht' # output
+      pca_loadings_file_pc_relate: '${cvars.mtdir}/kg.king_unrelated_samples.pca_loadings.ht' # output
+      scores_file: '${cvars.mtdir}/kg_filtered.pca_scores.ht'
+      pca_components: 10
+      pc_relate_args: # https://hail.is/docs/0.2/methods/relatedness.html#hail.methods.pc_relate
+        min_individual_maf: 0.05
+        block_size: 4096
+        min_kinship: 0.05
+        statistics: 'kin2'
+        # k:
+        # include_self_kinship:
+      relatedness_column: 'kin'
+      relatedness_threshold: 0.125
 
     kg_out_mt: '${cvars.mtdir}/kg_wes_regions.mt' # output
-    call_rate_threshold: 0.99
-    af_threshold: 0.05
-    hwe_threshold: 0.00001 #1e-5
-    r2_threshold: 0.2
-    hl_pc_related_kwargs:
-      min_individual_maf: 0.05
-      block_size: 4096
-      min_kinship: 0.05
-      statistics: "kin2"
-    pca_components: 10
-    kin_threshold: 0.125
 
   generate_truthset_ht:
     omni: '${cvars.resdir}/1000G_omni2.5.hg38.vcf.gz'
@@ -108,9 +133,10 @@ step1:
     verifybamid_plot: '${cvars.pltdir}/freemix_validation.html'
     samples_failing_freemix_tsv: '${cvars.anndir}/samples_failing_freemix.tsv'
     freemix_treshold: 0.05
-    remove_freemix_outliers: false
+    remove_freemix_outliers: true
 
   sex_metadata_file: ${general.metadata.self_reported_sex}
+  batch_metadata_file: ${general.metadata.batch_file}
   mt_metadata_annotated: '${cvars.mtdir}/mt_metadata_annotated.mt'
 
   # --- Step 1.3 --- #
@@ -157,7 +183,18 @@ step2:
     conflicting_sex_report_file: '${cvars.anndir}/conflicting_sex.tsv' # output
 
   # --- Step 2.2 --- #
-  prune:
+  long_range_ld_file: '${cvars.resdir}/long_ld_regions.hg38.bed'
+  filter_params:
+    call_rate_threshold: 0.99
+    af_threshold: 0.05
+    hwe_threshold: 0.00001 #1e-5
+  filtered_mt_outfile: '${cvars.mtdir}/filtered_for_PCA.mt'
+  king_params:
+    king_output_file: '${cvars.mtdir}/king.ht'
+    unrelated_king_file: '${cvars.mtdir}/unrelated_king.mt' # output
+    related_king_file: '${cvars.mtdir}/related_king.mt' # output
+    kinship_threshold: 0.0442
+  prune_params:
     pruned_mt_file: '${cvars.mtdir}/mt_ldpruned.mt' # output
     ld_prune_args: # https://hail.is/docs/0.2/methods/genetics.html#hail.methods.ld_prune
       r2: 0.2
@@ -165,12 +202,11 @@ step2:
       # memory_per_core:
       # keep_higher_maf:
       # block_size:
-
-  prune_pc_relate:
+  pc_relate_params:
+    unrelated_samples_scores_file: '${cvars.mtdir}/mt_pruned.unrelated_samples.pca_scores.ht' # output
+    pca_loadings_file_pc_relate: '${cvars.mtdir}/mt_pruned.pca_loadings.ht' # output
     scores_file: '${cvars.mtdir}/mt_pruned.pca_scores.ht' # output
-    samples_to_remove_file: '${cvars.mtdir}/mt_related_samples_to_remove.ht' # output
-    samples_to_remove_tsv: '${cvars.anndir}/related_samples_to_remove.tsv' # output in the TSV table
-    pca_components: 3
+    pca_components: 10
     pc_relate_args: # https://hail.is/docs/0.2/methods/relatedness.html#hail.methods.pc_relate
       min_individual_maf: 0.05
       block_size: 4096
@@ -180,33 +216,35 @@ step2:
       # include_self_kinship:
     relatedness_column: 'kin'
     relatedness_threshold: 0.125
+
+  relatedness_output:
     relatedness_outfile: '${cvars.anndir}/relatedness.tsv.gz'
     relatedness_plotfile: '${cvars.pltdir}/relatedness_plot.html'
+    samples_to_remove_file: '${cvars.mtdir}/mt_related_samples_to_remove.ht' # output
+    samples_to_remove_tsv: '${cvars.anndir}/related_samples_to_remove.tsv' # output in the TSV table
 
   prune_plot_pca:
-    plink_outfile: '${cvars.anndir}/mt_unrelated.plink'
-    pca_components: 4
-    pca_scores_file: '${cvars.mtdir}/mt_pca_scores.ht' # output
-    pca_loadings_file: '${cvars.mtdir}/mt_pca_loadings.ht' # output
+    #plink_outfile: '${cvars.anndir}/mt_unrelated.plink'
+    pruned_unrelated_pcrelate_file: '${cvars.mtdir}/mt_unrelated_ldpruned_pcrelate.mt' # output
+    pca_components: 10
+    union_pca_scores_file: '${cvars.mtdir}/mt_pca_scores.ht' # output
+    pca_scores_file: '${cvars.mtdir}/mt_pca_scores.unrelated_samples.ht' # output
+    pca_loadings_file: '${cvars.mtdir}/mt_pca_loadings.unrelated_samples.ht' # output
     pca_mt_file: '${cvars.mtdir}/mt_pca.mt' # output
-    plot_outfile: '${cvars.pltdir}/pca.html' # output
+    plot_outfile: '${cvars.pltdir}/relatedness_pca.html' # output
 
   # --- Step 2.3 --- #
   merge_1kg_and_ldprune:
-    long_range_ld_file: '${cvars.resdir}/long_ld_regions.hg38.bed'
-    merged_filtered_mt_outfile: '${cvars.mtdir}/merged_with_1kg_filtered.mt'
-    call_rate_threshold: 0.99
-    af_threshold: 0.05
-    hwe_threshold: 0.00001 #1e-5
+    pruned_mt_outfile: '${cvars.mtdir}/1kg_filtered_ldpruned.mt'
     r2_threshold: 0.2
-    filtered_and_pruned_mt_outfile: '${cvars.mtdir}/merged_with_1kg_filtered_ldpruned.mt'
+    pruned_and_merged_mt_outfile: '${cvars.mtdir}/merged_with_1kg_filtered_ldpruned.mt'
 
   pop_pca:
     pca_1kg_scores_file: '${cvars.mtdir}/pop_pca_1kg_scores.ht'
     pca_1kg_loadings_file: '${cvars.mtdir}/pop_pca_1kg_loadings.ht'
     pca_1kg_evals_file: '${cvars.anndir}/pop_pca_1kg_evals.tsv'
     pca_union_scores_file: '${cvars.mtdir}/pop_pca_union_scores.ht'
-    pca_components: 4
+    pca_components: 10
 
   plot_pop_pca:
     pca_components: 3
@@ -231,23 +269,48 @@ step2:
     annotated_mt_file: '${cvars.mtdir}/gatk_unprocessed_with_pop.mt' # output
 
   stratified_sample_qc:
-    mt_qc_outfile: '${cvars.mtdir}/mt_pops_sampleqc.mt' # output
-    ht_qc_cols_outfile: '${cvars.mtdir}/mt_pops_sampleqc.ht' # output
-    qc_filter_file: '${cvars.mtdir}/mt_pops_QC_filters.ht' # output
+    sample_qc_method: 'lr' #pop -stratification based on population; nn - nearest neighbours; lm - linear model
+    ht_qc_cols_outfile: '${cvars.mtdir}/mt_stratified_sampleqc.ht' # output
+    qc_filter_file: '${cvars.mtdir}/mt_stratified_QC_filters.ht' # output
+    mad_file: '${cvars.mtdir}/mad.ht' # output
     min_depth: 5
     min_genotype_quality: 10
     min_vaf: 0.2
+    # Use batch in nn or lr. True or Falce
+    use_batch: True
+
+    # Additional parameters to pass to gnomAD determine_nearest_neighbors function:
+    # https://broadinstitute.github.io/gnomad_methods/api_reference/sample_qc/filtering.html#gnomad.sample_qc.filtering.compute_qc_metrics_residuals
+    compute_qc_metrics_residuals_args: #do not specify strata and regression_sample_inclusion_expr in compute_qc_metrics_residuals_args
+    #  use_pc_square: True # Optional parmeter. To use default value keep this line commented.
+    #  n_pcs: 10 # Optional parmeter. To use default value keep this line commented.
+
+    # Additional parameters to pass to gnomAD determine_nearest_neighbors function:
+    #https://broadinstitute.github.io/gnomad_methods/api_reference/sample_qc/filtering.html#gnomad.sample_qc.filtering.determine_nearest_neighbors
+    determine_nearest_neighbors_args: #do not specify add_neighbor_distances and strata in determine_nearest_neighbors_args
+    #  n_pcs: 10 # Optional parmeter. To use default value keep this line commented.
+    #  n_neighbors: 50 # Optional parmeter. To use default value keep this line commented.
+    #  n_jobs: -1 # Optional parmeter. To use default value keep this line commented.
+    #  distance_metric: “euclidean” # Optional parmeter. To use default value keep this line commented.
+    #  use_approximation: False # Optional parmeter. To use default value keep this line commented.
+    #  n_trees: 10 # Optional parmeter. To use default value keep this line commented.
+
     # Additional parameters to pass to gnomAD sampleQC function:
     # https://broadinstitute.github.io/gnomad_methods/api_reference/sample_qc/filtering.html#gnomad.sample_qc.filtering.compute_stratified_metrics_filter
-    compute_stratified_metrics_filter_args:
-      lower_threshold: 12.0 # Using a broad interval to make all samples pass QC
-      upper_threshold: 12.0
-    output_text_file: '${cvars.anndir}/sample_qc_by_pop.tsv.bgz' # output
-    output_globals_json_file: '${cvars.anndir}/sample_qc_by_pop.globals.json' # output
+    compute_stratified_metrics_filter_args: #do not specify comparison_sample_expr in compute_stratified_metrics_filter_args
+      lower_threshold: 4.0 # Using a broad interval to make all samples pass QC
+      upper_threshold: 4.0
+    #  metric_threshold: {'r_het_hom_var': [math.inf, 4.0], 'heterozygosity_rate': [math.inf, 4.0]} # Optional parmeter. To use default value keep this line commented.
+    # extra output files
+    output_text_file: '${cvars.anndir}/stratified_sample_qc.tsv.bgz' # output
+    output_stratified_metrics_json_file: '${cvars.anndir}/stratified_sample_qc.qc_metrics_stats.json' # output
+    output_nn_file: '${cvars.anndir}/nearest_neighbours.tsv.bgz' # output
+    output_residuals_file: '${cvars.anndir}/residuals.tsv.bgz' # output
+    output_lms_json_file: '${cvars.anndir}/lms.json' # output
 
   plot_sample_qc_metrics:
     n_bins: 4
-    plot_outdir: '${cvars.pltdir}/sample_qc_metrics'
+    plot_outdir: '${cvars.pltdir}/stratified_sample_qc_metrics'
 
   # --- Step 2.5 --- #
   remove_sample_qc_fails:
@@ -314,7 +377,8 @@ step3:
 
   # --- Step 3.5 --- #
   add_cq_annotation:
-    synonymous_file: '${cvars.metadir}/${general.dataset_name}.synonymous_variants.tsv.bgz'
+    # Put here `null`, if you don't want to run transmitted/untransmitted singletons statistics calculations
+    cqfile: '${general.metadata.vep_consequences}'
 
   dnm_and_family_annotation:
     dnm_htfile: '${cvars.mtdir}/denovo_table.ht'
@@ -364,7 +428,6 @@ step3:
   # --- Step 3.9 --- #
   annotate_mt_with_cq_rf_score_and_bin:
     mtfile: '${cvars.mtdir}/mt_varqc_splitmulti.mt'
-    cqfile: '${cvars.metadir}/${general.dataset_name}.all_consequences.tsv.bgz'
     mtoutfile_after_varqc: '${cvars.mtdir}/mt_after_var_qc.mt'
 
 
@@ -407,9 +470,16 @@ step4:
   # --- Step 4.2 --- #
   annotate_cq_rf:
     mtfile: '${cvars.mtdir}/mt_varqc_splitmulti.mt'
+    # Put here `null`, if you don't want add VEP consequences annotation
     cqfile: '${general.metadata.vep_consequences}'
+    # Put here `null`, if you don't want add VEP consequences annotation. Othrewise specify to have correct header in the output VCFs
+    csq_header: '${general.metadata_dir}/${general.dataset_name}.csq_header.txt'
 
   apply_hard_filters:
+    # Set to true if you want to apply different hard filters for sex chromosomes in male samples (depth threshold will be halfed for sex chromosome).
+    sex_chromosome_specific_filtering: True
+    # A file similar to self_reported_sex with resolved annotation conflicts. This file is used when sex_chromosome_specific_filtering is true
+    sex_annotation_file: '${general.metadata_dir}/${general.dataset_name}.self_reported_sex.tsv'
     hard_filters:
       snp:
         relaxed:
@@ -452,6 +522,7 @@ step4:
 
   # used as an output of the whole step
   mtoutfile_annot: '${cvars.mtdir}/mt_hard_filter_combinations.mt'
+
 
   # --- Step 4.3a --- #
   export_vcfs_a:
