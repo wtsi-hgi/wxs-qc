@@ -1,8 +1,10 @@
-#Identical
 from utils.utils import path_spark
 from wes_qc.pca_utils import prune_mt, run_pc_project
 
 def run_king(mt: hl.MatrixTable, king_args: dict, prune_args: dict) -> (hl.MatrixTable, hl.MatrixTable):
+    '''
+    Separate related and unrelated samples using the KING kinship estimator.
+    '''
     print("=== LD pruning before KING")
     pruned_mt= prune_mt(mt, prune_args["ld_prune_args"])
     pruned_mt=pruned_mt.checkpoint(path_spark(prune_args["pruned_mt_file"]), overwrite=True)
@@ -24,7 +26,10 @@ def run_king(mt: hl.MatrixTable, king_args: dict, prune_args: dict) -> (hl.Matri
 
 def prune_pc_relate(
     mt: hl.MatrixTable, prune_params: dict, king_params: dict, pc_relate_params: dict, dataset: str, **kwargs
-) -> (hl.Table, hl.Table, hl.Table, hl.Table, hl.Table):
+) -> (hl.Table, hl.Table):
+    '''
+    Complete PC-Relate workflow for identifying and removing related samples.
+    '''
     #Running KING
     related_mt, unrelated_mt = run_king(mt, king_params, prune_params)
     #Running PCA
@@ -32,7 +37,6 @@ def prune_pc_relate(
     union_pca_scores=union_pca_scores.checkpoint(path_spark(pc_relate_params["scores_file"]), overwrite=True)
     pca_scores=pca_scores.checkpoint(path_spark(pc_relate_params["unrelated_samples_scores_file"]), overwrite=True)
     pca_loadings=pca_loadings.checkpoint(path_spark(pc_relate_params["pca_loadings_file_pc_relate"]), overwrite=True)
-    print("=== Calculating relatedness")
     if dataset == "study":
         related_mt = related_mt.drop(#For some reason unrelated_mt doesn't have these in study data
             "AD",
@@ -47,6 +51,8 @@ def prune_pc_relate(
             "RGQ"
         )
     pruned_mt = related_mt.union_cols(unrelated_mt)
+    print("=== Calculating relatedness")
+    #calculate relatedness using PC relate
     relatedness_ht = hl.pc_relate(pruned_mt.GT, scores_expr=union_pca_scores[pruned_mt.col_key].scores, **pc_relate_params["pc_relate_args"])
     # prune individuals to be left with unrelated - creates a table containing one column - samples to remove
     pairs = relatedness_ht.filter(relatedness_ht[relatedness_column] > relatedness_threshold)

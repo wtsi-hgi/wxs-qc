@@ -2,19 +2,9 @@ from wes_qc import hail_patches
 from gnomad.sample_qc.ancestry import pc_project
 
 def prune_mt(mt: hl.MatrixTable, ld_prune_args, **kwargs) -> hl.MatrixTable:
-    """
-    Splits multiallelic sites and runs ld pruning
-    Filter to autosomes before LD pruning to decrease sample size - autosomes only wanted for later steps
-    :param MatrixTable mt: input MT containing variants to be pruned
-    :param dict config:
-    :return: Pruned MatrixTable
-    :rtype: hl.MatrixTable
-
-    `hl.ld_prune` returns a maximal subset of variants that are nearly uncorrelated within each window.
-    Requires the dataset to contain only diploid genotype calls and no multiallelic variants.
-    See also: https://hail.is/docs/0.2/methods/genetics.html#hail.methods.ld_prune
-    """
-
+    '''
+    Prune variants in linkage disequilibrium (LD) on autosomes.
+    '''
     print("=== Filtering to autosomes")
     mt = mt.filter_rows(mt.locus.in_autosome())
     print("=== Splitting multiallelic sites")
@@ -28,6 +18,9 @@ def prune_mt(mt: hl.MatrixTable, ld_prune_args, **kwargs) -> hl.MatrixTable:
     return pruned_mt
 
 def run_pc_project(mt_ref, mt_study, pca_components):
+    '''
+    Run PCA on reference data and project study samples onto the PC space.
+    '''
     print("=== Running PCA")
     pca_evals, pca_scores, pca_loadings = hl.hwe_normalized_pca(mt_ref.GT, k=pca_components, compute_loadings=True)
     pca_af_ht = mt_ref.annotate_rows(pca_af=hl.agg.mean(mt_ref.GT.n_alt_alleles()) / 2).rows()

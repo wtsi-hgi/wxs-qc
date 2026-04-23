@@ -1,14 +1,6 @@
 def modify_vcf_metadata(metadata: dict, csq_file: Optional[str] = None, header_file: Optional[str] = None) -> dict:
     """
     Modify metadata to include information about the CSQ annotation file and header file used for VCF export.
-    
-    Args:
-        metadata (dict): The original metadata dictionary.
-        csq_file (Optional[str]): The path to the CSQ annotation file used for VCF export.
-        header_file (Optional[str]): The path to the header file used for VCF export.
-    
-    Returns:
-        dict: The modified metadata dictionary with CSQ annotation and header file information added.
     """
     if header_file is not None and csq_file is not None:
         metadata=extract_csq_header(header_file, metadata)
@@ -35,6 +27,9 @@ def modify_vcf_metadata(metadata: dict, csq_file: Optional[str] = None, header_f
     return metadata
 
 def extract_csq_header(header_file: str, metadata: dict) -> dict:
+    """
+    Modify metadata to include the CSQ description used for VCF export.
+    """
     info={}
     with open(header_file) as f:
         for line in f:
