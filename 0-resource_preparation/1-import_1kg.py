@@ -121,8 +121,8 @@ def main() -> None:
         kg_mt = hl.read_matrix_table(kg_unprocessed_mt_file)
         related_samples_to_remove = hl.read_table(samples_to_remove_file)
         kg_mt_remove_related = kg_remove_related_samples(kg_mt, related_samples_to_remove)
+        kg_mt_remove_related = filtering.filter_matrix_for_ldprune(kg_mt_remove_related, conf["long_range_ld_file"], **conf["filter_params"])
         kg_mt_remove_related.write(kg_mt_file, overwrite=True)
-
 
 if __name__ == "__main__":
     main()

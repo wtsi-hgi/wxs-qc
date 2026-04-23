@@ -1,3 +1,4 @@
+import hail as hl
 from wes_qc import hail_patches
 from gnomad.sample_qc.ancestry import pc_project
 
