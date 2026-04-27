@@ -47,9 +47,10 @@ def export_vcfs(
         mt.medium_pass_count,
         mt.relaxed_pass_count,
         mt.adj,
-        mt.assigned_pop,
         mt.sum_AD,
     )
+    if "assigned_pop" in mt.col:
+        mt = mt.drop(mt.assigned_pop)
 
     # info for header
     stringent_filters = (

@@ -853,7 +853,7 @@ def main():
 
     # = STEP PARAMETERS = #
     runmode=config["step2"]["stratified_sample_qc"]["sample_qc_method"]
-    control_list=config["step2"]["general"]["metadata"]["control_samples"]
+    control_list=config["general"]["metadata"]["control_samples"]
     if control_list is None:
         control_list=[]
 

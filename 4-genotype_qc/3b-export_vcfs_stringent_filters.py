@@ -1,5 +1,5 @@
 # export to VCF after annotating with a range of hard filters - flexible filter level
-from typing import Union
+from typing import Union, Any, Optional
 import argparse
 import hail as hl
 import os.path
@@ -52,10 +52,11 @@ def export_vcfs(
         mt.medium_pass_count,
         mt.relaxed_pass_count,
         mt.adj,
-        mt.assigned_pop,
         mt.sum_AD,
     )
-    
+    if "assigned_pop" in mt.col:
+        mt = mt.drop(mt.assigned_pop)
+   
     # Drop the fraction fields for other filter levels
     other_levels = [level for level in valid_levels if level != filter_level]
     info_drops = [f"fraction_pass_{level}_filters" for level in other_levels]
@@ -140,6 +141,16 @@ def export_vcfs(
     }
 
     metadata =vcf_utils.modify_vcf_metadata(metadata, csq_file, header_file)
+    if csq_file is None:
+        if 'CSQ' in mt.info.dtype.fields:
+            mt = mt.annotate_rows(
+                info=mt.info.drop('CSQ', 'consequence', 'gene', 'hgnc_id')
+            )
+    elif not metadata["info"].get("CSQ"):
+        if 'CSQ' in mt.info.dtype.fields:
+            mt = mt.annotate_rows(
+                info=mt.info.drop('CSQ')
+            )
 
     # Export per chromosome
     chroms = [*range(1, 23), "X", "Y"]
@@ -151,9 +162,10 @@ def export_vcfs(
         outfile = os.path.join(path_spark(filtered_vcf_dir), f"{chromosome}_{filter_level}_filters.vcf.bgz")
         hl.export_vcf(mt_chrom, outfile, metadata=metadata)
 
-
-def main():
-    # Parse command line arguments
+def get_options() -> argparse.Namespace:
+    """
+    Get options from the command line
+    """
     parser = argparse.ArgumentParser(
         description="Export VCFs with specified filter level (relaxed, medium, or stringent)"
     )
@@ -165,7 +177,11 @@ def main():
         help="Filter level to apply (default: stringent)"
     )
     args = parser.parse_args()
+    return args
 
+def main():
+    # Parse command line arguments
+    args = get_options()
     # = STEP SETUP = #
     config = parse_config()
     tmp_dir = config["general"]["tmp_dir"]

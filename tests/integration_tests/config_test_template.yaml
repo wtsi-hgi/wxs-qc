@@ -206,7 +206,7 @@ step2:
     unrelated_samples_scores_file: '${cvars.mtdir}/mt_pruned.unrelated_samples.pca_scores.ht' # output
     pca_loadings_file_pc_relate: '${cvars.mtdir}/mt_pruned.pca_loadings.ht' # output
     scores_file: '${cvars.mtdir}/mt_pruned.pca_scores.ht' # output
-    pca_components: 10
+    pca_components: 2
     pc_relate_args: # https://hail.is/docs/0.2/methods/relatedness.html#hail.methods.pc_relate
       min_individual_maf: 0.05
       block_size: 4096
@@ -226,7 +226,7 @@ step2:
   prune_plot_pca:
     #plink_outfile: '${cvars.anndir}/mt_unrelated.plink'
     pruned_unrelated_pcrelate_file: '${cvars.mtdir}/mt_unrelated_ldpruned_pcrelate.mt' # output
-    pca_components: 10
+    pca_components: 2
     union_pca_scores_file: '${cvars.mtdir}/mt_pca_scores.ht' # output
     pca_scores_file: '${cvars.mtdir}/mt_pca_scores.unrelated_samples.ht' # output
     pca_loadings_file: '${cvars.mtdir}/mt_pca_loadings.unrelated_samples.ht' # output
@@ -378,7 +378,7 @@ step3:
   # --- Step 3.5 --- #
   add_cq_annotation:
     # Put here `null`, if you don't want to run transmitted/untransmitted singletons statistics calculations
-    cqfile: '${general.metadata.vep_consequences}'
+    cqfile: null #'${general.metadata.vep_consequences}'
 
   dnm_and_family_annotation:
     dnm_htfile: '${cvars.mtdir}/denovo_table.ht'

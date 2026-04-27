@@ -347,7 +347,8 @@ class IntegrationTestsStub(HailTestCase):
         except Exception as e:
             self.fail(f"Step 4.3a failed with an exception: {e}")
 
-    def stub_4_3b_genotype_qc(self):
+    @patch("argparse.ArgumentParser.parse_args", return_value=argparse.Namespace(filter_level="stringent"))
+    def stub_4_3b_genotype_qc(self, mock_args):
         qc_step_4_3b = importlib.import_module("4-genotype_qc.3b-export_vcfs_stringent_filters")
         try:
             qc_step_4_3b.main()

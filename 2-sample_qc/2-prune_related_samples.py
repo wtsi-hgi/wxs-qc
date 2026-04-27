@@ -108,7 +108,7 @@ def main():
     relatedness_ht.export(path_spark(config["step2"]["relatedness_output"]["relatedness_outfile"]))
 
     # plot relatedness
-    plot_relatedness(relatedness_ht, **config["step2"]["relatedness_output"]["relatedness_plotfile"])
+    plot_relatedness(relatedness_ht, config["step2"]["relatedness_output"]["relatedness_plotfile"])
     # run PCA
     pca_mt, union_pca_scores, pca_scores, pca_loadings = run_population_pca(
         filtered_mt, related_samples_to_remove_ht, config["step2"]["prune_params"], **config["step2"]["prune_plot_pca"]

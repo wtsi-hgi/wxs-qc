@@ -56,7 +56,7 @@ def prune_pc_relate(
     #calculate relatedness using PC relate
     relatedness_ht = hl.pc_relate(pruned_mt.GT, scores_expr=union_pca_scores[pruned_mt.col_key].scores, **pc_relate_params["pc_relate_args"])
     # prune individuals to be left with unrelated - creates a table containing one column - samples to remove
-    pairs = relatedness_ht.filter(relatedness_ht[relatedness_column] > relatedness_threshold)
+    pairs = relatedness_ht.filter(relatedness_ht[pc_relate_params["relatedness_column"]] > pc_relate_params["relatedness_threshold"])
     related_samples_to_remove = hl.maximal_independent_set(pairs.i, pairs.j, keep=False)
     return related_samples_to_remove, relatedness_ht
 

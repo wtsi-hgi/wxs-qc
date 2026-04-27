@@ -102,7 +102,7 @@ def annotate_ac(mt: hl.MatrixTable, filter_name: str) -> hl.MatrixTable:
 
 
 # Build filter conditions for autosomes
-def build_autosomal_condition(hard_filters: dict, filter_level: str):
+def build_autosomal_condition(mt: hl.MatrixTable, hard_filters: dict, filter_level: str):
     """Build filtering condition for all chromosomes"""
     condition = (
         (hl.is_snp(mt.alleles[0], mt.alleles[1]))
@@ -127,7 +127,7 @@ def build_autosomal_condition(hard_filters: dict, filter_level: str):
     )
     return condition
 
-def build_sex_chr_condition(hard_filters: dict, filter_level: str):
+def build_sex_chr_condition(mt: hl.MatrixTable, hard_filters: dict, filter_level: str):
     """
     Build filtering condition using different thresholds for sex chromosomes
     For males on chrX non-PAR and chrY: exclude heterozygous calls
@@ -179,14 +179,14 @@ def apply_hard_filters(
 
     # Build final conditions combining autosomal and sex chromosome logic
     if diff_sex_chromosome_filter:
-        stringent_condition = build_sex_chr_condition(hard_filters, "stringent")
-        medium_condition = build_sex_chr_condition(hard_filters, "medium")
-        relaxed_condition = build_sex_chr_condition(hard_filters, "relaxed")
+        stringent_condition = build_sex_chr_condition(mt, hard_filters, "stringent")
+        medium_condition = build_sex_chr_condition(mt, hard_filters, "medium")
+        relaxed_condition = build_sex_chr_condition(mt, hard_filters, "relaxed")
     else:
         # Use standard filtering for all chromosomes
-        stringent_condition = build_autosomal_condition(hard_filters, "stringent")
-        medium_condition = build_autosomal_condition(hard_filters, "medium")
-        relaxed_condition = build_autosomal_condition(hard_filters, "relaxed")
+        stringent_condition = build_autosomal_condition(mt, hard_filters, "stringent")
+        medium_condition = build_autosomal_condition(mt, hard_filters, "medium")
+        relaxed_condition = build_autosomal_condition(mt, hard_filters, "relaxed")
     
     # Adding pass/fail tags to all genotypes
     mt = mt.annotate_entries(
@@ -293,7 +293,7 @@ def main():
     hard_filters = config["step4"]["apply_hard_filters"]["hard_filters"]
     
     # Get sex chromosome filtering flag from config (default to False if not present)
-    diff_sex_chromosome_filter = config["step4"]["apply_hard_filters"]["diff_sex_chromosome_filter"]
+    diff_sex_chromosome_filter = config["step4"]["apply_hard_filters"]["sex_chromosome_specific_filtering"]
 
     # = STEP DEPENDENCIES = #
     rf_dir = path_spark(
@@ -319,7 +319,7 @@ def main():
     print("=== Annotating mt with consequence, gene, rf bin ===")
     mt_annot = annotate_rf(mt, rf_htfile)
     if cqfile is not None:
-        mt_annot = annotate_ac(mt_annot, cqfile)
+        mt_annot = annotate_cq(mt_annot, cqfile)
     print("=== Applying hard filters ===")
     if diff_sex_chromosome_filter:
         print("=== Sex chromosome-specific filtering ENABLED ===")

@@ -35,7 +35,10 @@ def clean_mt(mt: hl.MatrixTable) -> hl.MatrixTable:
     Reduces matrixtable by cleaning all fields not required for hardfilter evaluation
     """
     mt = mt.select_entries(mt.GT, mt.HetAB, mt.DP, mt.GQ)
-    mt = mt.drop(mt.assigned_pop, *mt.row_value)
+    if "assigned_pop" in mt.col:
+        mt = mt.drop(mt.assigned_pop, *mt.row_value)
+    else:
+        mt = mt.drop(*mt.row_value)
     mt = mt.annotate_rows(info=hl.Struct())
     mt = mt.annotate_rows(
         type=hl.case()
@@ -74,7 +77,7 @@ def annotate_cq(mt: hl.MatrixTable, cqfile: str) -> hl.MatrixTable:
     :return: hl.MatrixTable
     """
     ht = hl.import_table(path_spark(cqfile), types={"f1": "int32"}, no_header=True)
-    ht = ht.rename({"f0": "chr", "f1": "pos", "f2": "rs", "f3": "ref", "f4": "alt", "f5": "consequence"})
+    ht = ht.rename({"f0": "chr", "f1": "pos", "f2": "rs", "f3": "ref", "f4": "alt", "f6": "consequence"})
     ht = ht.key_by(locus=hl.locus(ht.chr, ht.pos), alleles=[ht.ref, ht.alt])
     ht = ht.drop(ht.chr, ht.pos, ht.ref, ht.alt)
     mt = mt.annotate_rows(consequence=ht[mt.row_key].consequence)
@@ -172,6 +175,7 @@ def process_filter_combination(
     mtdir: str,
     giab_sample_id: Optional[str] = None,
     prec_recall_panel: Optional[hl.Table] = None,
+    csq_anntation_file: Optional[str] = None,
 ) -> EvaluationStepResults:
     """
     Process a single filter combination and return the variant counts and metrics.
@@ -212,7 +216,7 @@ def process_filter_combination(
         var_counts["mendelian_error_mean"], var_counts["mendelian_error_std"] = -1.0, -1.0
 
     # Counting transmitted/untransmitted ratio - for SNPs only
-    if var_type == "snv" and pedigree is not None:
+    if var_type == "snv" and pedigree is not None and csq_anntation_file is not None:
         # Extracting synonymous for transmitted/unstransmitted calculation
         mt_syn = mt_hard_filtered.filter_rows(mt_hard_filtered.consequence == "synonymous_variant")
         ratio = count_trans_untrans(mt_syn, pedigree)
@@ -238,6 +242,7 @@ def process_filter_combination(
                 ht_giab_dataset=ht_giab_dataset,
                 mtdir=mtdir,
                 prec_recall_panel=prec_recall_panel,
+                csq_anntation_file=csq_anntation_file
             )
             var_counts["prec"] = prec
             var_counts["recall"] = recall
@@ -285,6 +290,7 @@ def filter_and_count(
     mt: hl.MatrixTable,
     ht_giab_control: hl.Table,
     pedigree: Optional[hl.Pedigree],
+    cqfile: Optional[str],
     mtdir: str,
     var_type: str,
     hardfilter_combinations: dict[str, list[Union[int, float]]],
@@ -358,6 +364,7 @@ def filter_and_count(
             giab_sample_id=giab_sample_id,
             json_dump_folder=json_dump_folder,
             prec_recall_panel=prec_recall_panel,
+            csq_anntation_file=cqfile,
         )
         results[var_type][filter_name] = var_counts
 
@@ -402,6 +409,7 @@ def filter_and_count(
                             giab_sample_id=giab_sample_id,
                             json_dump_folder=json_dump_folder,
                             prec_recall_panel=prec_recall_panel,
+                            csq_anntation_file=cqfile,
                         )
 
                         results[var_type][filter_name] = var_counts
@@ -476,7 +484,7 @@ def apply_hard_filters(
 
 
 def count_prec_recall_indel(
-    ht_giab_control: hl.Table, ht_giab_dataset: hl.Table, mtdir: str, prec_recall_panel: Optional[hl.Table] = None
+    ht_giab_control: hl.Table, ht_giab_dataset: hl.Table, mtdir: str, prec_recall_panel: Optional[hl.Table] = None, csq_anntation_file: Optional[str] = None
 ) -> tuple:
     """
     Get precison/recall vs GIAB for indels
@@ -487,22 +495,26 @@ def count_prec_recall_indel(
 
     # Regular precision-recall for the full set of indels
     p, r = count_precision_recall(ht_giab_control, ht_giab_dataset_indels, prec_recall_panel)
+    if csq_anntation_file is not None:
+        # Precision/recall for FrameShift indels
+        ht_giab_control_frameshift = ht_giab_control.filter(ht_giab_control.consequence == "frameshift_variant")
+        ht_giab_dataset_frameshift = ht_giab_dataset_indels.filter(
+            ht_giab_dataset_indels.consequence == "frameshift_variant"
+        )
+        p_f, r_f = count_precision_recall(ht_giab_control_frameshift, ht_giab_dataset_frameshift, prec_recall_panel)
 
-    # Precision/recall for FrameShift indels
-    ht_giab_control_frameshift = ht_giab_control.filter(ht_giab_control.consequence == "frameshift_variant")
-    ht_giab_dataset_frameshift = ht_giab_dataset_indels.filter(
-        ht_giab_dataset_indels.consequence == "frameshift_variant"
-    )
-    p_f, r_f = count_precision_recall(ht_giab_control_frameshift, ht_giab_dataset_frameshift, prec_recall_panel)
-
-    # Precision/recall for In-Frame indels
-    inframe_cqs = ["inframe_deletion", "inframe_insertion"]
-    ht_giab_conrol_inframe = ht_giab_control.filter(hl.literal(inframe_cqs).contains(ht_giab_control.consequence))
-    ht_giab_dataset_inframe = ht_giab_dataset_indels.filter(
-        hl.literal(inframe_cqs).contains(ht_giab_dataset_indels.consequence)
-    )
-    p_if, r_if = count_precision_recall(ht_giab_conrol_inframe, ht_giab_dataset_inframe, prec_recall_panel)
-
+        # Precision/recall for In-Frame indels
+        inframe_cqs = ["inframe_deletion", "inframe_insertion"]
+        ht_giab_conrol_inframe = ht_giab_control.filter(hl.literal(inframe_cqs).contains(ht_giab_control.consequence))
+        ht_giab_dataset_inframe = ht_giab_dataset_indels.filter(
+            hl.literal(inframe_cqs).contains(ht_giab_dataset_indels.consequence)
+        )
+        p_if, r_if = count_precision_recall(ht_giab_conrol_inframe, ht_giab_dataset_inframe, prec_recall_panel)
+    else:
+        p_f = -1
+        r_f = -1
+        p_if = -1
+        r_if = -1
     return p, r, p_f, r_f, p_if, r_if
 
 
@@ -1003,7 +1015,7 @@ def main():
 
     # Files from VariantQC
     mtfile: str = config["step3"]["split_multi_and_var_qc"]["varqc_mtoutfile_split"]
-    cqfile: str = config["step3"]["annotate_mt_with_cq_rf_score_and_bin"]["cqfile"]
+    cqfile: str = config["step3"]["add_cq_annotation"]["cqfile"]
     pedfile: str = config["step3"]["pedfile"]
     rf_htfile: str = os.path.join(rf_dir, model_id, "_gnomad_score_binning_tmp.ht")
 
@@ -1029,7 +1041,8 @@ def main():
 
         rf_ht = hl.read_table(path_spark(rf_htfile))
         mt_annot = annotate_with_rf(mt, rf_ht)
-        mt_annot = annotate_cq(mt_annot, cqfile)
+        if cqfile is not None:
+            mt_annot = annotate_cq(mt_annot, cqfile)
         mt_annot.write(path_spark(mt_annot_path), overwrite=True)
 
     ht_giab_control = hl.read_table(path_spark(giab_ht_file))
@@ -1043,6 +1056,7 @@ def main():
             mt,
             ht_giab_control,
             pedigree,
+            cqfile,
             mtdir=path_spark(hardfilter_evaluate_workdir),
             var_type="snv",
             prec_recall_panel=prec_recall_panel,
@@ -1063,6 +1077,7 @@ def main():
             mt,
             ht_giab_control,
             pedigree,
+            cqfile,
             mtdir=path_spark(hardfilter_evaluate_workdir),
             var_type="indel",
             prec_recall_panel=prec_recall_panel,

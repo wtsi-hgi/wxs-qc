@@ -54,7 +54,10 @@ def get_trans_untrans_synon_singleton_counts(mt_in: hl.MatrixTable, pedfile: str
 
     untrans_sing = tdt_ht_untrans.filter((tdt_ht_untrans.t == 0) & (tdt_ht_untrans.u == 1))
     untrans = untrans_sing.count()
-    ratio = trans / untrans
+    if untrans > 0:
+        ratio = trans / untrans
+    else:
+        ratio = -1  # Sentinel value indicating undefined ratio
 
     print(
         "There are "
@@ -238,7 +241,15 @@ def main():
     print("=== Annotating-pre-filtered mt with consequence, gene, rf bin ===")
     rf_htfile = os.path.join(rf_dir, model_id, "_gnomad_score_binning_tmp.ht")  # move runhash to config
     mt = hl.read_matrix_table(path_spark(mt_prefiltered_file))
-    mt_annot = step4_2.annotate_cq_rf(mt, rf_htfile, cqfile)
+    mt_annot = step4_2.annotate_rf(mt, rf_htfile)
+    if cqfile is not None:
+        mt_annot = step4_2.annotate_cq(mt_annot, cqfile)
+    else:
+        mt_annot = mt_annot.annotate_rows(
+            info=mt_annot.info.annotate(
+                consequence=hl.missing(hl.tstr)
+            )
+        )
     print("--- Pre-filtering variants stats ---")
 
     vars_preqc = mt_annot.rows()
