@@ -34,7 +34,7 @@ def prune_pc_relate(
     #Running KING
     related_mt, unrelated_mt = run_king(mt, king_params, prune_params)
     #Running PCA
-    union_pca_scores, pca_scores, pca_loadings = run_pc_project(unrelated_mt, related_mt, pc_relate_params["pca_components"])
+    union_pca_scores, pca_scores, pca_loadings, _ = run_pc_project(unrelated_mt, related_mt, pc_relate_params["pca_components"])
     union_pca_scores=union_pca_scores.checkpoint(path_spark(pc_relate_params["scores_file"]), overwrite=True)
     pca_scores=pca_scores.checkpoint(path_spark(pc_relate_params["unrelated_samples_scores_file"]), overwrite=True)
     pca_loadings=pca_loadings.checkpoint(path_spark(pc_relate_params["pca_loadings_file_pc_relate"]), overwrite=True)

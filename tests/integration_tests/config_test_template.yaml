@@ -236,7 +236,12 @@ step2:
   # --- Step 2.3 --- #
   merge_1kg_and_ldprune:
     pruned_mt_outfile: '${cvars.mtdir}/1kg_filtered_ldpruned.mt'
-    r2_threshold: 0.2
+    ld_prune_args: # https://hail.is/docs/0.2/methods/genetics.html#hail.methods.ld_prune
+      r2: 0.2
+      # bp_window_size:
+      # memory_per_core:
+      # keep_higher_maf:
+      # block_size:
     pruned_and_merged_mt_outfile: '${cvars.mtdir}/merged_with_1kg_filtered_ldpruned.mt'
 
   pop_pca:
@@ -378,7 +383,7 @@ step3:
   # --- Step 3.5 --- #
   add_cq_annotation:
     # Put here `null`, if you don't want to run transmitted/untransmitted singletons statistics calculations
-    cqfile: null #'${general.metadata.vep_consequences}'
+    cqfile: '${general.metadata.vep_consequences}'
 
   dnm_and_family_annotation:
     dnm_htfile: '${cvars.mtdir}/denovo_table.ht'

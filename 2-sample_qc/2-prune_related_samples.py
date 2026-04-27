@@ -56,7 +56,7 @@ def run_population_pca(
     unrelated_mt=unrelated_mt.checkpoint(path_spark(pruned_unrelated_pcrelate_file), overwrite=True)
     related_mt = related_mt.semi_join_rows(unrelated_mt.rows())
 
-    union_pca_scores, pca_scores, pca_loadings=run_pc_project(unrelated_mt, related_mt, pca_components)
+    union_pca_scores, pca_scores, pca_loadings, _ =run_pc_project(unrelated_mt, related_mt, pca_components)
     
     pca_mt = filtered_mt.annotate_cols(scores=union_pca_scores[filtered_mt.col_key].scores)
     print("=== Plotting PC1 vs PC2")

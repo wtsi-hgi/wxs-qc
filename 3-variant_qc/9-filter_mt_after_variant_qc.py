@@ -30,7 +30,6 @@ def annotate_mt_with_cq_rf_score_and_bin(
     :param str rf_htfile: random forest hail table file
     :param int snv_threshold: bin threshold for SNVs
     :param int indel_threshold: bin threshold for indels
-    :param str cqfile: File containing consequence annotation
     :param str filtered_mtfile: random forest score annotated mtfile
     """
     mt = hl.read_matrix_table(path_spark(mtfile))

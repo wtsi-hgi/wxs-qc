@@ -5,6 +5,7 @@ from typing import Tuple
 import hail as hl
 from gnomad.sample_qc.ancestry import assign_population_pcs, pc_project
 
+from wes_qc.pca_utils import prune_mt, run_pc_project
 from wes_qc.hail_utils import path_local, path_spark
 from utils.utils import parse_config
 from wes_qc import hail_utils, filtering, visualize
@@ -14,7 +15,7 @@ def merge_1kg_and_ldprune(
     mt_filtered: hl.MatrixTable,
     kg_mt: hl.MatrixTable,
     pruned_mt_outfile: str,
-    r2_threshold: float,
+    ld_prune_args: dict,
     **kwargs,
 ) -> hl.MatrixTable:
     """
@@ -50,9 +51,7 @@ def merge_1kg_and_ldprune(
     kg_mt = kg_mt.semi_join_rows(mt_filtered.rows())
 
     # prunning of the linked Variants in kg_mt
-    pruned_ht = hl.ld_prune(kg_mt.GT, r2=r2_threshold)
-    pruned_mt = kg_mt.filter_rows(hl.is_defined(pruned_ht[kg_mt.row_key]))
-    pruned_mt = pruned_mt.select_entries(GT=hl.unphased_diploid_gt_index_call(pruned_mt.GT.n_alt_alleles()))
+    pruned_mt=prune_mt(kg_mt, ld_prune_args)
     pruned_mt = pruned_mt.checkpoint(pruned_mt_outfile, overwrite=True)
 
     # merging matrices
@@ -76,24 +75,13 @@ def pop_pca(
     mt_kg = mt.filter_cols(hl.is_defined(mt.known_pop))  # The golden source 1000G with known population
     mt_study = mt.filter_cols(hl.is_missing(mt.known_pop))
     # PCA for golden source 1000 Genomes
-    pca_1kg_evals, pca_1kg_scores, pca_1kg_loadings = hl.hwe_normalized_pca(
-        mt_kg.GT, k=pca_components, compute_loadings=True
-    )
-    pca_1kg_scores = pca_1kg_scores.annotate(known_pop=mt_kg.cols()[pca_1kg_scores.s].known_pop)
-    pca_af_ht = mt_kg.annotate_rows(pca_af=hl.agg.mean(mt_kg.GT.n_alt_alleles()) / 2).rows()
-    pca_1kg_loadings = pca_1kg_loadings.annotate(pca_af=pca_af_ht[pca_1kg_loadings.key].pca_af)
+    union_pca_scores, pca_1kg_scores, pca_1kg_loadings, pca_1kg_evals = run_pc_project(mt_kg, mt_study, pca_components)
 
+    pca_1kg_scores = pca_1kg_scores.annotate(known_pop=mt_kg.cols()[pca_1kg_scores.s].known_pop)
+    union_pca_scores = union_pca_scores.annotate(known_pop=mt.cols()[union_pca_scores.s].known_pop)
     with open(pca_1kg_evals_file, "w") as f:
         for val in pca_1kg_evals:
             f.write(str(val) + "\n")
-
-    pca_1kg_scores_nopop = pca_1kg_scores.drop(pca_1kg_scores.known_pop)
-
-    # projection of samples on precomputed PCs and combining of two PCA_scores tables
-    print("=== Projecting PCA scores to the cohort samples ===")
-    projection_pca_scores = pc_project(mt_study, pca_1kg_loadings, loading_location="loadings", af_location="pca_af")
-    union_pca_scores = pca_1kg_scores_nopop.union(projection_pca_scores)
-    union_pca_scores = union_pca_scores.annotate(known_pop=mt.cols()[union_pca_scores.s].known_pop)
 
     return pca_1kg_scores, pca_1kg_loadings, union_pca_scores
 

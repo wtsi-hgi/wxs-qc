@@ -30,5 +30,5 @@ def run_pc_project(mt_ref, mt_study, pca_components):
     projection_pca_scores = pc_project(mt_study, pca_loadings, loading_location="loadings", af_location="pca_af")
     union_pca_scores = pca_scores.union(projection_pca_scores)
 
-    return union_pca_scores, pca_scores, pca_loadings
+    return union_pca_scores, pca_scores, pca_loadings, pca_evals
 
