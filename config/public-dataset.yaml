@@ -38,7 +38,7 @@ general:
   metadata:
     verifybamid_selfsm:  '${general.metadata_dir}/${general.dataset_name}.verify_bam_id_result.selfSM.tsv'  # Set to null if you don't have freemix data
     self_reported_sex:   '${general.metadata_dir}/${general.dataset_name}.self_reported_sex.tsv'
-    #Set batch_file to null if you don't have batch information. All samples will be marked as batch1.
+    # Set batch_file to null if you don't have batch information. All samples will be marked as batch1.
     batch_file:          null #'${general.metadata_dir}/${general.dataset_name}.batch.tsv'
     vep_consequences:    '${general.metadata_dir}/${general.dataset_name}.all_consequences_with_gene_and_csq.tsv.bgz'
     # Set pedigree to null, if you don't want to run transmitted/untransmitted singletons statistics calculations
@@ -46,8 +46,12 @@ general:
     giab_sample_id: 'NA12878'
     # control samples are excluded from sample QC to remain in variant QC
     control_samples: ['NA12878']
-
-  rf_model_id: 'wxs-qc_public'
+  # Sample QC method (see the details in docs/wxs-qc_howto.md ):
+  # * pop - Stratified QC with PCA-assigned superpopulations (from gnomAD v3 + de novo PCA projection)
+  # * nn - Nearest neighbours (from gnomAD v4)
+  # * lr - linera regression (from gnomAD v4)
+  sample_qc_method: 'lr'
+  rf_model_id: 'wxs-qc_public' # Random forest model ID for Variant QC
 
 # Block of cvars variables - use to provide shorter alternatives for long names
 cvars:
@@ -82,7 +86,7 @@ step0:
       king_output_file: '${cvars.mtdir}/king_kg.ht'
       unrelated_king_file: '${cvars.mtdir}/unrelated_kg_king.mt' # output
       related_king_file: '${cvars.mtdir}/related_kg_king.mt' # output
-      kinship_threshold: 0.0442 
+      kinship_threshold: 0.0442
     prune_params:
       pruned_mt_file: '${cvars.mtdir}/kg_pruned_ld.mt' # output
       ld_prune_args: # https://hail.is/docs/0.2/methods/genetics.html#hail.methods.ld_prune
@@ -166,7 +170,7 @@ step2:
     defined_gt_frac_threshold: 0.99
 
   impute_sex:
-    sex_ht_outfile: '${cvars.anndir}/sex_annotated.sex_check.tsv.bgz'
+    sex_ht_outfile: '${cvars.anndir}/sex_annotated.sex_check.tsv.gz'
     sex_mt_outfile: '${cvars.mtdir}/mt_sex_annotated.mt'
     hail_impute_sex_params:  # https://hail.is/docs/0.2/methods/genetics.html#hail.methods.impute_sex
       female_threshold: 0.4
@@ -193,7 +197,7 @@ step2:
     king_output_file: '${cvars.mtdir}/king.ht'
     unrelated_king_file: '${cvars.mtdir}/unrelated_king.mt' # output
     related_king_file: '${cvars.mtdir}/related_king.mt' # output
-    kinship_threshold: 0.0442 
+    kinship_threshold: 0.0442
   prune_params:
     pruned_mt_file: '${cvars.mtdir}/mt_ldpruned.mt' # output
     ld_prune_args: # https://hail.is/docs/0.2/methods/genetics.html#hail.methods.ld_prune
@@ -274,52 +278,48 @@ step2:
     annotated_mt_file: '${cvars.mtdir}/gatk_unprocessed_with_pop.mt' # output
 
   stratified_sample_qc:
-    sample_qc_method: 'lr' #pop -stratification based on population; nn - nearest neighbours; lm - linear model
+    sample_qc_method: '${general.sample_qc_method}'  # The sampleQC method from general
     ht_qc_cols_outfile: '${cvars.mtdir}/mt_stratified_sampleqc.ht' # output
     qc_filter_file: '${cvars.mtdir}/mt_stratified_QC_filters.ht' # output
     mad_file: '${cvars.mtdir}/mad.ht' # output
     min_depth: 5
     min_genotype_quality: 10
     min_vaf: 0.2
-    # Use batch in nn or lr. True or Falce
+    # Use batch in nn or lr, if it is available. If no batch data is available, this parameters will be automatically set to False
+    # You can set it to `False` if you want to run sampleQC in cross-batch mode
     use_batch: True
 
     # Additional parameters to pass to gnomAD determine_nearest_neighbors function:
     # https://broadinstitute.github.io/gnomad_methods/api_reference/sample_qc/filtering.html#gnomad.sample_qc.filtering.compute_qc_metrics_residuals
     compute_qc_metrics_residuals_args: #do not specify strata and regression_sample_inclusion_expr in compute_qc_metrics_residuals_args
-    #  use_pc_square: True # Optional parmeter. To use default value keep this line commented.
-    #  n_pcs: 10 # Optional parmeter. To use default value keep this line commented.
+      n_pcs: 10 # Number of PCA components
 
     # Additional parameters to pass to gnomAD determine_nearest_neighbors function:
     #https://broadinstitute.github.io/gnomad_methods/api_reference/sample_qc/filtering.html#gnomad.sample_qc.filtering.determine_nearest_neighbors
-    determine_nearest_neighbors_args: #do not specify add_neighbor_distances and strata in determine_nearest_neighbors_args
-    #  n_pcs: 10 # Optional parmeter. To use default value keep this line commented.
-    #  n_neighbors: 50 # Optional parmeter. To use default value keep this line commented.
-    #  n_jobs: -1 # Optional parmeter. To use default value keep this line commented.
-    #  distance_metric: “euclidean” # Optional parmeter. To use default value keep this line commented.
-    #  use_approximation: False # Optional parmeter. To use default value keep this line commented.
-    #  n_trees: 10 # Optional parmeter. To use default value keep this line commented.
+    determine_nearest_neighbors_args: #do not specify add_neighbor_distances and strata here
+      n_pcs: 10 # Number of PCA components.
+      n_neighbors: 50 # Number of neighbours to calculate average values
 
     # Additional parameters to pass to gnomAD sampleQC function:
     # https://broadinstitute.github.io/gnomad_methods/api_reference/sample_qc/filtering.html#gnomad.sample_qc.filtering.compute_stratified_metrics_filter
     compute_stratified_metrics_filter_args: #do not specify comparison_sample_expr in compute_stratified_metrics_filter_args
       lower_threshold: 4.0 # Using a broad interval to make all samples pass QC
       upper_threshold: 4.0
-    #  metric_threshold: {'r_het_hom_var': [math.inf, 4.0], 'heterozygosity_rate': [math.inf, 4.0]} # Optional parmeter. To use default value keep this line commented.
+    #  metric_threshold: {'r_het_hom_var': [math.inf, 4.0], 'heterozygosity_rate': [math.inf, 4.0]} # Per-metric MAD thresholds
     # extra output files
-    output_text_file: '${cvars.anndir}/stratified_sample_qc.tsv.bgz' # output
-    output_stratified_metrics_json_file: '${cvars.anndir}/stratified_sample_qc.qc_metrics_stats.json' # output
-    output_nn_file: '${cvars.anndir}/nearest_neighbours.tsv.bgz' # output
-    output_residuals_file: '${cvars.anndir}/residuals.tsv.bgz' # output
+    output_text_file: '${cvars.anndir}/stratified_sample_qc.${general.sample_qc_method}.tsv.gz' # output
+    output_stratified_metrics_json_file: '${cvars.anndir}/stratified_sample_qc.${general.sample_qc_method}.qc_metrics_stats.json' # output
+    output_nn_file: '${cvars.anndir}/nearest_neighbours.tsv.gz' # output
+    output_residuals_file: '${cvars.anndir}/residuals.tsv.gz' # output
     output_lms_json_file: '${cvars.anndir}/lms.json' # output
 
   plot_sample_qc_metrics:
     n_bins: 20
-    plot_outdir: '${cvars.pltdir}/stratified_sample_qc_metrics'
+    plot_outdir: '${cvars.pltdir}/stratified_sample_qc_metrics_${general.sample_qc_method}'
 
   # --- Step 2.5 --- #
   remove_sample_qc_fails:
-    samples_failing_qc_file: '${cvars.anndir}/samples_failing_qc.tsv.bgz'
+    samples_failing_qc_file: '${cvars.anndir}/samples_failing_qc.${general.sample_qc_method}.tsv'
     sample_qc_filtered_mt_file: '${cvars.mtdir}/mt_pops_QC_filters_after_sample_qc.mt'
 
   sample_qc_combine_results:
@@ -528,7 +528,7 @@ step4:
   # used as an output of the whole step
   mtoutfile_annot: '${cvars.mtdir}/mt_hard_filter_combinations.mt'
 
-  
+
   # --- Step 4.3a --- #
   export_vcfs_a:
     mtfile: '${cvars.mtdir}/mt_hard_filter_combinations.mt'

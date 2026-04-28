@@ -242,7 +242,7 @@ def process_filter_combination(
                 ht_giab_dataset=ht_giab_dataset,
                 mtdir=mtdir,
                 prec_recall_panel=prec_recall_panel,
-                csq_anntation_file=csq_anntation_file
+                csq_anntation_file=csq_anntation_file,
             )
             var_counts["prec"] = prec
             var_counts["recall"] = recall
@@ -484,7 +484,11 @@ def apply_hard_filters(
 
 
 def count_prec_recall_indel(
-    ht_giab_control: hl.Table, ht_giab_dataset: hl.Table, mtdir: str, prec_recall_panel: Optional[hl.Table] = None, csq_anntation_file: Optional[str] = None
+    ht_giab_control: hl.Table,
+    ht_giab_dataset: hl.Table,
+    mtdir: str,
+    prec_recall_panel: Optional[hl.Table] = None,
+    csq_anntation_file: Optional[str] = None,
 ) -> tuple:
     """
     Get precison/recall vs GIAB for indels

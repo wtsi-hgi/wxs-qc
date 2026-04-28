@@ -14,7 +14,6 @@ from bokeh.models import Div, Span, Range1d, Label
 import numpy as np
 from collections import defaultdict
 import math
-from sklearn.linear_model import LinearRegression
 import json
 
 #######################################
@@ -424,7 +423,7 @@ def stratified_sample_qc_nn(
 #######################################
 def stratified_sample_qc_lr(
     raw_mt_file: str,
-    pca_score_file: str,
+    pca_score_file: str, # Scored
     qc_metrics: list,
     control_list: list,
     use_batch: bool,
@@ -438,7 +437,7 @@ def stratified_sample_qc_lr(
     """
     Run sample QC using regression-based residuals
     param str raw_mt_file: input MT file
-    param str pca_score_file: PCA scores file
+    param str pca_score_file: PCA scores file from the step 2
     param list qc_metrics: QC metrics to analyse
     param bool use_batch: whether to stratify by batch
     param int min_depth: minimum DP threshold
@@ -469,7 +468,7 @@ def stratified_sample_qc_lr(
     #annotating sample_qc_ht with PCs
     sample_qc_ht = sample_qc_ht.annotate(scores=pca_scores[sample_qc_ht.key].scores)
     #modifying compute_qc_metrics_residuals_args
-    print("=== Runnig residual calculation ===")
+    print("=== Running residual calculation ===")
     if compute_qc_metrics_residuals_args is None:
         compute_qc_metrics_residuals_args={}
     compute_qc_metrics_residuals_args["strata"]={"batch": sample_qc_ht.batch} if use_batch else None
@@ -494,7 +493,7 @@ def stratified_sample_qc_lr(
         print ("=== Warning! 'comparison_sample_expr' was provided but will be ignored in 'compute_stratified_metrics_filter'=== ")
         compute_stratified_metrics_filter_args_lr.pop("comparison_sample_expr", None)
 
-    print("=== Runnig stratified metrics filter ===")
+    print("=== Running stratified metrics filter ===")
     # Using gnomAD function to calculate stratified metrics
     filter_ht = compute_stratified_metrics_filter(
         sample_qc_res_ht,
@@ -872,6 +871,7 @@ def main():
     output_nn_file = config["step2"]["stratified_sample_qc"]["output_nn_file"]
     output_residuals_file = config["step2"]["stratified_sample_qc"]["output_residuals_file"]
     output_lms_json = config["step2"]["stratified_sample_qc"]["output_lms_json_file"]
+
     # = STEP LOGIC = #
     _ = hail_utils.init_hl(tmp_dir)
     qc_metrics = [
@@ -938,6 +938,8 @@ def main():
         # plot metrics
         print("=== Plotting metrics ===")
         plot_mad_metrics(mad_ht, qc_metrics, **config["step2"]["plot_sample_qc_metrics"], use_strata=use_batch, metric_thresholds=threshold_dict)
+    else:
+        raise ValueError(f"Unknown sample QC method: {runmode}")
 
 if __name__ == "__main__":
     main()

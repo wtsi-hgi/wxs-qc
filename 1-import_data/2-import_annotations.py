@@ -106,8 +106,7 @@ def validate_verifybamid(
     if remove_freemix_outliers:
         print("=== Removing freemix outliers")
         # Removing Freemix outliers
-        # For samples without freemix comparison returns false, so we keep them in the dataset
-        mt = mt.filter_cols(mt.freemix > freemix_treshold, keep=False)
+        mt = mt.filter_cols((mt.freemix <= freemix_treshold) | hl.is_missing(mt.freemix))
     return mt
 
 

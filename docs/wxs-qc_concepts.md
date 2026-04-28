@@ -31,20 +31,29 @@ This block generally follows the approach described in
 (Sealock et al. _"Tutorial: guidelines for quality filtering of whole-exome and whole-genome sequencing data 
 for population-scale association analyses"_. Nat Protoc 2025:1–11.):
 make a high-quality variation subset, impute sex,
-check sex consistency, make population PCA, assign superpopulation for each sample,
-and apply the stratified threshold to filter samples.
-To predict super populations, our pipeline uses the PCA projection approach described in [find link probably, gnomAD3?].
-We run PCA on the sample set of 1000 genomes samples (1000 Genomes Project Consortium et al. 2015)
-and then use Hail's pc_project() function to assign superpopulations to the dataset samples.
-Due to this approach,
-our pipeline can handle datasets with any number of related individuals without removing related samples.
+check sex consistency, and apply the stratified threshold to filter out outlier samples.
+We implemented three different methods for outlier detection:
+  * `pop` - Stratified QC with PCA-assigned superpopulations with PCA projection (from gnomAD v3)
+  * `nn` - Nearest neighbors (from gnomAD v4)
+  * `lr` - Linear regression (from gnomAD v4)
+
+For details, eee the [Sample QC stage documentation](wxs-qc_howto.md#stage-2-sample-qc).
 
 ## Variant QC
 
-The VariantQC step uses the approach used for gnomAD v2 (Karczewski et al. 2020) and the first stages of gnomAD v3:
-use a set of open resources to label variations as likely True-Positives and likely False-Positives,
-train a random forest (RF) model on these data,
-use RF model score to group variants into several bins based on their reliability.  
+The VariantQC step uses the approach used for gnomAD v2 (Karczewski et al. 2020) and the first stages of gnomAD v3.
+
+We use a set of open resources to label variations as likely True-Positives (TP) and likely False-Positives (FP). 
+Then we train a random forest (RF) model to predict TP and FP variants based on variant-level statistics, 
+use RF model score to group variants into several bins based on their reliability.
+
+Historically, this step was designed for “classic” variant callers, which require recalibrating the call correctness. 
+In the development version, we’re updating this part to support DeepVariant 
+and other neural network-based callers, which provide a very brief set of variant-level statistics.
+
+We have tested this extensively only on [GATK v4](https://gatk.broadinstitute.org/hc/en-us) HaplotypeCaller. 
+However, by altering the inputs to the RF model, 
+the variant QC could be adapted for other variant callers (FreeBayes, Strelka2, etc).
 
 ## Genotype QC
 
