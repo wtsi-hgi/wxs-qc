@@ -1019,7 +1019,7 @@ def main():
 
     # Files from VariantQC
     mtfile: str = config["step3"]["split_multi_and_var_qc"]["varqc_mtoutfile_split"]
-    cqfile: str = config["step3"]["add_cq_annotation"]["cqfile"]
+    cqfile: str = config["general"]["metadata"]["vep_consequences"]
     pedfile: str = config["step3"]["pedfile"]
     rf_htfile: str = os.path.join(rf_dir, model_id, "_gnomad_score_binning_tmp.ht")
 
