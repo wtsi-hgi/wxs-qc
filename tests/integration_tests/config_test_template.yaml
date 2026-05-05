@@ -292,13 +292,13 @@ step2:
     # Additional parameters to pass to gnomAD determine_nearest_neighbors function:
     # https://broadinstitute.github.io/gnomad_methods/api_reference/sample_qc/filtering.html#gnomad.sample_qc.filtering.compute_qc_metrics_residuals
     compute_qc_metrics_residuals_args: #do not specify strata and regression_sample_inclusion_expr in compute_qc_metrics_residuals_args
-      n_pcs: 10 # Number of PCA components
+      n_pcs: 2 # Number of PCA components. Should be <= pc_components in `pc_relate_params`
 
     # Additional parameters to pass to gnomAD determine_nearest_neighbors function:
     #https://broadinstitute.github.io/gnomad_methods/api_reference/sample_qc/filtering.html#gnomad.sample_qc.filtering.determine_nearest_neighbors
     determine_nearest_neighbors_args: #do not specify add_neighbor_distances and strata here
-      n_pcs: 10 # Number of PCA components.
-      n_neighbors: 50 # Number of neighbours to calculate average values
+      n_pcs: 2 # Number of PCA components. Should be <= pc_components in `pc_relate_params`
+      n_neighbors: 4 # Number of neighbours to calculate average values
 
     # Additional parameters to pass to gnomAD sampleQC function:
     # https://broadinstitute.github.io/gnomad_methods/api_reference/sample_qc/filtering.html#gnomad.sample_qc.filtering.compute_stratified_metrics_filter
