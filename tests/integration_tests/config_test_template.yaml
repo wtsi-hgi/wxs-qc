@@ -40,6 +40,8 @@ general:
     self_reported_sex:   '${general.metadata_dir}/${general.dataset_name}.self_reported_sex.tsv'
     # Set batch_file to null if you don't have batch information. All samples will be marked as batch1.
     batch_file:          null #'${general.metadata_dir}/${general.dataset_name}.batch.tsv'
+    # Set vep_consequences to null if you don't have VEP annotations.
+    # This will disable the VEP annotation export and singleton statistics calculations.
     vep_consequences:    '${general.metadata_dir}/${general.dataset_name}.all_consequences_with_gene_and_csq.tsv.bgz'
     # Set pedigree to null, if you don't want to run transmitted/untransmitted singletons statistics calculations
     pedigree:            {PEDIGREE_FILE_NAME} # Set to null if you don't have trios

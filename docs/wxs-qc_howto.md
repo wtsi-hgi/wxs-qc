@@ -1,9 +1,9 @@
 # Exome and Genome cohorts QC using WxS-QC pipeline
 
-This guide explains how to perform QC of human exome/genome data cohorts 
+This guide explains how to perform QC of human exome/genome data cohorts
 using the WxS-QC pipeline.
 
-The general information regarding the pipeline capabilities and limitations 
+The general information regarding the pipeline capabilities and limitations
 is available in the [readme](../README.md).
 
 ## Pre-requirements
@@ -13,12 +13,12 @@ We tested the pipeline on variants calling by GATK4 suite using haplotype caller
 
 The pipeline has no direct dependencies of GATK,
 but it uses variant-level and genotype-level metrics calculated by GATK.
-By altering the inputs to the RF model, the variant QC could be adapted for other variant callers 
+By altering the inputs to the RF model, the variant QC could be adapted for other variant callers
 (FreeBayes, Strelka2, etc).
 Details are provided in the [Variant QC section](#stage-3-variant-qc).
 
-The adaptation of the variant QC for modern neural network-based callers, 
-like DeepVariant and DRAGEN, is underway. 
+The adaptation of the variant QC for modern neural network-based callers,
+like DeepVariant and DRAGEN, is underway.
 
 We suggest not applying the GATK4 VQSR,
 because the pipeline has its own more flexible variant QC block.
@@ -198,7 +198,7 @@ Specify the corresponding input file in the `general->metadata` config for each 
   The `sample_id` column contains IDs of your samples (same as in your input VCFs).
   The `self_reported_sex` contains sex definition: `female`, `male` or `undefined`.
 * _batch_ - a two-column tab delimited file specifying batch for each sample.
-  If present, WxS-QC applies sample QC statistics for each batch individually. 
+  If present, WxS-QC applies sample QC statistics for each batch individually.
   Is useful when your data contain subsets sequenced using different wel-lab protocols,
   The example dataset contains no batches.
 
@@ -268,7 +268,7 @@ For all methods we calculate a set of key quality metrics:
 * number of transitions and transversions, transition/transversion ratio.
 * number of deletions and insertions, insertion/deletion rate
 
-We flag as outliers the samples that deviate significantly (typically more than four Median Absolute Deviations) 
+We flag as outliers the samples that deviate significantly (typically more than four Median Absolute Deviations)
 from the median of their reference group.
 The MAD level can be configured individually per metric on the step
 [Identify outliers](#identify-outliers).
@@ -279,16 +279,16 @@ You can try all of it and compare results.
 The control samples, named in the `general -> metadata -> control_samples` section,
 are kept in the dataset despite any results of the sample QC check.
 
-**Warning:** 
-All sampleQC methods design to work with relatively big population-level datasets.
+**Warning:**
+All sampleQC methods are designed to work with relatively big population-level datasets.
 We recommend having >=120 independent samples (200+ per ancestry/stratum is preferable) to obtain reliable results.
 
 #### Superpopulation Stratified Outlier Detection (pop)
-This method, originally used in gnomAD v3, performs outlier detection within predefined superpopulation groups 
-(e.g., EUR, AFR, EAS, ...), identified on the 
+This method, originally used in gnomAD v3, performs outlier detection within predefined superpopulation groups
+(e.g., EUR, AFR, EAS, ...), identified on the
 PCA-based super-population prediction.
 
-This approach works the best for groups with a similar genetic background, 
+This approach works the best for groups with a similar genetic background,
 which fits into a reference superpopulations from 1000 Genomes data.
 More information can be found in the [gnomAD v3 documentation](https://gnomad.broadinstitute.org/news/2019-10-gnomad-v3-0/).
 For metric description, see the
@@ -298,23 +298,23 @@ You can set up the number of PCA components for the script
 `3-population_pca_prediction.py`
 in the section `step2 -> pop_pca` of the config file.
 
-**Warning:** The PCA superpopulation prediction and stratified filtering can incorrectly mark as outliers 
-samples whose ancestries are not represented in the 1000 Genomes data 
-(which is a common case for non-European populations). 
-Also, stratified filtering produces false outliers for superpopulations with <100 samples in each subpopulation.  
+**Warning:** The PCA superpopulation prediction and stratified filtering can incorrectly mark as outliers
+samples whose ancestries are not represented in the 1000 Genomes data
+(which is a common case for non-European populations).
+Also, stratified filtering produces false outliers for superpopulations with <100 samples in each subpopulation.
 Use the _pop_ method only for large cohorts with ancestries covered by 1000 Genomes reference panel.
 The _Nearest Neighbors_ and _Linear Regression_ methods were specially introduced
 to correctly perform sample QC for samples with ancestries not represented in the panel.
 
 #### Nearest Neighbors (nn)
-The Nearest Neighbors method, introduced in gnomAD v4, 
-offers a more granular approach to population stratification. 
-Instead of grouping samples into pre-defined superpopulations, 
-it identifies a set of "genomic neighbors" for each sample based on their coordinates in Principal Component (PC) space. 
-Then it compares QC metrics for a given sample against the distribution of those same metrics among its closest genetic neighbors. 
+The Nearest Neighbors method, introduced in gnomAD v4,
+offers a more granular approach to population stratification.
+Instead of grouping samples into pre-defined superpopulations,
+it identifies a set of "genomic neighbors" for each sample based on their coordinates in Principal Component (PC) space.
+Then it compares QC metrics for a given sample against the distribution of those same metrics among its closest genetic neighbors.
 
-This method is particularly effective for samples with admixed or rare ancestries 
-that do not fit neatly into major superpopulations. 
+This method is particularly effective for samples with admixed or rare ancestries
+that do not fit neatly into major superpopulations.
 Further details on this approach are available in the [gnomAD v4 post](https://gnomad.broadinstitute.org/news/2023-11-gnomad-v4-0/).
 
 You can set ll the parameters for this function in the section
@@ -322,15 +322,15 @@ You can set ll the parameters for this function in the section
 
 
 #### Linear Regression Residuals (lr)
-This method uses a regression-based approach to account for the continuous relationship between genetic ancestry 
-(represented by PCs) and QC metrics. 
-It fits a linear model to predict each QC metric from the sample's principal components as independent variables. 
+This method uses a regression-based approach to account for the continuous relationship between genetic ancestry
+(represented by PCs) and QC metrics.
+It fits a linear model to predict each QC metric from the sample's principal components as independent variables.
 The "residuals" (difference between the observed metric value and the value predicted by the model)
-represent the portion of the metric variation that cannot be explained by ancestry. 
+represent the portion of the metric variation that cannot be explained by ancestry.
 Samples with extreme residuals are flagged as outliers.
 
-This method provides a robust way to normalize metrics across a continuous ancestry spectrum. 
-Relevant technical details can be found in the 
+This method provides a robust way to normalize metrics across a continuous ancestry spectrum.
+Relevant technical details can be found in the
 [gnomAD methods documentation](https://broadinstitute.github.io/gnomad_methods/api_reference/sample_qc/filtering.html#gnomad.sample_qc.filtering.compute_qc_metrics_residuals).
 
 ### Run sex imputation
@@ -351,47 +351,68 @@ a conflict between self-reported sex and genetically imputed sex, and saves it i
 ### Identify samples from related individuals with PC-Relate
 
 This script identifies related individuals in the dataset
-to ensure they do not bias population structure analysis on later stages. 
+to ensure they do not bias population structure analysis on later stages.
 
-It performs **LD pruning** to obtain a set of independent variants,
-then uses the Hail [PC-Relate](https://hail.is/docs/0.2/methods/relatedness.html#hail.methods.pc_relate) 
-function to calculate kinship coefficients and IBD (Identity By Descent). 
-Based on these scores, it identifies a **maximal independent set** of unrelated individuals 
-and generates a list of related samples that exceed the kinship threshold.
-
-Next, the script performs a **preliminary PCA** for unrelated samples, 
-projects the related samples onto this PCA space.
+The challenge is that both relatedness estimation and population structure analysis
+can interfere with each other: related samples distort PCA, and population structure
+can cause false relatedness signals.
+To address this, we adopted the approach described in
+[SISG Workshop](https://uw-gac.github.io/topmed_workshop_2018/pc-relate.html).
 
 ```shell
 python 2-sample_qc/2-prune_related_samples.py
 ```
- 
-The step outputs related sample info in PLink format, the list of related samples, and PCA scores. 
+
+The script uses a two-pass approach:
+
+1. **KING kinship estimation**: First, the script runs LD pruning and uses the
+   [KING](https://hail.is/docs/0.2/methods/relatedness.html#hail.methods.king)
+   kinship estimator to get an initial split of samples into related and unrelated sets.
+   KING works reliably on any dataset.
+2. **PCA on unrelated samples + projection to related**:
+   PCA is computed on the unrelated set, and related samples are projected onto this PCA space.
+3. **PC-Relate**: Using the PCA scores from the previous step, the script runs
+   [PC-Relate](https://hail.is/docs/0.2/methods/relatedness.html#hail.methods.pc_relate)
+   to refine kinship coefficients and IBD (Identity By Descent) estimates.
+   PC-Relate uses PCA to account for population structure, which improves
+   relatedness detection across different superpopulations.
+4. **Final split**: Based on the refined PC-Relate scores, the script identifies
+   a **maximal independent set** of unrelated individuals and generates
+   a final list of related samples that exceed the kinship threshold.
+5. **Final PCA**: PCA is computed on the final unrelated set,
+   and related samples are projected onto this PCA space.
+   These PCA scores are used on the subsequent steps to perform stratified sample filtering
+
+This two-pass approach correctly identifies related samples
+even in datasets with diverse superpopulations.
+
+The step outputs the list of related samples, and PCA scores.
 The relatedness information can be used to validate pedigree data and detect sample mislabeling.
-It also plots the Koch's relatedness plots (Kinship vs. IBD2) 
+It also plots the Koch's relatedness plots (Kinship vs. IBD2)
 and PC1/PC2 sample scatterplot.
 
 ### Predict super-populations using PCA
 
-This script predicts the super-population of each sample 
-by comparing the study dataset with a reference 1000 Genomes panel. 
+This script predicts the super-population of each sample
+by comparing the study dataset with a reference 1000 Genomes panel.
 
-First, we merge the study data with the reference 1000 Genomes data,
-and run LD pruning.
+We perform ld_prune on the 1000 Genomes reference panel,
+and them merge the manel with the dataset.
+To merge samples, we intersect variants between the two datasets.
+Therefore, we run PCA on the subset of high-quality variants from the experimental dataset,
+and the 1000 Genomes dataset.
+This ensures that the LD structure is defined by the reference,
+making results more stable and comparable across studies.
 
 ```shell
 python 2-sample_qc/3-population_pca_prediction.py --merge-and-ldprune
 ```
 
-To merge samples, we intersect variants between the two datasets.
-Therefore, we run PCA on the subset of high-quality variants from the experimental dataset,
-and the 1000 Genomes dataset.
-
 Next, we run PAC only for 1000 genomes samples,
 and then use PC projection to predict super-populations in the experimental dataset.
 This approach, compared to the direct PCA of the merged dataset,
-makes PC axes more stable and not distorted by related samples or unusual ancestry. 
-As a result, we can handle datasets with any number of related individuals, 
+makes PC axes more stable and not distorted by related samples or unusual ancestry.
+As a result, we can handle datasets with any number of related individuals,
 and PCs from different studies are more comparable.
 
 ```shell
@@ -400,8 +421,8 @@ python 2-sample_qc/3-population_pca_prediction.py --pca
 
 Plot 1KG PCA. On this step, all dataset samples should be labelled as `N/A`.
 
-Since the set of variations for the PCA run is unique for each dataset, 
-the PCA results for 1000 genomes can differ between runs. However, for the suggested cohort sizes, 
+Since the set of variations for the PCA run is unique for each dataset,
+the PCA results for 1000 genomes can differ between runs. However, for the suggested cohort sizes,
 the number of high-quality variants in the dataset is big enough to make PCA results visually comparable.
 
 ```shell
@@ -415,7 +436,7 @@ and plot the results.
 The plot step PCA clustering for merged dataset (1000 genomes + the dataset), and for the dataset only.
 You can specify the number of PCA components you want in the config file.
 
-The projection ensures that the study cohort’s structure is measured against 
+The projection ensures that the study cohort’s structure is measured against
 a known global reference without biasing the principal components themselves.
 
 ```shell
@@ -462,7 +483,7 @@ saves them in the folder defined by the `plot_sample_qc_metrics`:`plot_outdir`
 config parameter (a set of individual plots and one combined plot for all metrics and populations).
 To change default number of bins, use the `n_bins` config parameter.
 
-The sampleQC metrics and results for each sample are saved in the 
+The sampleQC metrics and results for each sample are saved in the
 `annotations/stratified_sample_qc.{method}.tsv.gz` table.
 
 Depending on the chosen method, the step outputs can slightly differ:
@@ -497,9 +518,9 @@ Samples that fail sample QC are saved in the file
 The VariantQC steps trains and runs a random forest model to estimate variation quality
 and rank all variations by this estimation.
 
-Historically, this step was designed for “classic” variant callers, 
-which produce a large set of variant-level statistics. 
-In the development version, we’re updating this part to support DeepVariant and other neural network-based callers, 
+Historically, this step was designed for “classic” variant callers,
+which produce a large set of variant-level statistics.
+In the development version, we’re updating this part to support DeepVariant and other neural network-based callers,
 which provide a very brief set of statistics.
 
 To train the predicting model, we need a set of True-Positive (TP) and False-positive (FP) variations.
@@ -549,7 +570,7 @@ Therefore, the list of statistics we use for the random foresm model is hardcode
 [constants.py](../utils/constants.py)
 
 To adapt the variant QC for your variant caller (FreeBayes, Strelka2, Octopus, etc),
-put the annoations available in the `INFO` field of your VCF file in the 
+put the annoations available in the `INFO` field of your VCF file in the
 `INFO_FEATURES` of the `constants.py` file.
 
 ```shell
@@ -593,17 +614,21 @@ python 3-variant_qc/4-apply_rf.py
 
 Annotate the random forest output with metrics including synonymous variants, family annotation,
 transmitted/untransmitted singletons, and gnomAD allele frequency.
-Synonymous variants are required in a file generated from VEP annotation and in the following format:
+Synonymous variants are extracted from the VEP consequences file
+(specified in `general->metadata->vep_consequences`).
+The script automatically filters synonymous variants from this file.
+
+The VEP consequences file should be in the following format
+(note: the `Consequence` column is used to filter synonymous variants):
 
 ```
-chr10   100202145   rs200461553 T   G   synonymous_variant
-chr10   100204510   rs2862988   C   T   synonymous_variant
-chr10   100204528   rs374991603 G   A   synonymous_variant
-chr10   100204555   rs17880383  G   A   synonymous_variant
+chr10   100202145   rs200461553 T   G   synonymous_variant  synonymous_variant  GENE1  HGNC:1234
+chr10   100204510   rs2862988   C   T   missense_variant    missense_variant    GENE2  HGNC:5678
+chr10   100204528   rs374991603 G   A   synonymous_variant  synonymous_variant  GENE1  HGNC:1234
 ```
 
-Place the file name in the config file section
-`step3->add_cq_annotation->synonymous_file` and run annotation:
+If you don't have VEP annotation, you can set `general->metadata->vep_consequences` to null
+This will disable calculation of singleton metrics.
 
 ```shell
 python 3-variant_qc/5-annotate_ht_after_rf.py
@@ -820,21 +845,37 @@ If needed, add more values to evaluate in the config and rerun the hard filter e
 ### Run the Genotype QC with the chosen set of filters
 
 Now you can apply your custom thresholds and make variants with corresponding filters.
-The pipeline annotates all variations with VEP consequences.
+The pipeline can annotate all variations with VEP consequences.
 To make the consequence file, extract it from VEP-annotated VCF using `bcftools`:
 ```bash
 bcftools view dataset.vep-annotated.vcf.gz | bcftools +split-vep -s worst -f '%CHROM\t%POS\t%ID\t%REF\t%ALT\t%CSQ\t%Consequence\t%SYMBOL\t%HGNC_ID\n' | bgzip > dataset.all_consequences_with_gene_and_csq.tsv.bgz
 ```
-
 The example of the file can be found in the
 [WSI bucket](https://wes-qc-data.cog.sanger.ac.uk/metadata/control_set_small.all_consequences_with_gene_and_csq.tsv.bgz).
 
-You need to extract the VEP consequences and place the consequence file name
-to the `general->metadata->vep_consequences` section of the config section, and run the genotype QC.
+To export VEP consequences of VCF files,
+you need to provide the correct VCF header
+via the option `step4 -> annotate_cq_rf -> csq_header`.
+To create it, run:
+
+```bash
+bcftools view -h dataset.vep-annotated.vcf.gz > dataset..csq_header.txt'
+```
+The consequence export works only if **both** `general->metadata->vep_consequences`
+and `step4 -> annotate_cq_rf -> csq_header` are specified.
 
 ```shell
 python 4-genotype_qc/2-apply_range_of_hard_filters.py
 ```
+
+#### (Optional) Sex chromosome-specific filtering
+
+By default, the script applies different filtering thresholds for sex chromosomes (X and Y).
+For males on chrX non-PAR and chrY regions,
+the depth (DP) threshold is halved (since these regions are hemizygous).
+This behavior is controlled by the `sex_chromosome_specific_filtering` option
+in the `apply_hard_filters` section of the config file.
+Set it to `False` to use the same filtering for all chromosomes.
 
 ### Export the filtered variants to VCFs
 
@@ -845,10 +886,13 @@ removes all variants not passing the relaxed filter, and saves the resulting dat
 python 4-genotype_qc/3a-export_vcfs_range_of_hard_filters.py
 ```
 
-Alternatively, to export VCFs with only passing stringent hard filter, use the `3b` version of the script:
+Alternatively, to export VCFs with only a single filter level applied,
+use the `3b` version of the script.
+You can specify which filter level to apply using the `--filter-level` option
+(choices: `relaxed`, `medium`, `stringent`; default: `stringent`):
 
 ```shell
-python 4-genotype_qc/3b-export_vcfs_stringent_filters.py
+python 4-genotype_qc/3b-export_vcfs_stringent_filters.py --filter-level stringent
 ```
 
 ### (Optional) - calculate-per-sample statistics and variant statistics
@@ -866,14 +910,18 @@ so the sum of stats is not equal to the total number of variations.
 
 Also, the script outputs in the console the variant counts per sample
 
-This step requires a separate VEP annotation file in the following format:
+This step uses the same VEP consequences file specified in `general->metadata->vep_consequences`
+If you set it to `null`, the consequence annotation will be skipped,
+and per-consequence counts will not be calculated.
+
+The VEP consequences file should be in the following format:
 
 ```
-chr10   100199947   rs367984062 A   C   intron_variant
-chr10   100199976   rs774723210 G   A   missense_variant
-chr10   100200004   .   C   A   missense_variant
-chr10   100200012   rs144642900 C   T   missense_variant
-chr1    100200019   .  C    A   stop_gained&splice_region_variant
+chr10   100199947   rs367984062 A   C   intron_variant          intron_variant      GENE1   HGNC:1234
+chr10   100199976   rs774723210 G   A   missense_variant        missense_variant    GENE2   HGNC:5678
+chr10   100200004   .           C   A   missense_variant        missense_variant    GENE3   HGNC:9012
+chr10   100200012   rs144642900 C   T   missense_variant        missense_variant    GENE4   HGNC:3456
+chr1    100200019   .           C   A   stop_gained&splice_region_variant  stop_gained  GENE5   HGNC:7890
 ```
 
 
