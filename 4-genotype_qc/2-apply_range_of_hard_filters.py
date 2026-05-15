@@ -221,7 +221,6 @@ def apply_hard_filters(
 
     return mt
 
-
 def apply_missingness(
     mt: hl.MatrixTable,
     snv_call_rate_stringent: float,
@@ -253,10 +252,22 @@ def apply_missingness(
         (hl.is_snp(mt.alleles[0], mt.alleles[1])) & (mt.relaxed_pass_count > n * snv_call_rate_relaxed)
     ) | ((hl.is_indel(mt.alleles[0], mt.alleles[1])) & (mt.relaxed_pass_count > n * indel_call_rate_relaxed))
 
+
+    # Adding variant-level filter tags
+    mt = mt.annotate_rows(
+        filters=hl.set(
+            [
+                hl.if_else(is_stringent_filters_pass, "stringent_pass", "fail_stringent_fail"),
+                hl.if_else(is_medium_filters_pass, "medium_pass", "medium_fail"),
+                hl.if_else(is_relaxed_filters_pass, "relaxed_pass", "relaxed_fail"),
+            ]
+        )
+    )
+
     mt = mt.annotate_entries(
-        stringent_filters=hl.if_else(is_stringent_filters_pass, mt.stringent_filters, "Fail"),
-        medium_filters=hl.if_else(is_medium_filters_pass, mt.medium_filters, "Fail"),
-        relaxed_filters=hl.if_else(is_relaxed_filters_pass, mt.relaxed_filters, "Fail"),
+        stringent_filters=hl.if_else(mt.filters.contains("stringent_pass"), mt.stringent_filters, "Fail"),
+        medium_filters=hl.if_else(mt.filters.contains("medium_pass"), mt.medium_filters, "Fail"),
+        relaxed_filters=hl.if_else(mt.filters.contains("relaxed_pass"), mt.relaxed_filters, "Fail"),
     )
 
     mt = mt.drop(mt.stringent_pass_count, mt.medium_pass_count, mt.relaxed_pass_count)
