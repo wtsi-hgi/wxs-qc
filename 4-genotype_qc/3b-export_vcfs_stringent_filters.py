@@ -86,20 +86,50 @@ def export_vcfs(
     )
 
     # Info for header - construct filter description
-    filter_desc = (
-        f"SNPs: RF bin<={hard_filters['snp'][filter_level]['bin']}"
-        f" & DP>={hard_filters['snp'][filter_level]['dp']}"
-        f" & GQ>={hard_filters['snp'][filter_level]['gq']}"
-        f" & HetAB>={hard_filters['snp'][filter_level]['ab']}"
-        f" & Call_Rate>={hard_filters['snp'][filter_level]['call_rate']}"
-        f", Indels: RF bin<={hard_filters['indel'][filter_level]['bin']}"
-        f" & DP>={hard_filters['indel'][filter_level]['dp']}"
-        f" & GQ>={hard_filters['indel'][filter_level]['gq']}"
-        f" & HetAB>={hard_filters['indel'][filter_level]['ab']}"
-        f" & Call_Rate>={hard_filters['indel'][filter_level]['call_rate']}"
-    )
+    filter_descriptions = {
+        level: (
+            f"SNPs: RF bin<={hard_filters['snp'][level]['bin']}"
+            f" & DP>={hard_filters['snp'][level]['dp']}"
+            f" & GQ>={hard_filters['snp'][level]['gq']}"
+            f" & HetAB>={hard_filters['snp'][level]['ab']}"
+            f" & Call_Rate>={hard_filters['snp'][level]['call_rate']}"
+            f", Indels: RF bin<={hard_filters['indel'][level]['bin']}"
+            f" & DP>={hard_filters['indel'][level]['dp']}"
+            f" & GQ>={hard_filters['indel'][level]['gq']}"
+            f" & HetAB>={hard_filters['indel'][level]['ab']}"
+            f" & Call_Rate>={hard_filters['indel'][level]['call_rate']}"
+        )
+        for level in valid_levels
+    }
+    filter_desc = filter_descriptions[filter_level]
 
     metadata = {
+        "filter": {
+            "stringent_pass": {
+                "Description": "Variant passes the stringent missingness filter "
+                + filter_descriptions["stringent"],
+            },
+            "fail_stringent_fail": {
+                "Description": "Variant fails the stringent missingness filter "
+                + filter_descriptions["stringent"],
+            },
+            "medium_pass": {
+                "Description": "Variant passes the medium missingness filter "
+                + filter_descriptions["medium"],
+            },
+            "medium_fail": {
+                "Description": "Variant fails the medium missingness filter "
+                + filter_descriptions["medium"],
+            },
+            "relaxed_pass": {
+                "Description": "Variant passes the relaxed missingness filter "
+                + filter_descriptions["relaxed"],
+            },
+            "relaxed_fail": {
+                "Description": "Variant fails the relaxed missingness filter "
+                + filter_descriptions["relaxed"],
+            },
+        },
         "format": {
             "HetAB": {"Description": "Hetrozygous allele balance", "Number": "A", "Type": "Float"},
             f"{filter_level}_filters": {

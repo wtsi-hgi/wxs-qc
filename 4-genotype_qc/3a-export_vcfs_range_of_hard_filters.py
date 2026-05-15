@@ -123,6 +123,26 @@ def export_vcfs(
     )
 
     metadata = {
+        "filter": {
+            "stringent_pass": {
+                "Description": "Variant passes the stringent missingness filter " + stringent_filters,
+            },
+            "fail_stringent_fail": {
+                "Description": "Variant fails the stringent missingness filter " + stringent_filters,
+            },
+            "medium_pass": {
+                "Description": "Variant passes the medium missingness filter " + medium_filters,
+            },
+            "medium_fail": {
+                "Description": "Variant fails the medium missingness filter " + medium_filters,
+            },
+            "relaxed_pass": {
+                "Description": "Variant passes the relaxed missingness filter " + relaxed_filters,
+            },
+            "relaxed_fail": {
+                "Description": "Variant fails the relaxed missingness filter " + relaxed_filters,
+            },
+        },
         "info": {
             "stringent_AN": {
                 "Description": "Total number of alleles in called genotypes",
