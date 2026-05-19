@@ -5,7 +5,7 @@ from typing import Union
 import hail as hl
 import os.path
 from utils.utils import parse_config, path_spark
-from wes_qc import hail_utils
+from wes_qc import hail_utils, stats
 
 
 def remove_samples(mt: hl.MatrixTable, exclude_file: str):
@@ -207,17 +207,22 @@ def apply_hard_filters(
 
     # annotate variants with fraction passing/failing each set of filters
     n_samples = mt.count_cols()
-    mt = mt.annotate_rows(stringent_pass_count=hl.agg.count_where(mt.stringent_filters == "Pass"))
-    mt = mt.annotate_rows(info=mt.info.annotate(fraction_pass_stringent_filters=mt.stringent_pass_count / n_samples))
+    mt = mt.annotate_rows(
+        stringent_pass_count=hl.agg.count_where(mt.stringent_filters == "Pass"),
+        medium_pass_count=hl.agg.count_where(mt.medium_filters == "Pass"),
+        relaxed_pass_count=hl.agg.count_where(mt.relaxed_filters == "Pass")
+    )
 
-    mt = mt.annotate_rows(medium_pass_count=hl.agg.count_where(mt.medium_filters == "Pass"))
-    mt = mt.annotate_rows(info=mt.info.annotate(fraction_pass_medium_filters=mt.medium_pass_count / n_samples))
-
-    mt = mt.annotate_rows(relaxed_pass_count=hl.agg.count_where(mt.relaxed_filters == "Pass"))
-    mt = mt.annotate_rows(info=mt.info.annotate(fraction_pass_relaxed_filters=mt.relaxed_pass_count / n_samples))
+    mt = mt.annotate_rows(info=mt.info.annotate(
+        fraction_pass_stringent_filters=mt.stringent_pass_count / n_samples,
+        fraction_pass_medium_filters=mt.medium_pass_count / n_samples,
+        fraction_pass_relaxed_filters=mt.relaxed_pass_count / n_samples
+    ))
 
     for filter_name in ("stringent", "medium", "relaxed"):
         mt = annotate_ac(mt, filter_name=filter_name)
+
+    stats.print_variant_filter_stats(mt)
 
     return mt
 
@@ -252,12 +257,11 @@ def apply_missingness(
         (hl.is_snp(mt.alleles[0], mt.alleles[1])) & (mt.relaxed_pass_count > n * snv_call_rate_relaxed)
     ) | ((hl.is_indel(mt.alleles[0], mt.alleles[1])) & (mt.relaxed_pass_count > n * indel_call_rate_relaxed))
 
-
-    # Adding variant-level filter tags
+    # Adding variant-level tags for
     mt = mt.annotate_rows(
         filters=hl.set(
             [
-                hl.if_else(is_stringent_filters_pass, "stringent_pass", "fail_stringent_fail"),
+                hl.if_else(is_stringent_filters_pass, "stringent_pass", "stringent_fail"),
                 hl.if_else(is_medium_filters_pass, "medium_pass", "medium_fail"),
                 hl.if_else(is_relaxed_filters_pass, "relaxed_pass", "relaxed_fail"),
             ]
