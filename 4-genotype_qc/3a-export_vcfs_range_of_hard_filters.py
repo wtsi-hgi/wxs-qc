@@ -1,7 +1,5 @@
 # export to VCF after annotating with a range of hard filters
-from ast import pattern
 import os.path
-import re
 from typing import Union, Optional
 
 import hail as hl
@@ -16,7 +14,12 @@ pass_stringent_string = "PASS_STRINGENT"
 
 
 def export_vcfs(
-    mtfile: str, filtered_vcf_dir: str, hard_filters: dict[str, dict[str, dict[str : Union[int, float]]]], model_id: str, csq_file: Optional[str] = None, header_file: Optional[str] = None
+    mtfile: str,
+    filtered_vcf_dir: str,
+    hard_filters: dict[str, dict[str, dict[str : Union[int, float]]]],
+    model_id: str,
+    csq_file: Optional[str] = None,
+    header_file: Optional[str] = None,
 ):
     """
     Export VCFs annotated with a range of hard filters
@@ -37,8 +40,8 @@ def export_vcfs(
             filter_metric = f"{filter_level}_{metric}"
             mt = mt.annotate_rows(info=mt.info.annotate(**{filter_metric: mt[filter_metric]}))
             mt = mt.drop(mt[filter_metric])
-    #remove variants if their relaxed_AC equals 0 after filtering
-    mt=mt.filter_rows(mt.info.relaxed_AC == [0], keep=False)
+    # remove variants if their relaxed_AC equals 0 after filtering
+    mt = mt.filter_rows(mt.info.relaxed_AC == [0], keep=False)
     mt = mt.drop(
         mt.a_index,
         mt.was_split,
@@ -127,7 +130,7 @@ def export_vcfs(
             "stringent_pass": {
                 "Description": "Variant passes the stringent missingness filter " + stringent_filters,
             },
-            "fail_stringent_fail": {
+            "stringent_fail": {
                 "Description": "Variant fails the stringent missingness filter " + stringent_filters,
             },
             "medium_pass": {
@@ -220,6 +223,7 @@ def export_vcfs(
 
     metadata = vcf_utils.modify_vcf_metadata(metadata, csq_file, header_file)
 
+    print("=== Varint tags stats after removing variants failing the relaxed filters ===")
     stats.print_variant_filter_stats(mt)
 
     # export per chromosome
@@ -245,7 +249,7 @@ def main():
     # = STEP DEPENDENCIES = #
     mtfile = config["step4"]["export_vcfs_a"]["mtfile"]
     csq_file = config["step4"]["annotate_cq_rf"]["cqfile"]
-    csq_header_file =config["step4"]["annotate_cq_rf"]["csq_header"]
+    csq_header_file = config["step4"]["annotate_cq_rf"]["csq_header"]
 
     # = STEP OUTPUTS = #
     filtered_vcf_dir = config["step4"]["export_vcfs_a"]["vcf_output_dir"]

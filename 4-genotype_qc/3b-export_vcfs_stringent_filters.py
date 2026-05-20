@@ -1,5 +1,5 @@
 # export to VCF after annotating with a range of hard filters - flexible filter level
-from typing import Union, Any, Optional
+from typing import Union, Optional
 import argparse
 import hail as hl
 import os.path
@@ -14,7 +14,7 @@ def export_vcfs(
     model_id: str,
     csq_file: Optional[str] = None,
     header_file: Optional[str] = None,
-    filter_level: str = "stringent"
+    filter_level: str = "stringent",
 ):
     """
     Export VCFs annotated with a range of hard filters
@@ -28,7 +28,7 @@ def export_vcfs(
     valid_levels = ["relaxed", "medium", "stringent"]
     if filter_level not in valid_levels:
         raise ValueError(f"filter_level must be one of {valid_levels}, got '{filter_level}'")
-    
+
     mt = hl.read_matrix_table(path_spark(mtfile))
 
     # Define field names based on filter level
@@ -56,34 +56,25 @@ def export_vcfs(
     )
     if "assigned_pop" in mt.col:
         mt = mt.drop(mt.assigned_pop)
-   
+
     # Drop the fraction fields for other filter levels
     other_levels = [level for level in valid_levels if level != filter_level]
     info_drops = [f"fraction_pass_{level}_filters" for level in other_levels]
     mt = mt.annotate_rows(info=mt.info.drop(*info_drops))
-    
+
     # Recalculating AC, AN, AC_Hom, AC_Het based on filter results
     mt = mt.annotate_rows(
-        info=mt.info.annotate(
-            AN=mt[an_field],
-            AC=mt[ac_field],
-            AC_Hom=mt[ac_hom_field],
-            AC_Het=mt[ac_het_field]
-        )
+        info=mt.info.annotate(AN=mt[an_field], AC=mt[ac_field], AC_Hom=mt[ac_hom_field], AC_Het=mt[ac_het_field])
     )
-    
+
     # Remove variants with AC equals 0
     mt = mt.filter_rows(mt.info.AC == [0], keep=False)
-    
+
     # Remove all filter columns
     mt = mt.drop(mt.relaxed_filters, mt.medium_filters, mt.stringent_filters)
-    
+
     # Calculate AF
-    mt = mt.annotate_rows(
-        info=mt.info.annotate(
-            AF=mt.info.AC / mt.info.AN
-        )
-    )
+    mt = mt.annotate_rows(info=mt.info.annotate(AF=mt.info.AC / mt.info.AN))
 
     # Info for header - construct filter description
     filter_descriptions = {
@@ -106,28 +97,22 @@ def export_vcfs(
     metadata = {
         "filter": {
             "stringent_pass": {
-                "Description": "Variant passes the stringent missingness filter "
-                + filter_descriptions["stringent"],
+                "Description": "Variant passes the stringent missingness filter " + filter_descriptions["stringent"],
             },
-            "fail_stringent_fail": {
-                "Description": "Variant fails the stringent missingness filter "
-                + filter_descriptions["stringent"],
+            "stringent_fail": {
+                "Description": "Variant fails the stringent missingness filter " + filter_descriptions["stringent"],
             },
             "medium_pass": {
-                "Description": "Variant passes the medium missingness filter "
-                + filter_descriptions["medium"],
+                "Description": "Variant passes the medium missingness filter " + filter_descriptions["medium"],
             },
             "medium_fail": {
-                "Description": "Variant fails the medium missingness filter "
-                + filter_descriptions["medium"],
+                "Description": "Variant fails the medium missingness filter " + filter_descriptions["medium"],
             },
             "relaxed_pass": {
-                "Description": "Variant passes the relaxed missingness filter "
-                + filter_descriptions["relaxed"],
+                "Description": "Variant passes the relaxed missingness filter " + filter_descriptions["relaxed"],
             },
             "relaxed_fail": {
-                "Description": "Variant fails the relaxed missingness filter "
-                + filter_descriptions["relaxed"],
+                "Description": "Variant fails the relaxed missingness filter " + filter_descriptions["relaxed"],
             },
         },
         "format": {
@@ -161,7 +146,11 @@ def export_vcfs(
             },
             "AC": {"Description": "Allele count in genotypes after QC", "Number": "A", "Type": "Integer"},
             "AF": {"Description": "Allele Frequency for ALT allele after QC", "Number": "A", "Type": "Integer"},
-            "AC_Hom": {"Description": "Allele counts in homozygous genotypes after QC", "Number": "A", "Type": "Integer"},
+            "AC_Hom": {
+                "Description": "Allele counts in homozygous genotypes after QC",
+                "Number": "A",
+                "Type": "Integer",
+            },
             "AC_Het": {
                 "Description": "Allele counts in heterozygous genotypes after QC",
                 "Number": "A",
@@ -170,17 +159,13 @@ def export_vcfs(
         },
     }
 
-    metadata =vcf_utils.modify_vcf_metadata(metadata, csq_file, header_file)
+    metadata = vcf_utils.modify_vcf_metadata(metadata, csq_file, header_file)
     if csq_file is None:
-        if 'CSQ' in mt.info.dtype.fields:
-            mt = mt.annotate_rows(
-                info=mt.info.drop('CSQ', 'consequence', 'gene', 'hgnc_id')
-            )
+        if "CSQ" in mt.info.dtype.fields:
+            mt = mt.annotate_rows(info=mt.info.drop("CSQ", "consequence", "gene", "hgnc_id"))
     elif not metadata["info"].get("CSQ"):
-        if 'CSQ' in mt.info.dtype.fields:
-            mt = mt.annotate_rows(
-                info=mt.info.drop('CSQ')
-            )
+        if "CSQ" in mt.info.dtype.fields:
+            mt = mt.annotate_rows(info=mt.info.drop("CSQ"))
 
     # Export per chromosome
     chroms = [*range(1, 23), "X", "Y"]
@@ -191,6 +176,7 @@ def export_vcfs(
         mt_chrom = mt_chrom.filter_rows(mt_chrom.locus.contig == mt_chrom.chromosome)
         outfile = os.path.join(path_spark(filtered_vcf_dir), f"{chromosome}_{filter_level}_filters.vcf.bgz")
         hl.export_vcf(mt_chrom, outfile, metadata=metadata)
+
 
 def get_options() -> argparse.Namespace:
     """
@@ -204,10 +190,11 @@ def get_options() -> argparse.Namespace:
         type=str,
         choices=["relaxed", "medium", "stringent"],
         default="stringent",
-        help="Filter level to apply (default: stringent)"
+        help="Filter level to apply (default: stringent)",
     )
     args = parser.parse_args()
     return args
+
 
 def main():
     # Parse command line arguments
@@ -223,14 +210,16 @@ def main():
     # = STEP DEPENDENCIES = #
     mtfile = config["step4"]["export_vcfs_b"]["mtfile"]
     csq_file = config["step4"]["annotate_cq_rf"]["cqfile"]
-    csq_header_file =config["step4"]["annotate_cq_rf"]["csq_header"]
+    csq_header_file = config["step4"]["annotate_cq_rf"]["csq_header"]
 
     # = STEP OUTPUTS = #
     filtered_vcf_dir = config["step4"]["export_vcfs_b"]["filtered_vcf_dir"]
 
     # = STEP LOGIC = #
     _ = hail_utils.init_hl(tmp_dir)
-    export_vcfs(mtfile, filtered_vcf_dir, hard_filters, model_id, csq_file, csq_header_file, filter_level=args.filter_level)
+    export_vcfs(
+        mtfile, filtered_vcf_dir, hard_filters, model_id, csq_file, csq_header_file, filter_level=args.filter_level
+    )
 
 
 if __name__ == "__main__":

@@ -895,6 +895,21 @@ You can specify which filter level to apply using the `--filter-level` option
 python 4-genotype_qc/3b-export_vcfs_stringent_filters.py --filter-level stringent
 ```
 
+### Information stored in the VCF data
+
+The resulting VCF contains the following data:
+* `FILTER` column tags, describing whether the variant passes stringent, medium, or relaxed filters.
+  *Note: The export step removes all variants not passing the relaxed filter.
+  Therefore, you won't see any variants with filter tag `relaxed_fail`*
+* The full set of variant-level annotations form the original VCFs
+* The RF bin and RF score are added to the `INFO` column.
+* VEP consequences annotations are added to the `CSQ` entry if were provided on the genotype filtering step
+* The full set of genotype-related metrics from original VCfs: DP, GQ, AB
+* Genotype-level tags `stringent_filters`, `medium_filters`, and `relaxed_filters`
+  describing whether the **genotype** passes the relaxed, medium, or stringent filters.
+  *Note: If a variant fails the variant-level filters (like RF bin or call_rate), all genotypes are tagged as `fail`*
+
+
 ### (Optional) - calculate-per-sample statistics and variant statistics
 If you want to additionally evaluate the variant QC and genotypeQC statistics,
 use the following script:
