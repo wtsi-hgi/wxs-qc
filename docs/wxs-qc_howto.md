@@ -358,14 +358,16 @@ and with at least 1% of alternative alleles (configured by `n_alt_alleles_thresh
 This script identifies related individuals in the dataset
 to ensure they do not bias population structure analysis on later stages.
 
-To identify related samples on this step,
+To identify related samples
 and to perform stratified outlier detection on the subsequent steps,
 we use a subset of high-quality variants:
 
-* SNVs, autosomal, biallelic,
+* SNVs, autosomal, and biallelic.
 * called in >= 99% of the samples (configured by `filter_params -> call_rate_threshold` parameter),
 * with >= 5% of alternative alleles (configured by `filter_params -> af_threshold` paraemter),
-* and with Hardy-Weinberg Equilibrium (HWE) p_value >= 1E-5 (controlled by `filter_params -> hwe_threshold` parameter)
+* with Hardy-Weinberg Equilibrium (HWE) p_value >= 1E-5 (controlled by `filter_params -> hwe_threshold` parameter).
+  The HWE p-value is calculated using the
+  [Hail VariantQC function](https://hail.is/docs/0.2/methods/genetics.html#hail.methods.variant_qc).
 
 The challenge is that both relatedness estimation and population structure analysis
 can interfere with each other: related samples distort PCA, and population structure
