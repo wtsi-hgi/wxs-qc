@@ -168,7 +168,7 @@ step1:
 step2:
   # --- Step 2.1 --- #
   sex_annotation_hard_filters:
-    n_alt_alleles_threshold: 0.001
+    n_alt_alleles_threshold: 0.01
     defined_gt_frac_threshold: 0.99
 
   impute_sex:
