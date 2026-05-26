@@ -29,8 +29,8 @@ We provide:
   Technically, there are no restrictions on running the pipeline for long-read data,
   as long as it provides a standard multi-sample VCF file as input.
 * Short-variants: SNVs and small indels. No structural variants support.
-* All sample QC approaches are designed for population-scale studies.
-  To have robust outlier sample detection, we recommend using a cohort size of >= 150 samples.
+* All sampleQC methods are designed to work with relatively big population-level datasets.
+  We recommend having >=120 independent samples (200+ per ancestry/stratum is preferable) to obtain reliable results.
 * We tested the pipeline extensively only on variants calling by GATK4 suite using haplotype calling and joint calling steps.
   - The pipeline has no direct dependencies of GATK,
     but it uses variant-level and genotype-level metrics calculated by GATK.
