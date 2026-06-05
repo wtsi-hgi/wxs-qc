@@ -298,6 +298,38 @@ def sex_annotation(mt: hl.MatrixTable, sex_metadata_file: str, **kwargs) -> hl.M
 
     return mt_sex_annotated
 
+def run_hard_filters(mt: hl.MatrixTable, hard_filters: dict, diff_sex_chromosome_filter: bool = False) -> hl.MatrixTable:
+    n_males = mt.aggregate_cols(
+        hl.agg.count_where(mt.sex == "male")
+    )
+    if n_males > 0:
+        mt_all_y = mt.filter_rows(mt.locus.contig == "chrY")
+        mt = mt.filter_rows(mt.locus.contig != "chrY")
+        mt = apply_hard_filters(mt, hard_filters, diff_sex_chromosome_filter=diff_sex_chromosome_filter)
+        mt_male= mt_all_y.filter_cols(mt_all_y.sex == 'male')
+        mt_male = apply_hard_filters(mt_male, hard_filters, diff_sex_chromosome_filter=diff_sex_chromosome_filter)
+        mt_all_y = mt_all_y.annotate_entries(
+            stringent_filters = hl.or_else(
+                mt_male[mt_all_y.row_key, mt_all_y.col_key].stringent_filters,
+                "Fail"
+            ),
+            medium_filters = hl.or_else(
+                mt_male[mt_all_y.row_key, mt_all_y.col_key].medium_filters,
+                "Fail"
+            ),
+            relaxed_filters = hl.or_else(
+                mt_male[mt_all_y.row_key, mt_all_y.col_key].relaxed_filters,
+                "Fail"
+            ),
+        )
+        mt_all_y = mt_all_y.annotate_rows(
+            **mt_male.rows()[mt_all_y.row_key]
+        )
+        mt = mt.union_rows(mt_all_y)
+    else:
+        mt = apply_hard_filters(mt, hard_filters, diff_sex_chromosome_filter=diff_sex_chromosome_filter)
+    return mt
+
 def main():
     # = STEP SETUP = #
     config = parse_config()
@@ -335,12 +367,12 @@ def main():
     mt_annot = annotate_rf(mt, rf_htfile)
     if cqfile is not None:
         mt_annot = annotate_cq(mt_annot, cqfile)
+    mt_annot=sex_annotation(mt_annot, path_spark(sex_annotation_file))
     print("=== Applying hard filters ===")
     if diff_sex_chromosome_filter:
         print("=== Sex chromosome-specific filtering ENABLED ===")
-        mt_annot=sex_annotation(mt_annot, path_spark(sex_annotation_file))
     # annotate with all combinations of filters (pass/fail) and add missingness
-    mt_annot = apply_hard_filters(mt_annot, hard_filters, diff_sex_chromosome_filter=diff_sex_chromosome_filter)
+    mt_annot = run_hard_filters(mt_annot, hard_filters, diff_sex_chromosome_filter=diff_sex_chromosome_filter)
     mt_annot.write(path_spark(mtfile_annot), overwrite=True)
 
 
