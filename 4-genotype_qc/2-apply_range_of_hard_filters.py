@@ -21,7 +21,10 @@ def remove_samples(mt: hl.MatrixTable, exclude_file: str):
     return mt
 
 
-def annotate_rf(mt: hl.MatrixTable, rf_htfile: str, ) -> hl.MatrixTable:
+def annotate_rf(
+    mt: hl.MatrixTable,
+    rf_htfile: str,
+) -> hl.MatrixTable:
     """
     Annotate with RF bin and pass/fail for 3 combinations of filters for SNPs,
     3 combinations of filters for indels and missingness for each set of filters
@@ -37,6 +40,7 @@ def annotate_rf(mt: hl.MatrixTable, rf_htfile: str, ) -> hl.MatrixTable:
     mt = mt.annotate_rows(info=mt.info.annotate(rf_bin=rf_ht[mt.row_key].bin))
 
     return mt
+
 
 def annotate_cq(mt: hl.MatrixTable, cqfile: str) -> hl.MatrixTable:
     """
@@ -83,6 +87,7 @@ def annotate_cq(mt: hl.MatrixTable, cqfile: str) -> hl.MatrixTable:
 
     return mt
 
+
 def annotate_ac(mt: hl.MatrixTable, filter_name: str) -> hl.MatrixTable:
     assert filter_name in ("stringent", "medium", "relaxed")
     filter_field = f"{filter_name}_filters"
@@ -127,6 +132,7 @@ def build_autosomal_condition(mt: hl.MatrixTable, hard_filters: dict, filter_lev
     )
     return condition
 
+
 def build_sex_chr_condition(mt: hl.MatrixTable, hard_filters: dict, filter_level: str):
     """
     Build filtering condition using different thresholds for sex chromosomes
@@ -137,9 +143,13 @@ def build_sex_chr_condition(mt: hl.MatrixTable, hard_filters: dict, filter_level
         (hl.is_snp(mt.alleles[0], mt.alleles[1]))
         & (mt.info.rf_bin <= hard_filters["snp"][filter_level]["bin"])
         & (
-            ((mt.DP >= hard_filters["snp"][filter_level]["dp"]) & (mt.sex == 'female'))
-            | ((mt.DP >= hard_filters["snp"][filter_level]["dp"]) & (mt.sex == 'male') & mt.locus.in_autosome_or_par())
-            | ((mt.DP >= (hard_filters["snp"][filter_level]["dp"] / 2)) & (mt.sex == 'male') & (mt.locus.in_x_nonpar() | mt.locus.in_y_nonpar()))
+            ((mt.DP >= hard_filters["snp"][filter_level]["dp"]) & (mt.sex == "female"))
+            | ((mt.DP >= hard_filters["snp"][filter_level]["dp"]) & (mt.sex == "male") & mt.locus.in_autosome_or_par())
+            | (
+                (mt.DP >= (hard_filters["snp"][filter_level]["dp"] / 2))
+                & (mt.sex == "male")
+                & (mt.locus.in_x_nonpar() | mt.locus.in_y_nonpar())
+            )
         )
         & (mt.GQ >= hard_filters["snp"][filter_level]["gq"])
         & (
@@ -151,9 +161,17 @@ def build_sex_chr_condition(mt: hl.MatrixTable, hard_filters: dict, filter_level
         (hl.is_indel(mt.alleles[0], mt.alleles[1]))
         & (mt.info.rf_bin <= hard_filters["indel"][filter_level]["bin"])
         & (
-            ((mt.DP >= hard_filters["indel"][filter_level]["dp"]) & (mt.sex == 'female'))
-            | ((mt.DP >= hard_filters["indel"][filter_level]["dp"]) & (mt.sex == 'male') & mt.locus.in_autosome_or_par())
-            | ((mt.DP >= (hard_filters["indel"][filter_level]["dp"] / 2)) & (mt.sex == 'male') & (mt.locus.in_x_nonpar() | mt.locus.in_y_nonpar()))
+            ((mt.DP >= hard_filters["indel"][filter_level]["dp"]) & (mt.sex == "female"))
+            | (
+                (mt.DP >= hard_filters["indel"][filter_level]["dp"])
+                & (mt.sex == "male")
+                & mt.locus.in_autosome_or_par()
+            )
+            | (
+                (mt.DP >= (hard_filters["indel"][filter_level]["dp"] / 2))
+                & (mt.sex == "male")
+                & (mt.locus.in_x_nonpar() | mt.locus.in_y_nonpar())
+            )
         )
         & (mt.GQ >= hard_filters["indel"][filter_level]["gq"])
         & (
@@ -164,10 +182,11 @@ def build_sex_chr_condition(mt: hl.MatrixTable, hard_filters: dict, filter_level
     )
     return condition
 
+
 def apply_hard_filters(
-    mt: hl.MatrixTable, 
+    mt: hl.MatrixTable,
     hard_filters: dict[str, dict[str, dict[str, Union[int, float]]]],
-    diff_sex_chromosome_filter: bool = False
+    diff_sex_chromosome_filter: bool = False,
 ) -> hl.MatrixTable:
     """
     Apply hard filters and annotate missingness
@@ -187,7 +206,7 @@ def apply_hard_filters(
         stringent_condition = build_autosomal_condition(mt, hard_filters, "stringent")
         medium_condition = build_autosomal_condition(mt, hard_filters, "medium")
         relaxed_condition = build_autosomal_condition(mt, hard_filters, "relaxed")
-    
+
     # Adding pass/fail tags to all genotypes
     mt = mt.annotate_entries(
         stringent_filters=hl.if_else(stringent_condition, "Pass", "Fail"),
@@ -210,14 +229,16 @@ def apply_hard_filters(
     mt = mt.annotate_rows(
         stringent_pass_count=hl.agg.count_where(mt.stringent_filters == "Pass"),
         medium_pass_count=hl.agg.count_where(mt.medium_filters == "Pass"),
-        relaxed_pass_count=hl.agg.count_where(mt.relaxed_filters == "Pass")
+        relaxed_pass_count=hl.agg.count_where(mt.relaxed_filters == "Pass"),
     )
 
-    mt = mt.annotate_rows(info=mt.info.annotate(
-        fraction_pass_stringent_filters=mt.stringent_pass_count / n_samples,
-        fraction_pass_medium_filters=mt.medium_pass_count / n_samples,
-        fraction_pass_relaxed_filters=mt.relaxed_pass_count / n_samples
-    ))
+    mt = mt.annotate_rows(
+        info=mt.info.annotate(
+            fraction_pass_stringent_filters=mt.stringent_pass_count / n_samples,
+            fraction_pass_medium_filters=mt.medium_pass_count / n_samples,
+            fraction_pass_relaxed_filters=mt.relaxed_pass_count / n_samples,
+        )
+    )
 
     for filter_name in ("stringent", "medium", "relaxed"):
         mt = annotate_ac(mt, filter_name=filter_name)
@@ -225,6 +246,7 @@ def apply_hard_filters(
     stats.print_variant_filter_stats(mt)
 
     return mt
+
 
 def apply_missingness(
     mt: hl.MatrixTable,
@@ -278,6 +300,7 @@ def apply_missingness(
 
     return mt
 
+
 def sex_annotation(mt: hl.MatrixTable, sex_metadata_file: str, **kwargs) -> hl.MatrixTable:
     """
     Annotates samples in the matrix-table with sex
@@ -298,37 +321,31 @@ def sex_annotation(mt: hl.MatrixTable, sex_metadata_file: str, **kwargs) -> hl.M
 
     return mt_sex_annotated
 
-def run_hard_filters(mt: hl.MatrixTable, hard_filters: dict, diff_sex_chromosome_filter: bool = False) -> hl.MatrixTable:
-    n_males = mt.aggregate_cols(
-        hl.agg.count_where(mt.sex == "male")
-    )
+
+def run_hard_filters(
+    mt: hl.MatrixTable, hard_filters: dict, diff_sex_chromosome_filter: bool = False
+) -> hl.MatrixTable:
+    n_males = mt.aggregate_cols(hl.agg.count_where(mt.sex == "male"))
     if n_males > 0:
+        print("=== Applying chrY-aware filtering to male samples:")
         mt_all_y = mt.filter_rows(mt.locus.contig == "chrY")
         mt = mt.filter_rows(mt.locus.contig != "chrY")
         mt = apply_hard_filters(mt, hard_filters, diff_sex_chromosome_filter=diff_sex_chromosome_filter)
-        mt_male= mt_all_y.filter_cols(mt_all_y.sex == 'male')
+        mt_male = mt_all_y.filter_cols(mt_all_y.sex == "male")
+        print("--- chrY-variant stats for male samples:")
         mt_male = apply_hard_filters(mt_male, hard_filters, diff_sex_chromosome_filter=diff_sex_chromosome_filter)
         mt_all_y = mt_all_y.annotate_entries(
-            stringent_filters = hl.or_else(
-                mt_male[mt_all_y.row_key, mt_all_y.col_key].stringent_filters,
-                "Fail"
-            ),
-            medium_filters = hl.or_else(
-                mt_male[mt_all_y.row_key, mt_all_y.col_key].medium_filters,
-                "Fail"
-            ),
-            relaxed_filters = hl.or_else(
-                mt_male[mt_all_y.row_key, mt_all_y.col_key].relaxed_filters,
-                "Fail"
-            ),
+            stringent_filters=hl.or_else(mt_male[mt_all_y.row_key, mt_all_y.col_key].stringent_filters, "Fail"),
+            medium_filters=hl.or_else(mt_male[mt_all_y.row_key, mt_all_y.col_key].medium_filters, "Fail"),
+            relaxed_filters=hl.or_else(mt_male[mt_all_y.row_key, mt_all_y.col_key].relaxed_filters, "Fail"),
         )
-        mt_all_y = mt_all_y.annotate_rows(
-            **mt_male.rows()[mt_all_y.row_key]
-        )
+        # Copy row annotations created by "apply_hard_filters" from male-only mt to all-samples mt
+        mt_all_y = mt_all_y.annotate_rows(**mt_male.rows()[mt_all_y.row_key])
         mt = mt.union_rows(mt_all_y)
     else:
         mt = apply_hard_filters(mt, hard_filters, diff_sex_chromosome_filter=diff_sex_chromosome_filter)
     return mt
+
 
 def main():
     # = STEP SETUP = #
@@ -338,7 +355,7 @@ def main():
     # = STEP PARAMETERS = #
     model_id = config["general"]["rf_model_id"]
     hard_filters = config["step4"]["apply_hard_filters"]["hard_filters"]
-    
+
     # Get sex chromosome filtering flag from config (default to False if not present)
     diff_sex_chromosome_filter = config["step4"]["apply_hard_filters"]["sex_chromosome_specific_filtering"]
 
@@ -348,7 +365,7 @@ def main():
     )  # TODO: use adapters inside the functions to enhance robustness
     mtfile = config["step4"]["annotate_cq_rf"]["mtfile"]
     cqfile = config["step4"]["annotate_cq_rf"]["cqfile"]
-    sex_annotation_file= config["step4"]["apply_hard_filters"]["sex_annotation_file"]
+    sex_annotation_file = config["step4"]["apply_hard_filters"]["sex_annotation_file"]
     # = STEP OUTPUTS = #
     mtfile_annot = config["step4"]["mtoutfile_annot"]
 
@@ -362,12 +379,12 @@ def main():
     # remove unwanted samples
     # mt = remove_samples(mt, exclude_file)
 
-    # annotate mt with consequence, gene, rf bin
+    # annotate mt with consequences, gene, rf bin
     print("=== Annotating mt with consequence, gene, rf bin ===")
     mt_annot = annotate_rf(mt, rf_htfile)
     if cqfile is not None:
         mt_annot = annotate_cq(mt_annot, cqfile)
-    mt_annot=sex_annotation(mt_annot, path_spark(sex_annotation_file))
+    mt_annot = sex_annotation(mt_annot, path_spark(sex_annotation_file))
     print("=== Applying hard filters ===")
     if diff_sex_chromosome_filter:
         print("=== Sex chromosome-specific filtering ENABLED ===")

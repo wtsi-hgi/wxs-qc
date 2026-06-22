@@ -20,7 +20,7 @@ classifiers = [
 ]
 
 dependencies = [
-    "hail>=0.2.136",
+    "hail>=0.2.137",
     "gnomad>=0.8.2",
     "omegaconf>=2.3.0",
     "pandas>=2.2.3",

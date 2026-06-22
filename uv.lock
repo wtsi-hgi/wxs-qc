@@ -900,7 +900,7 @@ wheels = [
 
 [[package]]
 name = "hail"
-version = "0.2.136"
+version = "0.2.138"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiodns" },
@@ -933,13 +933,14 @@ dependencies = [
     { name = "requests" },
     { name = "rich" },
     { name = "scipy" },
+    { name = "setuptools" },
     { name = "sortedcontainers" },
     { name = "tabulate" },
     { name = "typer" },
     { name = "uvloop", marker = "sys_platform != 'win32'" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/db/f5/b40597b1ebcbcff09c9c26ec883c9f6091f99207b9ccc65e272077e4419c/hail-0.2.136-py3-none-any.whl", hash = "sha256:f1e395fd59a7c4c71a18b35827d97f2d100d26ee5e777ade3e2126b7c9bbdf0a", size = 147109454, upload-time = "2025-09-09T17:44:39.865Z" },
+    { url = "https://files.pythonhosted.org/packages/b0/95/1aeb6cc7c4fd0f61088315a9056e37f4d2faa5316051eabb55b4ec602265/hail-0.2.138-py3-none-any.whl", hash = "sha256:9d995a97b4f8eee7478203ec5acf1af2036e80ac1dd8bdc4fa4ac8ab114a1ac5", size = 133093982, upload-time = "2026-04-16T21:34:15.647Z" },
 ]
 
 [[package]]
@@ -2842,11 +2843,11 @@ wheels = [
 
 [[package]]
 name = "setuptools"
-version = "80.8.0"
+version = "81.0.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/8d/d2/ec1acaaff45caed5c2dedb33b67055ba9d4e96b091094df90762e60135fe/setuptools-80.8.0.tar.gz", hash = "sha256:49f7af965996f26d43c8ae34539c8d99c5042fbff34302ea151eaa9c207cd257", size = 1319720, upload-time = "2025-05-20T14:02:53.503Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/0d/1c/73e719955c59b8e424d015ab450f51c0af856ae46ea2da83eba51cc88de1/setuptools-81.0.0.tar.gz", hash = "sha256:487b53915f52501f0a79ccfd0c02c165ffe06631443a886740b91af4b7a5845a", size = 1198299, upload-time = "2026-02-06T21:10:39.601Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/58/29/93c53c098d301132196c3238c312825324740851d77a8500a2462c0fd888/setuptools-80.8.0-py3-none-any.whl", hash = "sha256:95a60484590d24103af13b686121328cc2736bee85de8936383111e421b9edc0", size = 1201470, upload-time = "2025-05-20T14:02:51.348Z" },
+    { url = "https://files.pythonhosted.org/packages/e1/e3/c164c88b2e5ce7b24d667b9bd83589cf4f3520d97cad01534cd3c4f55fdb/setuptools-81.0.0-py3-none-any.whl", hash = "sha256:fdd925d5c5d9f62e4b74b30d6dd7828ce236fd6ed998a08d81de62ce5a6310d6", size = 1062021, upload-time = "2026-02-06T21:10:37.175Z" },
 ]
 
 [[package]]
@@ -3326,7 +3327,7 @@ dev = [
 requires-dist = [
     { name = "bokeh", specifier = ">=3.3" },
     { name = "gnomad", specifier = ">=0.8.2" },
-    { name = "hail", specifier = ">=0.2.136" },
+    { name = "hail", specifier = ">=0.2.137" },
     { name = "omegaconf", specifier = ">=2.3.0" },
     { name = "pandas", specifier = ">=2.2.3" },
 ]
