@@ -347,11 +347,6 @@ Finally, if self-reported sex is available, the script identifies samples that h
 a conflict between self-reported sex and genetically imputed sex, and saves it in the table
 `conflicting_sex.tsv`.
 
-To identify self-reported sex, we filter variants to use only a high-quality subset:
-SNVs, bi-allelic,
-called in at least 99% of the samples (configured by `defined_gt_frac_threshold` parameter),
-and with at least 1% of alternative alleles (configured by `n_alt_alleles_threshold`).
-
 
 ### Identify samples from related individuals with PC-Relate
 
