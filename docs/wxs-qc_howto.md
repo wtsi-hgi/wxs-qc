@@ -274,7 +274,7 @@ The MAD level can be configured individually per metric on the step
 [Identify outliers](#identify-outliers).
 The difference between methods is how they define a reference group for each sample.
 Depending on the chosen method, the step outputs can slightly differ.
-You can try all of it and compare results.
+You can try all of it and compare the results.
 
 The control samples, named in the `general -> metadata -> control_samples` section,
 are kept in the dataset despite any results of the sample QC check.
@@ -347,21 +347,33 @@ Finally, if self-reported sex is available, the script identifies samples that h
 a conflict between self-reported sex and genetically imputed sex, and saves it in the table
 `conflicting_sex.tsv`.
 
+To identify self-reported sex, we filter variants to use only a high-quality subset:
+SNVs, bi-allelic,
+called in at least 99% of the samples (configured by `defined_gt_frac_threshold` parameter),
+and with at least 1% of alternative alleles (configured by `n_alt_alleles_threshold`).
+
 
 ### Identify samples from related individuals with PC-Relate
 
 This script identifies related individuals in the dataset
 to ensure they do not bias population structure analysis on later stages.
 
+To identify related samples
+and to perform stratified outlier detection on the subsequent steps,
+we use a subset of high-quality variants:
+
+* SNVs, autosomal, and biallelic.
+* called in >= 99% of the samples (configured by `filter_params -> call_rate_threshold` parameter),
+* with >= 5% of alternative alleles (configured by `filter_params -> af_threshold` paraemter),
+* with Hardy-Weinberg Equilibrium (HWE) p_value >= 1E-5 (controlled by `filter_params -> hwe_threshold` parameter).
+  The HWE p-value is calculated using the
+  [Hail VariantQC function](https://hail.is/docs/0.2/methods/genetics.html#hail.methods.variant_qc).
+
 The challenge is that both relatedness estimation and population structure analysis
 can interfere with each other: related samples distort PCA, and population structure
 can cause false relatedness signals.
 To address this, we adopted the approach described in
 [SISG Workshop](https://uw-gac.github.io/topmed_workshop_2018/pc-relate.html).
-
-```shell
-python 2-sample_qc/2-prune_related_samples.py
-```
 
 The script uses a two-pass approach:
 
@@ -385,6 +397,12 @@ The script uses a two-pass approach:
 
 This two-pass approach correctly identifies related samples
 even in datasets with diverse superpopulations.
+
+Run it:
+
+```shell
+python 2-sample_qc/2-prune_related_samples.py
+```
 
 The step outputs the list of related samples, and PCA scores.
 The relatedness information can be used to validate pedigree data and detect sample mislabeling.
