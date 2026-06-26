@@ -1,0 +1,52 @@
+---
+name: implement-wxs-qc
+description: Implement an approved scoped change in WxS-QC, preserving Python/Hail pipeline contracts, numbered stage behavior, config compatibility, and strict scope discipline.
+---
+
+# Implement WxS-QC Skill
+
+Use this skill only when implementing code after a human has approved a plan.
+
+## Workflow
+
+1. Confirm approval
+   - Locate the approved plan in `artifacts/1_plan.md` when one exists.
+   - If approval is not explicit, stop and request approval. Do not implement.
+
+2. Re-check repository constraints
+   - Read `AGENTS.md`.
+   - Confirm the approved scope and files to touch.
+   - Re-read the relevant numbered script, helper module, config, and tests before editing.
+   - If the approved plan conflicts with the actual codebase, stop and ask for instructions.
+   - If required changes fall outside approved scope, stop and ask for confirmation.
+
+3. Implement minimal changes
+   - Keep the diff small, focused, and behavior-preserving unless behavior change is explicitly approved.
+   - Preserve numbered script order, public script names, CLI arguments, config keys, and output paths unless explicitly approved.
+   - Follow the style of the touched files.
+   - Do not apply broad formatting, import cleanup, or refactoring outside the requested code path.
+
+4. Preserve Hail/Spark contracts
+   - Keep Hail Table/MatrixTable loading and saving in the same layer unless the approved plan changes that boundary.
+   - Prefer passing Hail objects through pipeline functions instead of introducing hidden IO.
+   - Convert paths to Spark/Hail format only where the Spark/Hail API requires it.
+   - Be careful with keying, row/column annotations, checkpointing, repartitioning, and expensive actions.
+
+5. Update related surfaces only when in scope
+   - If config behavior changes, update affected config examples and docs only when approved.
+   - If shared helpers in `wes_qc/` or `utils/` change, check all known call sites.
+   - Add or update focused tests when the touched area has an existing pattern.
+
+6. Run focused checks
+   - Prefer the smallest relevant target:
+     - `make test-ut-one-step test=<pytest-name-or-pattern>`
+     - `make integration-test-trios`
+     - `make integration-test-non-trios`
+     - `make test-it-one-step test=<pytest-name-or-pattern>`
+     - `pre-commit run --files <changed-files>`
+   - If Hail/Spark, cloud data, or time constraints block checks, record that clearly.
+
+7. Prepare implementation notes
+   - Save notes to `artifacts/2_implement.md` when using the artifacts workflow.
+   - Include what changed, why, files touched, checks run, blocked checks, risks, and any out-of-scope discoveries.
+   - Read `references/change-checklist.md` before concluding.

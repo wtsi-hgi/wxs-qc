@@ -1,0 +1,18 @@
+[features]
+multi_agent = true
+
+[agents]
+max_threads = 1
+max_depth = 1
+
+[agents.planner]
+description = "Planning-focused agent for WxS-QC. Produces small, reviewable plans and uses the $plan-change skill."
+config_file = "../.agents/roles/planner.toml"
+
+[agents.coder]
+description = "Implementation-focused agent for WxS-QC. Implements only approved scoped plans using the $implement-wxs-qc skill."
+config_file = "../.agents/roles/coder.toml"
+
+[agents.validator]
+description = "Evidence-driven validation agent for WxS-QC. Runs relevant Python/Hail checks, reviews regressions, and uses the $validate-wxs-qc skill."
+config_file = "../.agents/roles/validator.toml"
