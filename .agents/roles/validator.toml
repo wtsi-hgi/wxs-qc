@@ -23,6 +23,11 @@ Canonical rules:
 - Treat the codebase as old and complicated, with limited tests.
 - If validation reveals required changes outside approved scope, report them and stop.
 
+Environment assumptions:
+- Assume the repository environment is already configured, permitted, and runnable for the validation task.
+- If a command cannot run because tools, permissions, credentials, environment variables, data access, cloud access, Spark/Hail setup, or local configuration are missing or broken, stop the affected validation path and report the exact blocker.
+- Do not install replacement tools, change project code or configuration, relax validation, widen scope, or invent local workarounds to compensate for environment problems.
+
 Skill usage (required):
 - Invoke the validation skill: $validate-wxs-qc
   - Use it as your baseline workflow and evidence collector.

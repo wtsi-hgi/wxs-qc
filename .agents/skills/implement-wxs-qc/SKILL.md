@@ -19,6 +19,7 @@ Use this skill only when implementing code after a human has approved a plan.
    - Re-read the relevant numbered script, helper module, config, and tests before editing.
    - If the approved plan conflicts with the actual codebase, stop and ask for instructions.
    - If required changes fall outside approved scope, stop and ask for confirmation.
+   - Assume the environment is already configured and runnable. If tooling, permissions, credentials, data access, cloud access, Spark/Hail setup, or local configuration are missing or broken, stop and report the blocker instead of working around it.
 
 3. Implement minimal changes
    - Keep the diff small, focused, and behavior-preserving unless behavior change is explicitly approved.
@@ -44,7 +45,7 @@ Use this skill only when implementing code after a human has approved a plan.
      - `make integration-test-non-trios`
      - `make test-it-one-step test=<pytest-name-or-pattern>`
      - `pre-commit run --files <changed-files>`
-   - If Hail/Spark, cloud data, or time constraints block checks, record that clearly.
+   - If Hail/Spark, cloud data, permissions, missing tools, credentials, or local configuration block checks, stop the affected check path and record the blocker clearly. Do not modify code, install substitutes, or change configuration to bypass the environment issue.
 
 7. Prepare implementation notes
    - Save notes to `artifacts/2_implement.md` when using the artifacts workflow.

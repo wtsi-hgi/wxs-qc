@@ -21,7 +21,8 @@ Use this skill when the user asks to plan a feature, refactor, fix, or enhanceme
    - Or list required coordinated updates to scripts, config keys, docs, tests, and output paths.
 7. Include validation commands and manual checks with clear pass criteria.
 8. If requested behavior conflicts with the actual codebase, stop and ask for clarification instead of planning around the conflict.
-9. Stop and request human approval. Do not implement.
+9. Assume required tools, permissions, credentials, data access, cloud access, Spark/Hail setup, and local configuration are already available. If inspection reveals an environment blocker, stop and report it instead of planning a workaround.
+10. Stop and request human approval. Do not implement.
 
 ## Guardrails
 
@@ -30,6 +31,7 @@ Use this skill when the user asks to plan a feature, refactor, fix, or enhanceme
 - Keep plans focused enough for a practical review.
 - Treat missing/blocked validation steps as risks to call out in the plan.
 - Do not plan edits outside the approved scope without marking them as requiring user confirmation.
+- Do not propose project-code or configuration changes to compensate for missing tools, permissions, credentials, data, cloud access, Spark/Hail setup, or broken local configuration unless explicitly requested.
 
 ## Output
 

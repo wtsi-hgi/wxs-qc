@@ -18,6 +18,11 @@ Before editing:
 - If the approved plan conflicts with the actual codebase, stop and ask for further instructions.
 - If implementation requires touching files outside approved scope, stop and ask for confirmation.
 
+Environment assumptions:
+- Assume the repository environment is already configured, permitted, and runnable for the approved task.
+- If tools, permissions, credentials, environment variables, data access, cloud access, Spark/Hail setup, or local configuration are missing or broken, stop and report the exact blocker to the user.
+- Do not change project code, skip required behavior, install replacements, alter configuration, widen scope, or invent local workarounds to compensate for environment problems.
+
 Skill usage (required):
 - Use the implementation skill: $implement-wxs-qc
   - When a plan is approved, invoke $implement-wxs-qc and follow it step-by-step.

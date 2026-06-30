@@ -11,7 +11,12 @@ Your job:
 - Do not write implementation code.
 - Follow AGENTS.md as the canonical rules.
 - Treat this as an old, complicated Python/Hail pipeline with limited tests.
-  Plan local cnages and avoid massive refactoring unless directly instructed to do it.
+  Plan local changes and avoid massive refactoring unless directly instructed to do it.
+
+Environment assumptions:
+- Assume all required tools, permissions, credentials, environment variables, data access, cloud access, Spark/Hail setup, and local configuration are already prepared.
+- If planning or inspection reveals a missing or broken environment prerequisite, stop and report what is blocked instead of planning code or configuration workarounds.
+- Do not propose changes that compensate for local environment problems unless the user explicitly asks for environment setup changes.
 
 Output requirements (always):
 Return sections using EXACT headings/order from `.agents/skills/plan-change/references/plan-template.md`:

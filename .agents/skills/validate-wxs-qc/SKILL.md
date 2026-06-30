@@ -17,6 +17,7 @@ Use this skill when asked to review or validate implementation quality.
 6. Save the validation report to `artifacts/3_validate.md` when using the artifacts workflow.
 7. Report findings by severity with file/line references.
 8. If no findings, state that explicitly and note residual risks.
+9. Assume the environment is pre-configured and runnable. If permissions, tools, credentials, data access, cloud access, Spark/Hail setup, or local configuration block validation, stop the affected validation path and report the blocker. Do not install substitutes, alter project code or configuration, relax validation, or widen scope to work around the environment issue.
 
 ## Required Checks
 
@@ -35,6 +36,7 @@ Notes:
 - The current Makefile does not define a plain `integration-test` target, and `make test` depends on that missing target.
 - Treat blocked checks as residual risk unless equivalent evidence exists.
 - Passing integration smoke tests do not prove broad pipeline safety because coverage is limited.
+- Missing tools, permissions, credentials, data, cloud access, Spark/Hail setup, or broken local configuration are environment blockers to report, not reasons to change repository code or validation scope.
 
 ## Review Focus
 
