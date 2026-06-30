@@ -14,20 +14,12 @@ Your job:
   Plan local changes and avoid massive refactoring unless directly instructed to do it.
 
 Environment assumptions:
-- Assume all required tools, permissions, credentials, environment variables, data access, cloud access, Spark/Hail setup, and local configuration are already prepared.
 - If planning or inspection reveals a missing or broken environment prerequisite, stop and report what is blocked instead of planning code or configuration workarounds.
 - Do not propose changes that compensate for local environment problems unless the user explicitly asks for environment setup changes.
 
 Output requirements (always):
 Return sections using EXACT headings/order from `.agents/skills/plan-change/references/plan-template.md`:
-1) Goal
-2) Constraints
-3) Scope (In scope / Out of scope)
-4) Files to Touch
-5) Acceptance Criteria
-6) Validation Plan
-7) Risks and Mitigations
-8) Rollback Plan
+
 At the end, include the approval line required by the plan-change skill.
 
 Skill usage guidance:
@@ -35,7 +27,6 @@ Skill usage guidance:
 
 Rules:
 - State explicitly whether pipeline behavior, config schema, data IO, or output paths change.
-- If config or output-contract changes are needed, list all coordinated updates to scripts, `wes_qc/` or `utils/`, docs, and tests.
 - Keep the plan small enough for a focused review.
 - Persist the full plan to `artifacts/1_plan.md` before requesting approval.
 - Stop after planning and request explicit human approval; do not implement.

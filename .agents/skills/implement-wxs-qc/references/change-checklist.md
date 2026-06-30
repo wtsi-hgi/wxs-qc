@@ -10,5 +10,6 @@ Before finishing implementation:
 - [ ] No out-of-scope files were edited
 - [ ] Numbered pipeline order, CLI flags, config keys, and output paths are preserved unless explicitly approved
 - [ ] Hail/Spark IO boundaries are preserved unless explicitly approved
-- [ ] Focused tests/checks were run, or blocked checks were documented
+- [ ] Pre-commit checks were run for changed files, or blockers were documented
+- [ ] Individual integration tests were run for changed pipeline steps, or blockers were documented
 - [ ] Implementation notes include risks and validation evidence

@@ -33,8 +33,7 @@ Changes should be small, scoped, and easy to review.
 - `config/`: example/public configuration.
 - `docs/`: user and developer documentation.
 - `scripts/`: shell helpers, notebooks, and cluster/local execution utilities.
-- `tests/`: unit and integration tests. Coverage is limited and should not be
-  interpreted as proving that broad refactors are safe.
+- `tests/`: unit and integration tests.
 
 ## Non-Negotiable Scope Rules
 
@@ -44,12 +43,11 @@ Changes should be small, scoped, and easy to review.
 - Do not perform opportunistic cleanup, broad formatting, import sorting, or
   refactoring in files that are not part of the requested change.
 - If a required fix appears to need changes outside the approved scope,
-  stop and ask the user for confirmation before editing those files.
+  stop and ask the user for confirmation.
 - If task instructions conflict with the actual codebase, stop and ask for
-  further instructions. Do not guess which side should win.
+  further instructions.
 - If the README, docs, tests, type hints, comments, or function names disagree
-  with executable behavior, inspect the code and ask before making assumptions that affect behavior.
-- Preserve user changes. Do not revert, overwrite, or reformat work that was not part of your own change.
+  with executable behavior, inspect the code and ask user before making assumptions that affect behavior.
 
 ## Environment Assumptions
 
@@ -72,7 +70,7 @@ Changes should be small, scoped, and easy to review.
   code path. Avoid large architectural changes.
 - Use structured parsing APIs for config, YAML, Python, or tabular data when
   practical. Avoid fragile ad hoc text manipulation for code or data formats.
-- Add comments only where they clarify non-obvious Hail/Spark behavior,
+- Add comments only where they clarify algorithm, non-obvious Hail/Spark behavior,
   historical constraints, or complex transformations.
 - Do not rename public scripts, pipeline step files, config keys, or output paths
   unless the user explicitly approves the migration.
@@ -80,7 +78,7 @@ Changes should be small, scoped, and easy to review.
 ## Python and Hail Conventions
 
 - The project targets Python 3.12, but some parts of the code may still assume Python 3.9 compatibility.
-  Convert them to the new Python 3.12 syntax when they are in scope.
+  Convert them to the Python 3.12 syntax when they are in scope.
 - Hail MatrixTable/Table reads and writes are expensive and often tied to workflow state.
   Do not move IO across function boundaries unless the task explicitly requires it.
 - Prefer keeping Hail data loading and saving in `main()`-style script entry points when that matches nearby code.
@@ -94,10 +92,12 @@ Changes should be small, scoped, and easy to review.
 
 Current automated test coverage is limited and not comprehensive.
 The unit tests are currently broken and are not used for validation.
-Use the integration smoke tests as the active validation path; they mainly check
-for the absence of unhandled exceptions.
+Integration tests validate only the absence of exceptions and failures.
 Passing integration smoke tests does not guarantee that a change is safe across
 the whole pipeline.
+Therefore, any broad refactors are currently unsafe and require strict user control.
+Use the integration smoke tests as the active validation path; they mainly check
+for the absence of unhandled exceptions.
 
 Available commands include:
 
@@ -110,21 +110,17 @@ pre-commit run mypy --hook-stage manual
 ```
 
 Notes:
-
-- Run `make integration-test-trios` to test the pipeline end-to-end through the
-  trio integration smoke-test path.
 - Run `make test-it-one-step test=test_trios_...` to individually test and debug
   a specific trio pipeline step.
+- Run `make integration-test-trios` to test the pipeline end-to-end through the
+  trio integration smoke-test path. Only do it after individual tests pass.
 - Use `make integration-test-non-trios` only when the approved change
   specifically affects the non-trio path.
-- The current Makefile does not define a plain `integration-test` target, and
-  `make test` depends on that missing target. Prefer the explicit trio/non-trio
-  integration targets until the Makefile is corrected.
 - Integration tests may require Hail/Spark setup and generated intermediate files.
 - `PYSPARK_PYTHON` and `PYSPARK_DRIVER_PYTHON` are set by the Makefile.
 - Prefer running the smallest relevant test target first.
 - If tests cannot be run because of environment, data, cloud, Spark, or time
-  constraints, state that clearly in the final response.
+  constraints, stop and ask user to fix it.
 - When adding or changing behavior, add focused tests if the touched area has an
   appropriate existing test pattern. Do not build a large new test framework as
   part of a narrow task.

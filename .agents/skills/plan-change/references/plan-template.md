@@ -24,5 +24,3 @@
 ## Risks and Mitigations
 - Risk:
 - Mitigation:
-
-## Rollback Plan

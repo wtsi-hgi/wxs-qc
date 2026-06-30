@@ -21,13 +21,6 @@ run_check() {
   echo
 }
 
-if command -v make >/dev/null 2>&1; then
-  run_check "integration-test-trios" make integration-test-trios
-else
-  echo "[validate] make is not available; skipping Makefile checks."
-  HAS_FAILURE=1
-fi
-
 if command -v pre-commit >/dev/null 2>&1; then
   run_check "pre-commit-all-files" pre-commit run --all-files
 else

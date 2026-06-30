@@ -5,7 +5,7 @@ description: Implement an approved scoped change in WxS-QC, preserving Python/Ha
 
 # Implement WxS-QC Skill
 
-Use this skill only when implementing code after a human has approved a plan.
+Use this skill when implementing code after a human has approved a plan.
 
 ## Workflow
 
@@ -38,14 +38,19 @@ Use this skill only when implementing code after a human has approved a plan.
    - If shared helpers in `wes_qc/` or `utils/` change, check all known call sites.
    - Add or update focused tests when the touched area has an existing pattern.
 
-6. Run focused checks
-   - Prefer the smallest relevant target:
-     - `make test-ut-one-step test=<pytest-name-or-pattern>`
+6. Run implementation checks
+   - Run pre-commit linters and checks against every changed file:
+     - `pre-commit run --files <changed-files>`
+     - `pre-commit run mypy --hook-stage manual`
+   - Run the individual trio integration test for each changed pipeline step:
+     - `make test-it-one-step test=test_trios_<step-name-or-prefix>`
+   - Use the concrete `test_trios_...` target that maps to the changed step or the narrowest available step prefix.
+   - Do not run the full end-to-end integration suites from the implementer role. The user owns those long-running checks:
      - `make integration-test-trios`
      - `make integration-test-non-trios`
-     - `make test-it-one-step test=<pytest-name-or-pattern>`
-     - `pre-commit run --files <changed-files>`
-   - If Hail/Spark, cloud data, permissions, missing tools, credentials, or local configuration block checks, stop the affected check path and record the blocker clearly. Do not modify code, install substitutes, or change configuration to bypass the environment issue.
+   - If Hail/Spark, cloud data, permissions, missing tools, credentials, or local configuration block checks,
+     stop the affected check path and record the blocker clearly.
+     Do not modify code, install substitutes, or change configuration to bypass the environment issue.
 
 7. Prepare implementation notes
    - Save notes to `artifacts/2_implement.md` when using the artifacts workflow.
