@@ -102,14 +102,16 @@ for the absence of unhandled exceptions.
 Available commands include:
 
 ```bash
+make check
+make typecheck
 make integration-test-trios
 make integration-test-non-trios
 make test-it-one-step test=test_trios_<step-name-or-prefix>
-pre-commit run --files <changed-files>
-pre-commit run mypy --hook-stage manual
 ```
 
 Notes:
+- Run `make check` to run set of pre-commit checks (they can't be run directly due to the sandbox restrictions).
+- Run `make typecheck` to run type checking.
 - Run `make test-it-one-step test=test_trios_...` to individually test and debug
   a specific trio pipeline step.
 - Run `make integration-test-trios` to test the pipeline end-to-end through the

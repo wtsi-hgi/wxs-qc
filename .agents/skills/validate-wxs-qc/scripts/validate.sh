@@ -21,13 +21,8 @@ run_check() {
   echo
 }
 
-if command -v pre-commit >/dev/null 2>&1; then
-  run_check "pre-commit-all-files" pre-commit run --all-files
-  run_check "mypy" bash -c "scripts/stage_mypy_numbered_scripts.sh && mypy --config-file=pyproject.toml"
-else
-  echo "[validate] pre-commit is not available; skipping hook checks."
-  HAS_FAILURE=1
-fi
+run_check "check" make check
+run_check "typecheck" make typecheck
 
 if [[ "$HAS_FAILURE" -ne 0 ]]; then
   echo "[validate] One or more checks failed or were unavailable."

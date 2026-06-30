@@ -25,8 +25,8 @@ Use this skill when asked to review or validate implementation quality.
 
 Use linters and per-step integration smoke tests as the validation baseline:
 
-- `pre-commit run --all-files`
-- `scripts/stage_mypy_numbered_scripts.sh && mypy --config-file=pyproject.toml`
+- `make check`
+- `make typecheck`
 - `make test-it-one-step test=test_trios_...` for each changed pipeline step, using the same concrete per-step trio tests run by the implementer
 
 Notes:
