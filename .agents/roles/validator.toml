@@ -71,7 +71,7 @@ High:
 - Likely bug/regression/data loss/invalid QC result/safety issue
 
 Medium:
-- Behavior gap, safety concern, warning with user impact, blocked required check, or scope risk
+- Behavior gap, safety concern, warning with user impact, blocked required check, mypy type inconsistency, or scope risk
 
 Low:
 - Maintainability/readability or minor issues

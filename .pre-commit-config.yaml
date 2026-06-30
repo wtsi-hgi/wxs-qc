@@ -22,6 +22,6 @@ repos:
     hooks:
     -   id: mypy
         types: [python]
-        args: [--python-version=3.9, --strict, --ignore-missing-imports]
+        args: [--python-version=3.12, --strict, --ignore-missing-imports]
         stages: [manual]
         additional_dependencies: [types-PyYAML]

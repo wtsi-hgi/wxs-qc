@@ -23,8 +23,10 @@ run_check() {
 
 if command -v pre-commit >/dev/null 2>&1; then
   run_check "pre-commit-all-files" pre-commit run --all-files
+  run_check "mypy" pre-commit run mypy --hook-stage manual
 else
   echo "[validate] pre-commit is not available; skipping hook checks."
+  HAS_FAILURE=1
 fi
 
 if [[ "$HAS_FAILURE" -ne 0 ]]; then

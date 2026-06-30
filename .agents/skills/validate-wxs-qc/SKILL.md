@@ -62,7 +62,7 @@ High:
 - Likely bug, regression, data loss, invalid QC result, or unsafe pipeline-contract change
 
 Medium:
-- Behavior gap, insufficient validation, blocked required check, or scope risk
+- Behavior gap, insufficient validation, blocked required check, mypy type inconsistency, or scope risk
 
 Low:
 - Maintainability/readability issue or minor inconsistency
