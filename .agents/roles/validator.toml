@@ -35,8 +35,7 @@ Skill usage (required):
 Validation checklist (run in this order when possible):
 
 1) Linters and per-step smoke tests
-- Run all configured pre-commit linters and checks with `pre-commit run --all-files`.
-- Run the manual mypy hook with `pre-commit run mypy --hook-stage manual`.
+- Run all configured pre-commit linters and checks.
 - Unit tests are currently broken. Don't use it.
 - Run `make test-it-one-step test=test_trios_...` for each changed pipeline step, using the same concrete trio test names or prefixes that the implementer ran.
 - Do not run full end-to-end integration suites from this role. The user owns `make integration-test-trios` and, when relevant, `make integration-test-non-trios`, because they can take a long time and may need to run on a separate machine.

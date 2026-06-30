@@ -23,7 +23,7 @@ run_check() {
 
 if command -v pre-commit >/dev/null 2>&1; then
   run_check "pre-commit-all-files" pre-commit run --all-files
-  run_check "mypy" pre-commit run mypy --hook-stage manual
+  run_check "mypy" bash -c "scripts/stage_mypy_numbered_scripts.sh && mypy --config-file=pyproject.toml"
 else
   echo "[validate] pre-commit is not available; skipping hook checks."
   HAS_FAILURE=1

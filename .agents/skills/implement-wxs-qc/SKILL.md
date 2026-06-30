@@ -41,7 +41,7 @@ Use this skill when implementing code after a human has approved a plan.
 6. Run implementation checks
    - Run pre-commit linters and checks against every changed file:
      - `pre-commit run --files <changed-files>`
-     - `pre-commit run mypy --hook-stage manual`
+     - `scripts/stage_mypy_numbered_scripts.sh && mypy --config-file=pyproject.toml`
    - Run the individual trio integration test for each changed pipeline step:
      - `make test-it-one-step test=test_trios_<step-name-or-prefix>`
    - Use the concrete `test_trios_...` target that maps to the changed step or the narrowest available step prefix.

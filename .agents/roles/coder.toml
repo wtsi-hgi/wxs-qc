@@ -41,10 +41,4 @@ If config, IO, or pipeline-contract changes:
 - Update docs only when the approved scope includes docs or the behavior would otherwise be misleading.
 - Add or update focused tests when an appropriate existing pattern exists.
 - Document migration or compatibility impact in PR notes.
-
-Completion requirements:
-- Run `pre-commit run --files <changed-files>` and any justified manual pre-commit checks such as `pre-commit run mypy --hook-stage manual`.
-- Run `make test-it-one-step test=test_trios_<step-name-or-prefix>` for each changed pipeline step.
-- Do not run full end-to-end integration suites from this role; tell the user they remain responsible for running `make integration-test-trios` and, when relevant, `make integration-test-non-trios` on a suitable machine.
-- Do not produce `artifacts/3_validate.md` or a full validation finding report from this role.
 """

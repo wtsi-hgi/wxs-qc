@@ -40,8 +40,18 @@ dev = [
     "pandas-stubs>=2.2.3",
 ]
 
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
 [tool.mypy]
 python_version = "3.12"
+files = [
+    ".mypy_stage",
+    "tests",
+    "utils",
+    "wes_qc",
+]
 strict = true
 plugins = []
 warn_return_any = true
@@ -57,5 +67,9 @@ warn_no_return = true
 warn_unreachable = true
 
 [[tool.mypy.overrides]]
-module = "hail"
+module = [
+    "gnomad.*",
+    "hail",
+    "hail.*",
+]
 ignore_missing_imports = true
