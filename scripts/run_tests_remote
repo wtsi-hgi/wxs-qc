@@ -1,0 +1,127 @@
+#!/usr/bin/env bash
+
+# Sync this repository to a remote VM,
+# run a selected integration-test Make target there, and download the remote test logs.
+# SSH is expected to be preconfigured so `ssh vm` works without additional arguments.
+
+set -uo pipefail
+
+usage() {
+    cat <<'EOF'
+Usage:
+  scripts/run_tests_remote [make-target] [make-variable...]
+
+Examples:
+  scripts/run_tests_remote integration-test-trios
+  scripts/run_tests_remote integration-test-non-trios
+  scripts/run_tests_remote test-it-one-step test=test_trios_3_5_variant_qc
+
+Environment:
+  REMOTE_HOST  SSH host alias. Default: gz3vm
+  REMOTE_ROOT  Remote parent directory for the synced repo. Default: /home/ubuntu/temprun
+EOF
+}
+
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+    usage
+    exit 0
+fi
+
+remote_host="${REMOTE_HOST:-gz3vm}"
+remote_root="${REMOTE_ROOT:-/home/ubuntu/temprun}"
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+repo_name="$(basename "${repo_root}")"
+remote_repo="${remote_root}/${repo_name}"
+run_id="$(date +%Y%m%d_%H%M%S)"
+local_log_dir="${repo_root}/hlrun_remote_logs/${run_id}"
+remote_log_dir="${remote_repo}/hlrun_remote_logs/${run_id}"
+
+if [[ "$#" -eq 0 ]]; then
+    make_args=("integration-test-trios")
+else
+    make_args=("$@")
+fi
+
+echo "Syncing ${repo_root} to ${remote_host}:${remote_repo}"
+if ! ssh "${remote_host}" mkdir -p "${remote_repo}"; then
+    echo "Failed to create remote repo directory ${remote_host}:${remote_repo}" >&2
+    exit 2
+fi
+
+if ! rsync -az \
+    --exclude ".git/" \
+    --exclude ".idea/" \
+    --exclude ".venv/" \
+    --exclude ".mypy_cache/" \
+    --exclude ".pytest_cache/" \
+    --exclude ".ruff_cache/" \
+    --exclude "__pycache__/" \
+    --exclude "hlrun_*" \
+    --exclude "hail*.log" \
+    --exclude "tests/test_data/" \
+    --exclude "tests/integration_tests/hail*.log" \
+    --exclude "tests/integration_tests/matrixtables/" \
+    "${repo_root}/" "${remote_host}:${remote_repo}/"
+then
+    echo "Failed to sync ${repo_root} to ${remote_host}:${remote_repo}" >&2
+    exit 2
+fi
+
+echo "Running on ${remote_host}: make ${make_args[*]}"
+
+if ssh "${remote_host}" bash -s -- "${remote_repo}" "${remote_log_dir}" "${make_args[@]}" <<'REMOTE'
+set -uo pipefail
+
+remote_repo="$1"
+remote_log_dir="$2"
+shift 2
+make_args=("$@")
+
+safe_log_name="$(printf '%s_' "${make_args[@]}" | sed 's/[^A-Za-z0-9_.-]/_/g; s/_$//')"
+log_file="${remote_log_dir}/${safe_log_name:-make}.log"
+
+mkdir -p "${remote_log_dir}"
+cd "${remote_repo}" || exit 2
+
+if [[ ! -d ".venv" ]]; then
+    echo "Expected ${remote_repo}/.venv to exist on the VM." >&2
+    exit 2
+fi
+
+{
+    echo "Remote host: $(hostname)"
+    echo "Remote repo: ${remote_repo}"
+    echo "Started: $(date -Is)"
+    echo "Command: make ${make_args[*]}"
+    echo
+
+    # shellcheck disable=SC1091
+    source .venv/bin/activate
+    make "${make_args[@]}"
+    status="$?"
+
+    echo
+    echo "Finished: $(date -Is)"
+    echo "Exit status: ${status}"
+    exit "${status}"
+} 2>&1 | tee "${log_file}"
+
+exit "${PIPESTATUS[0]}"
+REMOTE
+then
+    run_status=0
+else
+    run_status="$?"
+fi
+
+echo "Downloading logs to ${local_log_dir}"
+mkdir -p "${local_log_dir}"
+if ! rsync -az "${remote_host}:${remote_log_dir}/" "${local_log_dir}/"; then
+    echo "Failed to download logs from ${remote_host}:${remote_log_dir}" >&2
+    exit 2
+fi
+
+echo "Logs downloaded:"
+find "${local_log_dir}" -maxdepth 1 -type f -print
+
+exit "${run_status}"
