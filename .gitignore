@@ -142,6 +142,7 @@ tests/unit_tests/*
 !tests/unit_tests/hail_compare_functions.py
 tests/integration_tests/*
 # except the test_*.py files
+!tests/integration_tests/conftest.py
 !tests/integration_tests/test_*.py
 !tests/integration_tests/config_test_template.yaml
 

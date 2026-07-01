@@ -18,6 +18,13 @@ The current development direction is iterative improvement of coding style,
 maintainability, and reliability.
 Changes should be small, scoped, and easy to review.
 
+Follow the plan-implement-validate approach:
+* Execute the 'planner' role to plan the changes and ask for user confirmation,
+* Execute the 'implement' role to implement them
+* Finally, run the 'validate' role to check that the changes are safe and do not break anything.
+
+**Always ask to confirm the proposed changes plan before proceeding wit the implementation.**
+
 ## Repository Structure
 
 - `0-resource_preparation/`: numbered scripts for preparing external resources.
