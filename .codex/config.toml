@@ -1,3 +1,21 @@
+# <repo>/.codex/config.toml
+# Use this line to remove all sandbox restrictions (for agent testign only)
+# default_permissions = ":danger-full-access"
+
+# The custom permissions that allow localhost port binding - required to run Spark.
+default_permissions = "hail-local"
+
+[permissions.hail-local]
+extends = ":workspace"
+
+[permissions.hail-local.network]
+enabled = true
+allow_local_binding = true
+
+[permissions.hail-local.network.domains]
+"localhost" = "allow"
+"127.0.0.1" = "allow"
+
 [features]
 multi_agent = true
 
