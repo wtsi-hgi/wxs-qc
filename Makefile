@@ -29,28 +29,23 @@ typecheck:
 		echo "No modified Python files to typecheck."; \
 	fi
 
-test: unit-test integration-test
-
-test-ut-one-step:
-	cd tests/unit_tests && pytest -vv -s -k $(test)
-
 test-it-one-step:
-	cd tests/integration_tests && pytest -vv -s -k $(test)
+	cd tests/integration_tests && pytest -vv -s --exitfirst -k $(test)
 
 test-it-one-step-profile: clear-hard-filter-checkpoints
 	cd tests/integration_tests && \
-	python -m cProfile -o profile.stats -m pytest -vv -s -k $(test) && \
+	python -m cProfile -o profile.stats -m pytest -vv -s --exitfirst -k $(test) && \
 	snakeviz --hostname 0.0.0.0 $(shell pwd)/tests/integration_tests/profile.stats
 
 integration-test-trios: clear-ht clear-logs
-	cd tests/integration_tests && pytest -k "test_trios_ and not test_trios_0_3_import_data"
+	cd tests/integration_tests && pytest -vv -ra --tb=short --exitfirst -k "test_trios_ and not test_trios_0_3_import_data"
 
 integration-test-non-trios: clear-ht clear-logs
-	cd tests/integration_tests && pytest -k "test_non_trios_ and not test_non_trios_0_3_import_data"
+	cd tests/integration_tests && pytest -vv -ra --tb=short --exitfirst -k "test_non_trios_ and not test_non_trios_0_3_import_data"
 
 
 integration-test-coverage: clear-ht clear-logs
-	cd tests/integration_tests && pytest -k "test_trios_ and not test_trios_0_3_import_data" --cov=../..
+	cd tests/integration_tests && pytest -vv -ra --tb=short --exitfirst -k "test_trios_ and not test_trios_0_3_import_data" --cov=../..
 
 
 clear-hard-filter-checkpoints:
