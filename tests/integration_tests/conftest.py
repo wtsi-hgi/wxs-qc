@@ -17,9 +17,13 @@ def integration_tests_dir() -> Path:
 
 
 @pytest.fixture(scope="session")
-def test_data_dir(integration_tests_dir: Path) -> Path:
-    test_suite_path = integration_tests_dir.parent
-    test_data_download_path = test_suite_path / "test_data"
+def integration_tests_data_dir(integration_tests_dir: Path) -> Path:
+    return integration_tests_dir.parent / "data"
+
+
+@pytest.fixture(scope="session")
+def test_data_dir(integration_tests_dir: Path, integration_tests_data_dir: Path) -> Path:
+    test_data_download_path = integration_tests_data_dir / "test_source_data"
     test_files_list = (integration_tests_dir / TEST_FILES_LIST).resolve()
 
     print(f"Downloading data from the bucket using files list {test_files_list}")
@@ -32,6 +36,7 @@ def test_data_dir(integration_tests_dir: Path) -> Path:
 def rendered_config(
     request: pytest.FixtureRequest,
     integration_tests_dir: Path,
+    integration_tests_data_dir: Path,
     test_data_dir: Path,
     tmp_path_factory: pytest.TempPathFactory,
 ) -> Path:
@@ -42,6 +47,7 @@ def rendered_config(
 
     render_config(
         str(integration_tests_dir / INTEGRATION_TESTS_CONFIG_TEMPLATE),
+        str(integration_tests_data_dir),
         str(test_data_dir / "control_set_small"),
         str(test_data_dir / "resources"),
         str(test_data_dir / "metadata"),

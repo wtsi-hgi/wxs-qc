@@ -13,6 +13,7 @@ TEST_FILES_LIST = "../test_files_list_in_bucket.txt"
 
 # variables for test config rendering
 INTEGRATION_TESTS_DIR = "{INTEGRATION_TESTS_DIR}"
+INTEGRATION_TESTS_DATA_DIR = "{INTEGRATION_TESTS_DATA_DIR}"
 TEST_DATA_DIR = "{TEST_DATA_DIR}"
 RESOURCES_DIR = "{RESOURCES_DIR}"
 METADATA_DIR = "{METADATA_DIR}"
@@ -31,6 +32,7 @@ RF_RUN_TEST_HASH = "testhash"  # manually set rf run id
 
 def render_config(
     path_to_template: str,
+    integration_tests_data_dir: Optional[str],
     test_data_dir: Optional[str],
     resources_dir: Optional[str],
     metadata_dir: Optional[str],
@@ -43,6 +45,10 @@ def render_config(
     Read the config template and fill in the paths.
     """
     integration_tests_dir = os.path.dirname(os.path.abspath(__file__))
+    default_integration_tests_data_dir = os.path.join(os.path.dirname(integration_tests_dir), "data")
+    integration_tests_data_dir = (
+        integration_tests_data_dir if integration_tests_data_dir else default_integration_tests_data_dir
+    )
 
     # TODO agree on test and resources folder naming convention
     test_data_dir = test_data_dir if test_data_dir else os.path.join(integration_tests_dir, "control_set")
@@ -60,6 +66,7 @@ def render_config(
 
     # TODO: make versatile
     template = template.replace(INTEGRATION_TESTS_DIR, integration_tests_dir)
+    template = template.replace(INTEGRATION_TESTS_DATA_DIR, integration_tests_data_dir)
     template = template.replace(TEST_DATA_DIR, test_data_dir)
     template = template.replace(RESOURCES_DIR, resources_dir)
     template = template.replace(METADATA_DIR, metadata_dir)

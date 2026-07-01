@@ -132,19 +132,8 @@ cython_debug/
 # this folder name for tests data is deprecated
 tests/test_data_individual_files/
 
-# the new name for test data directory is the following
-tests/test_data/
-
-tests/unit_tests/*
-# except the test_*.py files
-!tests/unit_tests/test_*.py
-!tests/unit_tests/conftest.py
-!tests/unit_tests/hail_compare_functions.py
-tests/integration_tests/*
-# except the test_*.py files
-!tests/integration_tests/conftest.py
-!tests/integration_tests/test_*.py
-!tests/integration_tests/config_test_template.yaml
+# generated test data
+tests/data/
 
 
 # All userprovided notebooks with temporary code

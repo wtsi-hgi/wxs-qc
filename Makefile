@@ -33,9 +33,10 @@ test-it-one-step:
 	cd tests/integration_tests && pytest -vv -s --exitfirst -k $(test)
 
 test-it-one-step-profile: clear-hard-filter-checkpoints
+	mkdir -p tests/data
 	cd tests/integration_tests && \
-	python -m cProfile -o profile.stats -m pytest -vv -s --exitfirst -k $(test) && \
-	snakeviz --hostname 0.0.0.0 $(shell pwd)/tests/integration_tests/profile.stats
+	python -m cProfile -o ../data/profile.stats -m pytest -vv -s --exitfirst -k $(test) && \
+	snakeviz --hostname 0.0.0.0 $(shell pwd)/tests/data/profile.stats
 
 integration-test-trios: clear-ht clear-logs
 	cd tests/integration_tests && pytest -vv -ra --tb=short --exitfirst -k "test_trios_ and not test_trios_0_3_import_data"
@@ -49,13 +50,15 @@ integration-test-coverage: clear-ht clear-logs
 
 
 clear-hard-filter-checkpoints:
-	rm -rf tests/integration_tests/integration-data/annotations/testhash/json_dump/* || true
+	rm -rf tests/data/control_set_small_results/annotations/testhash/json_dump/* || true
 
 clear-logs:
 	rm hail*.log || true
 	rm hlrun_* || true
 	rm tests/unit_tests/hail*.log || true
 	rm tests/integration_tests/hail*.log || true
+	rm tests/data/hail*.log || true
+	rm tests/data/control_set_small_results/hail*.log || true
 
 clear-ht:
-	rm -rf tests/integration_tests/matrixtables/* || true
+	rm -rf tests/data/control_set_small_results/matrixtables/* || true

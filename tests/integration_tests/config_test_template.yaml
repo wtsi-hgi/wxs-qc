@@ -21,7 +21,7 @@ general:
   # Also used for the naming of tables, plots, etc
   dataset_name: 'control_set_small'
   # Dataset root directory - to use in folder paths
-  data_root: '{INTEGRATION_TESTS_DIR}/${general.dataset_name}'
+  data_root: '{INTEGRATION_TESTS_DATA_DIR}/${general.dataset_name}_results'
   tmp_dir: 'file://${general.data_root}/tmp' # output
   #tmp_dir: '/shared' # Without file:// prefix Hail will use HDFS on the spark master, e.g. hdfs://spark-master:9820/shared
   # To use local temp dir you need to specify it with 'file://' prefix
