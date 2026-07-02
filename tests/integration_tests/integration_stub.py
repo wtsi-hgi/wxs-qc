@@ -20,6 +20,7 @@ METADATA_DIR = "{METADATA_DIR}"
 TRAINING_SETS_DIR = "{TRAINING_SETS_DIR}"
 VARIANT_QC_RANDOM_FOREST_DIR = "{VARIANT_QC_RANDOM_FOREST_DIR}"
 PEDIGREE_FILE_NAME = "{PEDIGREE_FILE_NAME}"
+SAMPLE_QC_METHOD = "{SAMPLE_QC_METHOD}"
 
 # configuration file template for the integration tests
 INTEGRATION_TESTS_CONFIG_TEMPLATE = "config_test_template.yaml"
@@ -39,6 +40,7 @@ def render_config(
     training_sets_dir: Optional[str],
     variant_qc_random_forest_dir: Optional[str],
     pedigree_file_name: Optional[str],
+    sample_qc_method: str = "lr",
     savefile: str = "inputs_test_rendered.yaml",
 ) -> None:
     """
@@ -74,6 +76,7 @@ def render_config(
     template = template.replace(VARIANT_QC_RANDOM_FOREST_DIR, variant_qc_random_forest_dir)
     pedigree_file_name = pedigree_file_name if pedigree_file_name is not None else "null"
     template = template.replace(PEDIGREE_FILE_NAME, pedigree_file_name)
+    template = template.replace(SAMPLE_QC_METHOD, sample_qc_method)
 
     with open(savefile, "w") as f:
         f.write(template)

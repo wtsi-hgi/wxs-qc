@@ -44,6 +44,7 @@ def rendered_config(
     rendered_config_dir = tmp_path_factory.mktemp(test_class.__name__ if test_class else "integration")
     rendered_config_savefile = rendered_config_dir / INTEGRATION_TESTS_CONFIG_RENDERED_SAVEFILE
     pedigree_file_path = getattr(test_class, "pedigree_file_path", None)
+    sample_qc_method = getattr(test_class, "sample_qc_method", "lr")
 
     render_config(
         str(integration_tests_dir / INTEGRATION_TESTS_CONFIG_TEMPLATE),
@@ -54,6 +55,7 @@ def rendered_config(
         str(test_data_dir / "training_sets"),
         str(test_data_dir / "variant_qc_random_forest"),
         pedigree_file_name=pedigree_file_path,
+        sample_qc_method=sample_qc_method,
         savefile=str(rendered_config_savefile),
     )
 

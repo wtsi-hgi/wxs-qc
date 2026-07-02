@@ -143,3 +143,4 @@ jupyter_notebooks/*
 hlrun_*
 
 artifacts
+tests/integration_tests/rf_probs.parquet/

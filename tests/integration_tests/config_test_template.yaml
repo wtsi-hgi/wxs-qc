@@ -52,7 +52,7 @@ general:
   # * pop - Stratified QC with PCA-assigned superpopulations (from gnomAD v3 + de novo PCA projection)
   # * nn - Nearest neighbours (from gnomAD v4)
   # * lr - linera regression (from gnomAD v4)
-  sample_qc_method: 'lr'
+  sample_qc_method: '{SAMPLE_QC_METHOD}'
   rf_model_id: "testhash" # Random forest model ID for Variant QC
 
 # Block of cvars variables - use to provide shorter alternatives for long names
