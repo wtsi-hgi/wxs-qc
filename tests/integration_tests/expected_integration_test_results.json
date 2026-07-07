@@ -1,0 +1,128 @@
+{
+  "trios": {
+    "step_2_2_sample_qc": {
+      "related_samples_to_remove": [
+        "EGAN00003332049_remapped",
+        "EGAN00003332050_remapped",
+        "EGAN00003332053_remapped"
+      ],
+      "relatedness": [
+        {
+          "i": "EGAN00003332049_remapped",
+          "j": "EGAN00003332051",
+          "kin": 0.26212,
+          "ibd2": 0.29731
+        },
+        {
+          "i": "EGAN00003332050_remapped",
+          "j": "EGAN00003332050",
+          "kin": 0.23359,
+          "ibd2": 0.45451
+        },
+        {
+          "i": "EGAN00003332051_remapped",
+          "j": "EGAN00003332049_remapped",
+          "kin": 0.26212,
+          "ibd2": 0.29731
+        },
+        {
+          "i": "EGAN00003332051_remapped",
+          "j": "EGAN00003332051",
+          "kin": 0.099882,
+          "ibd2": 0.20318
+        },
+        {
+          "i": "EGAN00003332053",
+          "j": "EGAN00003332053_remapped",
+          "kin": 0.20179,
+          "ibd2": 0.43623
+        }
+      ],
+      "hail_outputs": {
+        "samples_to_remove": {
+          "count": 3
+        },
+        "pc_relate_scores": {
+          "count": 8,
+          "sample_ids": [
+            "EGAN00003332049_remapped",
+            "EGAN00003332050",
+            "EGAN00003332050_remapped",
+            "EGAN00003332051",
+            "EGAN00003332051_remapped",
+            "EGAN00003332052",
+            "EGAN00003332053",
+            "EGAN00003332053_remapped"
+          ],
+          "score_lengths": [
+            2
+          ]
+        },
+        "pc_relate_unrelated_scores": {
+          "count": 4,
+          "sample_ids": [
+            "EGAN00003332049_remapped",
+            "EGAN00003332050",
+            "EGAN00003332051",
+            "EGAN00003332052"
+          ],
+          "score_lengths": [
+            2
+          ]
+        },
+        "pc_relate_pca_loadings": {
+          "count": 5594
+        },
+        "population_pca_scores": {
+          "count": 8,
+          "sample_ids": [
+            "EGAN00003332049_remapped",
+            "EGAN00003332050",
+            "EGAN00003332050_remapped",
+            "EGAN00003332051",
+            "EGAN00003332051_remapped",
+            "EGAN00003332052",
+            "EGAN00003332053",
+            "EGAN00003332053_remapped"
+          ],
+          "score_lengths": [
+            2
+          ]
+        },
+        "population_pca_unrelated_scores": {
+          "count": 5,
+          "sample_ids": [
+            "EGAN00003332050",
+            "EGAN00003332051",
+            "EGAN00003332051_remapped",
+            "EGAN00003332052",
+            "EGAN00003332053"
+          ],
+          "score_lengths": [
+            2
+          ]
+        },
+        "population_pca_loadings": {
+          "count": 4729
+        },
+        "population_pca_mt": {
+          "row_count": 89694,
+          "col_count": 8,
+          "sample_ids": [
+            "EGAN00003332049_remapped",
+            "EGAN00003332050",
+            "EGAN00003332050_remapped",
+            "EGAN00003332051",
+            "EGAN00003332051_remapped",
+            "EGAN00003332052",
+            "EGAN00003332053",
+            "EGAN00003332053_remapped"
+          ],
+          "score_lengths": [
+            2
+          ]
+        }
+      }
+    }
+  }
+}
