@@ -1,10 +1,13 @@
 # identify and prune related samples prior to PCA
 # use mt with hard filters and sex annotation from 2-sample_qc/1-hard_filters_sex_annotation.py
-import hail as hl
+import argparse
 import os
-from utils.utils import parse_config, path_local, path_spark
+
 import bokeh.plotting as bkplt
 import bokeh.layouts as bklayouts
+import hail as hl
+
+from utils.utils import parse_config, path_local, path_spark
 from wes_qc.pca_utils import prune_mt, run_pc_project
 from wes_qc.compute_relatedness import prune_pc_relate
 from wes_qc.filtering import filter_matrix_for_ldprune
@@ -50,6 +53,7 @@ def run_population_pca(
     print(f"=== {samples} samples for PCA")
     samples = related_mt.count_cols()
     print(f"=== {samples} samples for PC projection")
+
     # Why do we need plink files?
     # plink_mt = unrelated_mt.annotate_cols(uid=unrelated_mt.s).key_cols_by("uid")
     # hl.export_plink(dataset=plink_mt, output=path_spark(plink_outfile), fam_id=plink_mt.uid, ind_id=plink_mt.uid)
@@ -70,9 +74,28 @@ def run_population_pca(
     return pca_mt, union_pca_scores, pca_scores, pca_loadings
 
 
+def get_options() -> argparse.Namespace:
+    """
+    Get options from the command line
+    """
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--filter-mt", help="Filter matrix table for LD pruning", action="store_true")
+    parser.add_argument("--pc-relate", help="Run PC-Relate and identify related samples", action="store_true")
+    parser.add_argument("--plot-pca", help="Plot relatedness and run population PCA", action="store_true")
+    parser.add_argument("--all", help="Run all steps", action="store_true")
+    args = parser.parse_args()
+    return args
+
+
 def main():
     # = STEP SETUP = #
     config = parse_config()
+    args = get_options()
+    if args.all:
+        args.filter_mt = True
+        args.pc_relate = True
+        args.plot_pca = True
+
     tmp_dir = config["general"]["tmp_dir"]
 
     # = STEP PARAMETERS = #
@@ -88,41 +111,69 @@ def main():
     pltdir = path_local(config["general"]["plots_dir"])
     if not os.path.exists(pltdir):
         os.makedirs(pltdir)
-    # load input mt
-    mt = hl.read_matrix_table(path_spark(mt_infile))
-    # removing control samples
-    mt = filtering.remove_samples(mt, control_list)
-    # filter matrix to have good variants
-    filtered_mt = filter_matrix_for_ldprune(
-        mt, config["step2"]["long_range_ld_file"], **config["step2"]["filter_params"]
-    )
-    filtered_mt = filtered_mt.checkpoint(path_spark(config["step2"]["filtered_mt_outfile"]), overwrite=True)
 
-    # run pcrelate
-    related_samples_to_remove_ht, relatedness_ht = prune_pc_relate(
-        filtered_mt,
-        config["step2"]["prune_params"],
-        config["step2"]["king_params"],
-        config["step2"]["pc_relate_params"],
-        "study",
-    )
+    filtered_mt = None
+    related_samples_to_remove_ht = None
+    relatedness_ht = None
 
-    related_samples_to_remove_ht = related_samples_to_remove_ht.checkpoint(
-        path_spark(config["step2"]["relatedness_output"]["samples_to_remove_file"]), overwrite=True
-    )
-    related_samples_to_remove_ht.export(path_spark(config["step2"]["relatedness_output"]["samples_to_remove_tsv"]))
-    relatedness_ht.export(path_spark(config["step2"]["relatedness_output"]["relatedness_outfile"]))
+    if args.filter_mt:
+        # load input mt
+        mt = hl.read_matrix_table(path_spark(mt_infile))
+        # removing control samples
+        mt = filtering.remove_samples(mt, control_list)
+        # filter matrix to have good variants
+        filtered_mt = filter_matrix_for_ldprune(
+            mt, config["step2"]["long_range_ld_file"], **config["step2"]["filter_params"]
+        )
+        filtered_mt = filtered_mt.checkpoint(path_spark(config["step2"]["filtered_mt_outfile"]), overwrite=True)
 
-    # plot relatedness
-    plot_relatedness(relatedness_ht, config["step2"]["relatedness_output"]["relatedness_plotfile"])
-    # run PCA
-    pca_mt, union_pca_scores, pca_scores, pca_loadings = run_population_pca(
-        filtered_mt, related_samples_to_remove_ht, config["step2"]["prune_params"], **config["step2"]["prune_plot_pca"]
-    )
-    pca_mt.write(path_spark(config["step2"]["prune_plot_pca"]["pca_mt_file"]), overwrite=True)
-    union_pca_scores.write(path_spark(config["step2"]["prune_plot_pca"]["union_pca_scores_file"]), overwrite=True)
-    pca_scores.write(path_spark(config["step2"]["prune_plot_pca"]["pca_scores_file"]), overwrite=True)
-    pca_loadings.write(path_spark(config["step2"]["prune_plot_pca"]["pca_loadings_file"]), overwrite=True)  # output
+    # -----------------------------------------------------------------------------
+    if args.pc_relate:
+        if filtered_mt is None:
+            filtered_mt = hl.read_matrix_table(path_spark(config["step2"]["filtered_mt_outfile"]))
+        # run pcrelate
+        related_samples_to_remove_ht, relatedness_ht = prune_pc_relate(
+            filtered_mt,
+            config["step2"]["prune_params"],
+            config["step2"]["king_params"],
+            config["step2"]["pc_relate_params"],
+            "study",
+        )
+        relatedness_ht = relatedness_ht.checkpoint(
+            hl.utils.new_temp_file("pc_relate_relatedness", "ht"), overwrite=True
+        )
+
+        related_samples_to_remove_ht = related_samples_to_remove_ht.checkpoint(
+            path_spark(config["step2"]["relatedness_output"]["samples_to_remove_file"]), overwrite=True
+        )
+        related_samples_to_remove_ht.export(path_spark(config["step2"]["relatedness_output"]["samples_to_remove_tsv"]))
+        relatedness_ht.export(path_spark(config["step2"]["relatedness_output"]["relatedness_outfile"]))
+    # -----------------------------------------------------------------------------
+
+    if args.plot_pca:
+        if filtered_mt is None:
+            filtered_mt = hl.read_matrix_table(path_spark(config["step2"]["filtered_mt_outfile"]))
+        if related_samples_to_remove_ht is None:
+            related_samples_to_remove_ht = hl.read_table(
+                path_spark(config["step2"]["relatedness_output"]["samples_to_remove_file"])
+            )
+        if relatedness_ht is None:
+            relatedness_ht = hl.import_table(
+                path_spark(config["step2"]["relatedness_output"]["relatedness_outfile"]), impute=True, force=True
+            )
+        # plot relatedness
+        plot_relatedness(relatedness_ht, config["step2"]["relatedness_output"]["relatedness_plotfile"])
+        # run PCA
+        pca_mt, union_pca_scores, pca_scores, pca_loadings = run_population_pca(
+            filtered_mt,
+            related_samples_to_remove_ht,
+            config["step2"]["prune_params"],
+            **config["step2"]["prune_plot_pca"],
+        )
+        pca_mt.write(path_spark(config["step2"]["prune_plot_pca"]["pca_mt_file"]), overwrite=True)
+        union_pca_scores.write(path_spark(config["step2"]["prune_plot_pca"]["union_pca_scores_file"]), overwrite=True)
+        pca_scores.write(path_spark(config["step2"]["prune_plot_pca"]["pca_scores_file"]), overwrite=True)
+        pca_loadings.write(path_spark(config["step2"]["prune_plot_pca"]["pca_loadings_file"]), overwrite=True)  # output
 
 
 if __name__ == "__main__":

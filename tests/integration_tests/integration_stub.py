@@ -161,7 +161,11 @@ class IntegrationTestsStub:
         except Exception as e:
             pytest.fail(f"Step 2.1 failed with an exception: {e}")
 
-    def stub_2_2_sample_qc(self) -> None:
+    @patch(
+        "argparse.ArgumentParser.parse_args",
+        return_value=argparse.Namespace(filter_mt=True, pc_relate=True, plot_pca=True, all=False),
+    )
+    def stub_2_2_sample_qc(self, mock_args: Any) -> None:
         qc_step_2_2 = importlib.import_module("2-sample_qc.2-prune_related_samples")
 
         try:
