@@ -6,6 +6,13 @@ def prune_mt(mt: hl.MatrixTable, ld_prune_args, **kwargs) -> hl.MatrixTable:
     """
     Prune variants in linkage disequilibrium (LD) on autosomes.
     Required filtered matrixtable - containing only autosomal biallelic SNVs.
+
+    Input contract:
+        Recommended materialized input MatrixTable.
+        LD pruning scans genotype data and callers commonly checkpoint this
+        filtered MatrixTable before or after pruning.
+    Returns:
+        Lazy MatrixTable. The caller owns checkpointing or writing.
     """
     print("=== Performing LD pruning")
     pruned_ht = hl.ld_prune(mt.GT, **ld_prune_args)
@@ -17,6 +24,14 @@ def prune_mt(mt: hl.MatrixTable, ld_prune_args, **kwargs) -> hl.MatrixTable:
 def run_pc_project(mt_ref, mt_study, pca_components):
     """
     Run PCA on reference data and project study samples onto the PC space.
+
+    Input contract:
+        Recommended materialized input MatrixTables.
+        The reference MatrixTable is used for PCA and allele-frequency
+        annotation, and the study MatrixTable is used for projection.
+    Returns:
+        Lazy union, reference score, and loading Tables, plus PCA eigenvalues.
+        The caller owns checkpointing or writing Hail outputs.
     """
     print("=== Running PCA")
     pca_evals, pca_scores, pca_loadings = hl.hwe_normalized_pca(mt_ref.GT, k=pca_components, compute_loadings=True)

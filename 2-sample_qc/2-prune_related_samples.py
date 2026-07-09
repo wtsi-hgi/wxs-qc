@@ -17,7 +17,13 @@ from wes_qc import hail_utils, constants, filtering
 def plot_relatedness(
     relatedness_ht: hl.Table, relatedness_plotfile: str, text_size=constants.plots_text_size, **kwargs
 ) -> None:
-    """Plot relatedness scores."""
+    """
+    Plot relatedness scores.
+
+    Input contract:
+        Recommended a materialized Table.
+        Plotting triggers Hail actions.
+    """
     p1 = hl.plot.histogram(relatedness_ht.kin, title="Kinship distribution")
     p1.axis.axis_label_text_font_size = text_size
     p1.axis.major_label_text_font_size = text_size
@@ -44,6 +50,12 @@ def run_population_pca(
     """
     Runs PCA and creates a matrix table of non-related individuals with PCA scores
     Remove related samples from PC relate from pruned MT and run PCA
+
+    Input contract:
+        Requires materialized input MatrixTable.
+        The function branches `filtered_mt`, counts columns, performs LD pruning,
+        runs PCA, and plots PCA scores.
+        The `samples_to_remove` Table may be lazy.
     """
     print("=== Running population PCA")
     print("=== Spliting samples")

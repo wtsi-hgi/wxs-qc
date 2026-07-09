@@ -6,6 +6,14 @@ from wes_qc.pca_utils import prune_mt, run_pc_project
 def run_king(mt: hl.MatrixTable, king_args: dict, prune_args: dict) -> (hl.MatrixTable, hl.MatrixTable):
     """
     Separate related and unrelated samples using the KING kinship estimator.
+
+    Input contract:
+        Recommended materialized input MatrixTable.
+        The function runs LD pruning, KING, maximal independent set selection,
+        and then branches the input MatrixTable into related and unrelated
+        sample sets.
+    Output contract:
+        Materialized related and unrelated MatrixTables.
     """
     print("=== LD pruning before KING")
     pruned_mt = prune_mt(mt, prune_args["ld_prune_args"])
@@ -32,6 +40,13 @@ def prune_pc_relate(
 ) -> (hl.Table, hl.Table):
     """
     Complete PC-Relate workflow for identifying and removing related samples.
+
+    Input contract:
+        Recommended materialized input MatrixTable.
+        The workflow runs KING, PCA, PC projection, and PC-Relate.
+    Output contract:
+        Lazy samples-to-remove Table and materialized relatedness Table.
+        The caller owns checkpointing or writing the samples-to-remove Table.
     """
     # Running KING
     related_mt, unrelated_mt = run_king(mt, king_params, prune_params)

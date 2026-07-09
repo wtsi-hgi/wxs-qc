@@ -1,5 +1,5 @@
 """
-All fucntions used to filter samples/variants
+All functions used to filter samples/variants
 """
 
 import hail as hl
@@ -70,7 +70,7 @@ def filter_vars_for_quality(
     mt: hl.MatrixTable, af_threshold: float, call_rate_threshold: float, hwe_threshold: float
 ) -> hl.MatrixTable:
     """
-    Keeps "good" variants passing the thresholds for QC metrics
+    Keeps "good" variants passing the thresholds for QC metrics.
     """
     mt_vqc = hl.variant_qc(mt, name="variant_QC_Hail")
     mt_vqc_filtered = mt_vqc.filter_rows(
@@ -114,6 +114,9 @@ def filter_by_bed(ht: hl.Table, intervals: hl.Table) -> hl.Table:
 
 
 def remove_samples(mt: hl.MatrixTable, sample_list: list) -> hl.MatrixTable:
+    """
+    Remove listed samples from a MatrixTable.
+    """
     if sample_list is not None and sample_list != []:
         samples_to_remove_set = hl.literal(set(sample_list))
         mt = mt.filter_cols(~samples_to_remove_set.contains(mt.s))

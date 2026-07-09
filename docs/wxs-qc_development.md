@@ -2,12 +2,34 @@
 
 This howto contains development workflow and best practices for the WxS-QC pipeline.
 
-WxS-QC is an old Python/Hail pipeline with a long history of development and adoption
-For now, the pipeline code has limited automated coverage, and workflow contracts that are not always fully documented.
-Treat the executable code as the source of truth
+WxS-QC is an old Python/Hail pipeline with a long history of development and adoption.
+It contains numbered pipeline stages, standalone scripts, shared helper modules, Hail/Spark-specific behavior, docs,
+and tests that cover only a limited part of the actual behavior.
+
+Treat the existing code as the source of truth,
 and perform iterative improvement to align it with coding best practices and style guidance.
 
+## Repository Structure
+
+- `0-resource_preparation/`: numbered scripts for preparing external resources.
+- `1-import_data/`: import and validation scripts for input data and annotations.
+- `2-sample_qc/`: sample QC pipeline steps.
+- `3-variant_qc/`: variant QC, random forest, ranking, binning, plotting, and
+  filtering steps.
+- `4-genotype_qc/`: genotype hard-filter evaluation, VCF export, and downstream
+  summaries.
+- `wes_qc/`: main shared Python package for pipeline utilities and reusable
+  logic.
+- `utils/`: older or auxiliary utility code still used by parts of the pipeline.
+- `config/`: example/public configuration.
+- `docs/`: user and developer documentation.
+- `scripts/`: shell helpers, notebooks, and cluster/local execution utilities.
+- `tests/`: unit and integration tests.
+
+
 ## Development environment
+
+### Setting up enviroment for local development
 
 Update your environment with all dependencies, including dev and test packages:
 
@@ -129,6 +151,31 @@ fstat_hist = plot_f_stat_histogram(sex_ht, **config["step2"]["f_stat_outliers"])
 
 - Maintain reusable utility functions in the `wes_qc` package.
 - Separate service modules by purpose.
+
+### Hail objects contract documentation
+
+All Hail objects are lazy and do not materialize until they are used.
+By default, all helper functions accept lazy Hail objects unless their docstring says otherwise.
+
+However, some functions may need to use materialized Hail objects as input
+or materialize outputs to perform their job efficiently.
+If a function requires or strongly recomments materialized input for performance or correctness,
+it should be annotated with the docstring describing the contract:
+
+"""
+  Input contract:
+      Recommended materialized input MatrixTable.
+      The function scans `mt` multiple times, and assumes the input MatrixTable has already been checkpointed by the caller.
+  Output contract:
+      Materialized Table.
+"""
+
+For functions that are normal lazy transforms, omit it or write only:
+
+  """
+  Returns:
+      Lazy MatrixTable. The caller owns checkpointing or writing.
+  """
 
 ## Performance optimization tips
 

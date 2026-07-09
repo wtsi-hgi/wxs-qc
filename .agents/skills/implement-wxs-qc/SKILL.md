@@ -30,6 +30,10 @@ Use this skill when implementing code after a human has approved a plan.
 4. Preserve Hail/Spark contracts
    - Keep Hail Table/MatrixTable loading and saving in the same layer unless the approved plan changes that boundary.
    - Prefer passing Hail objects through pipeline functions instead of introducing hidden IO.
+   - Treat helper functions as accepting lazy Hail objects by default unless their docstring says otherwise.
+   - When a function requires or strongly recommends materialized Hail input, or materializes its output for correctness or performance, document that explicitly in the docstring with `Input contract:` and/or `Output contract:` sections.
+     Example: `Input contract: Recommended materialized input MatrixTable. Output contract: Materialized Table.`
+   - For normal lazy transforms, either omit special contract text or state the lazy return behavior in `Returns:`, including that the caller owns checkpointing or writing.
    - Convert paths to Spark/Hail format only where the Spark/Hail API requires it.
    - Be careful with keying, row/column annotations, checkpointing, repartitioning, and expensive actions.
 
