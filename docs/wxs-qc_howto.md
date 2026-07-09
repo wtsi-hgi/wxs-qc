@@ -359,7 +359,7 @@ we use a subset of high-quality variants:
 
 * SNVs, autosomal, and biallelic.
 * called in >= 99% of the samples (configured by `filter_params -> call_rate_threshold` parameter),
-* with >= 5% of alternative alleles (configured by `filter_params -> af_threshold` paraemter),
+* with >= 5% of alternative alleles (configured by `filter_params -> af_threshold` parameter),
 * with Hardy-Weinberg Equilibrium (HWE) p_value >= 1E-5 (controlled by `filter_params -> hwe_threshold` parameter).
   The HWE p-value is calculated using the
   [Hail VariantQC function](https://hail.is/docs/0.2/methods/genetics.html#hail.methods.variant_qc).
@@ -393,16 +393,30 @@ The script uses a two-pass approach:
 This two-pass approach correctly identifies related samples
 even in datasets with diverse superpopulations.
 
-Run it:
+The script is split into resumable stages. Run the stages in order:
 
 ```shell
-python 2-sample_qc/2-prune_related_samples.py
+python 2-sample_qc/2-prune_related_samples.py --filter-mt
+python 2-sample_qc/2-prune_related_samples.py --pc-relate
+python 2-sample_qc/2-prune_related_samples.py --plot-pca
 ```
 
-The step outputs the list of related samples, and PCA scores.
+The same stages can also be run in a single invocation:
+
+```shell
+python 2-sample_qc/2-prune_related_samples.py --all
+```
+
+The `--filter-mt` stage removes control samples and filters to high-quality variants,
+The `--pc-relate` stage splits samples into KING-related and KING-unrelated sets,
+runs PCA on the KING-unrelated samples, projects the KING-related samples, runs PC-Relate,
+and writes the final table of related samples.
+The `--plot-pca` stage plots relatedness, computes the final PCA after PC-Relate pruning,
+and writes the PCA matrix, scores, and loadings used by later sample-QC steps.
+
+The step outputs the list of related samples and PCA scores.
 The relatedness information can be used to validate pedigree data and detect sample mislabeling.
-It also plots the Koch's relatedness plots (Kinship vs. IBD2)
-and PC1/PC2 sample scatterplot.
+It also plots the Koch's relatedness plots (Kinship vs. IBD2) and PC1/PC2 sample scatterplot.
 
 ### Predict super-populations using PCA
 

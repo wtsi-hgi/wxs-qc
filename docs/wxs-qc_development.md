@@ -1,8 +1,13 @@
 # Developer's howto
 
-This how-to contains development howto and best practices for the WxS-QC pipeline.
+This howto contains development workflow and best practices for the WxS-QC pipeline.
 
-## Set up a dev environment
+WxS-QC is an old Python/Hail pipeline with a long history of development and adoption
+For now, the pipeline code has limited automated coverage, and workflow contracts that are not always fully documented.
+Treat the executable code as the source of truth
+and perform iterative improvement to align it with coding best practices and style guidance.
+
+## Development environment
 
 Update your environment with all dependencies, including dev and test packages:
 
@@ -10,106 +15,143 @@ Update your environment with all dependencies, including dev and test packages:
 uv sync
 ```
 
-Set up `pre-commit`:
+Set up `pre-commit` for local commits:
 
 ```bash
 pre-commit install
 ```
 
-This will set up the pre-commit hooks, which include:
-- Trailing whitespace removal
-- End of file fixer
-- YAML syntax checking
-- Large file checking
-- Ruff linting and formatting
-- MyPy type checking
+This installs hooks for checks such as trailing whitespace removal, end-of-file fixes,
+YAML syntax checking, large file checking, Ruff linting and formatting, and MyPy type checking.
 
+### Agent-assisted development
 
-## Run the tests and calculate coverage
+The repository contains local instructions for AI-assisted work:
 
-The easiest way to run tests is using `make` utility and commands defined in `Makefile`.
+- `AGENTS.md`: canonical repository rules and scope constraints.
+- `.agents/roles`: planning implementation and validation roles.
+- `.agents/skills`: Corresponding skills for each role.
 
-To run all the tests:
+For agent-assisted changes use the plan-implement-validate approach with a himan in the loop,
+which requires explicit approval after the planning step.
+Agent implements one change at a time.
+Then a developer should manually review the change, run tests is necessary,
+and manually commit changes.
+
+### Checks and smoke tests
+
+All available checks are implemented as Makefile targets.
+
+Pre-commit checks through the repository target:
+
 ```bash
-make test
+make check
 ```
 
-Or you can specify the type of test to run
+A separate target for type checking:
+
 ```bash
-make unit-test
-make integration-test
+make typecheck
 ```
 
-To run the tests with coverage:
+Run a targeted trio integration smoke test for each changed pipeline step:
+
 ```bash
-make unit-test-coverage
-make integration-test-coverage
+make test-it-one-step test=test_trios_<step-name-or-prefix>
 ```
 
-To run a subset of tests, use the `test-it-one-step` or `test-ut-one-step`,
-and provide the test name wildcard using `test` option:
+Examples:
+
 ```bash
-make test-it-one-step test=test_trios_1           # Run all tests for stage 1
-make test-ut-one-step test=test_find_duplicated_  # Run all tests for function finding duplicates
+make test-it-one-step test=test_trios_1
+make test-it-one-step test=test_trios_2_2
 ```
 
-## Use pre-commit hooks
+Unit tests are currently broken and are not the active validation path.
 
-Once `pre-commit` is installed and configured
-(as described in the [Set up a dev environment](#set-up-a-dev-environment) section),
-the hooks will automatically run on every commit.
+Full end-to-end integration suites are long-running checks:
 
-### Run pre-commit manually
+```bash
+make integration-test-trios
+make integration-test-non-trios
+```
 
-To run all pre-commit hooks on all files:
+### Pre-commit hooks
+
+Once `pre-commit` is installed, hooks run automatically on commit.
+
+For repository validation, prefer `make check`;
+it is the supported entry point for pre-commit checks in the agent workflow and avoids sandbox-specific command issues.
+
+For manual local development outside the agent workflow, direct pre-commit
+commands can still be useful:
+
 ```bash
 pre-commit run --all-files
-```
-
-To run pre-commit hooks on specific files:
-```bash
 pre-commit run --files <file1> <file2>
-```
-
-### Run MyPy type checking
-
-For now `mypy` is configured to run in the manual stage because it produces
-errors with the config module, that are not fixed yet.
-
-To run MyPy manually for your commit:
-```bash
 pre-commit run mypy --hook-stage manual
-```
-
-### Skipping pre-commit hooks
-
-In rare cases when you need to bypass pre-commit hooks (not recommended for regular use), run:
-```bash
-git commit -m "Your message" --no-verify
 ```
 
 ## Development and code organization best practices
 
 This section contains major suggestions to maintain code style and structure for the WxS-QC pipeline.
-Due to the limited number of developers,
-the code refactoring is usually performed together with functional improvements.
-Therefore, current guidelines represent the desired state for the codebase,
-and not all pipeline parts follow it yet.
+These guidelines represent the desired direction for the codebase, but not all pipeline parts follow them yet.
+Prefer the local style and contracts of the files you are touching.
 
-### Scripts organizations and sequence
-- Use numbered scripts for pipeline steps
-- Break complex steps into smaller substeps using command-line arguments
+### Scripts organization and sequence
 
-### Main Function Structure
-- Try to keep all data loadings and savings (especially Hail structures) inside the `main()` function.
-- Copy existing `main()` function structure
+- Use numbered scripts for pipeline steps.
+- Break complex steps into smaller substeps using command-line arguments when
+  that pattern already fits the stage.
+
+### Main function structure
+
+- Keep data loading and saving, especially Hail structures, in the `main()` layer when that matches nearby code.
+- Follow the `main()` standard function structure for the stage being changed.
+- Where possible, avoid moving expensive Hail/Spark IO across function boundaries.
 
 ### Pipeline step function design
-- Accept matrix tables as primary input/output. Avoid writing/reading matrixtables inside pipeline step functions
-- Use dictionary unpacking from parsed config for flexible argument passing
-  (For example `fstat_hist = plot_f_stat_histogram(sex_ht, **config["step2"]["f_stat_outliers"])`)
-- Convert file paths to Spark format (`file://`) just before submitting to Hail/Spark functions.
 
-### Toolset Organization
-- Maintain utility functions in the `wes-qc` folder
-- Create and separate modules depending on the function purpose.
+- Prefer pipeline step functions that accept and return Hail objects.
+- Avoid hidden MatrixTable or Table reads and writes inside helper functions.
+- If needed checkpoint intermediate results inside functions to a temporary location using `hail.utils.temp_file()`.
+- Use dictionary from parsed config for flexible argument passing.
+  If needed, unpack the `config` dictionary into individual arguments when it matches the existing call pattern
+
+```python
+fstat_hist = plot_f_stat_histogram(sex_ht, **config["step2"]["f_stat_outliers"])
+```
+
+- Convert file paths to Spark format, such as `file://`, only at the point where
+  a Hail or Spark API requires that format.
+
+### Toolset organization
+
+- Maintain reusable utility functions in the `wes_qc` package.
+- Separate service modules by purpose.
+
+## Performance optimization tips
+
+Hail and Spark utilize lazy computational approach,
+and most transformations are just a recipe until an action forces execution.
+
+Checkpoints are a mechanism to save and reuse expensive intermediate results.
+However, writing checkpoints is an expensive action and can be a bottleneck if used without a reason.
+
+**Avoid checkpoints when**:
+
+- You perform a linear set of filtering, aggregation, or join operations.
+- You need to calcuate several aggregations over the same data.
+  Instead, put all aggregations in a single aggregation call call.
+
+**Checkpoint when** the recipe becomes expensive, reused, unstable, or too large.
+Common checkpoint points include:
+
+- Before branching the pipeline into several downstream outputs.
+  Example: a filtered MatrixTable used for KING, PC-Relate, PCA, plotting, and exports.
+  Without checkpoint/readback, each action may recompute the filter chain.
+- After a large shuffle or expensive aggregation (Which may hide inside Hail functions):
+  such as `variant_qc`, `sample_qc`, `ld_prune`, `pc_relate`,
+  group-by, interval filters over large tables, or repartitions.
+- When lineage is getting long. Many chained filters, annotations, joins, semi-joins, unions,
+  and aggregations can make the Spark plan huge and fragile.
