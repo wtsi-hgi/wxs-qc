@@ -1,18 +1,12 @@
 import hail as hl
-from wes_qc import hail_patches
 from gnomad.sample_qc.ancestry import pc_project
 
 
 def prune_mt(mt: hl.MatrixTable, ld_prune_args, **kwargs) -> hl.MatrixTable:
     """
     Prune variants in linkage disequilibrium (LD) on autosomes.
+    Required filtered matrixtable - containing only autosomal biallelic SNVs.
     """
-    print("=== Filtering to autosomes")
-    mt = mt.filter_rows(mt.locus.in_autosome())
-    print("=== Splitting multiallelic sites")
-    mt = hail_patches.split_multi_hts(
-        mt, recalculate_gq=False
-    )  # this shouldn't do anything as only biallelic sites are used
     print("=== Performing LD pruning")
     pruned_ht = hl.ld_prune(mt.GT, **ld_prune_args)
     pruned_mt = mt.filter_rows(hl.is_defined(pruned_ht[mt.row_key]))

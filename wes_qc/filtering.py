@@ -5,8 +5,6 @@ All fucntions used to filter samples/variants
 import hail as hl
 from utils.utils import path_spark
 
-from wes_qc import hail_patches
-
 
 def find_duplicated_variants(mt: hl.MatrixTable) -> hl.Table:
     """
@@ -61,11 +59,8 @@ def filter_mt_autosome_biallelic_snvs(mt: hl.MatrixTable) -> hl.MatrixTable:
     Keeps only bi-allelic autosome SNVs
     """
     mt = mt.filter_rows(mt.locus.in_autosome())
-    # split multiallelic variants and remove them
-    mt = hail_patches.split_multi_hts(
-        mt, recalculate_gq=False
-    )  # this shouldn't do anything as only biallelic sites are used
-    mt = mt.filter_rows(mt.was_split is True, keep=False)
+    # Remove multiallelic variants
+    mt = mt.filter_rows(hl.len(mt.alleles) == 2)
     # keep only SNVs
     mt = mt.filter_rows(hl.is_snp(mt.alleles[0], mt.alleles[1]))
     return mt
@@ -118,7 +113,7 @@ def filter_by_bed(ht: hl.Table, intervals: hl.Table) -> hl.Table:
     return ht.filter(hl.is_defined(intervals[ht.locus]))
 
 
-def remove_samples(mt: hl.MatrixTable, sample_list: list)->hl.MatrixTable:
+def remove_samples(mt: hl.MatrixTable, sample_list: list) -> hl.MatrixTable:
     if sample_list is not None and sample_list != []:
         samples_to_remove_set = hl.literal(set(sample_list))
         mt = mt.filter_cols(~samples_to_remove_set.contains(mt.s))
