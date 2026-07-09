@@ -31,7 +31,6 @@ def run_pc_project(mt_ref, mt_study, pca_components):
         annotation, and the study MatrixTable is used for projection.
     Returns:
         Lazy union, reference score, and loading Tables, plus PCA eigenvalues.
-        The caller owns checkpointing or writing Hail outputs.
     """
     print("=== Running PCA")
     pca_evals, pca_scores, pca_loadings = hl.hwe_normalized_pca(mt_ref.GT, k=pca_components, compute_loadings=True)

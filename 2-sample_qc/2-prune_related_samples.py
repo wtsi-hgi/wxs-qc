@@ -151,9 +151,6 @@ def main():
             config["step2"]["pc_relate_params"],
             "study",
         )
-        relatedness_ht = relatedness_ht.checkpoint(
-            hl.utils.new_temp_file("pc_relate_relatedness", "ht"), overwrite=True
-        )
 
         related_samples_to_remove_ht = related_samples_to_remove_ht.checkpoint(
             path_spark(config["step2"]["relatedness_output"]["samples_to_remove_file"]), overwrite=True
@@ -175,6 +172,7 @@ def main():
             )
         # plot relatedness
         plot_relatedness(relatedness_ht, config["step2"]["relatedness_output"]["relatedness_plotfile"])
+
         # run PCA
         pca_mt, union_pca_scores, pca_scores, pca_loadings = run_population_pca(
             filtered_mt,
