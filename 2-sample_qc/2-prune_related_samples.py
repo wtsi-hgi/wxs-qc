@@ -131,6 +131,7 @@ def main():
     if args.filter_mt:
         # load input mt
         mt = hl.read_matrix_table(path_spark(mt_infile))
+        print(f"=== Variant count before filtering: {mt.count_rows()}")
         # removing control samples
         mt = filtering.remove_samples(mt, control_list)
         # filter matrix to have good variants
@@ -138,6 +139,7 @@ def main():
             mt, config["step2"]["long_range_ld_file"], **config["step2"]["filter_params"]
         )
         filtered_mt = filtered_mt.checkpoint(path_spark(config["step2"]["filtered_mt_outfile"]), overwrite=True)
+        print(f"=== Variant count after filtering: {mt.count_rows()}")
 
     # -----------------------------------------------------------------------------
     if args.pc_relate:
