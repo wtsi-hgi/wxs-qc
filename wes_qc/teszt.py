@@ -3,10 +3,13 @@ All service functions required to run tests
 Used Hungarian name to avoid picking this module by pytest
 """
 
+from __future__ import annotations
+
 import csv
 import os
 import subprocess
 from pathlib import Path
+from typing import Any, Literal
 
 import pandas as pd
 
@@ -17,6 +20,21 @@ def _detect_table_delimiter(path: str | Path) -> str:
     return csv.Sniffer().sniff(sample, delimiters=",\t").delimiter
 
 
+def _table_column_kind(
+    column: pd.Series[Any],
+    path: str | Path,
+) -> Literal["float", "integer", "string"]:
+    if pd.api.types.is_float_dtype(column):
+        return "float"
+    if pd.api.types.is_integer_dtype(column):
+        return "integer"
+    if isinstance(column.dtype, pd.StringDtype) or (
+        pd.api.types.is_object_dtype(column) and all(isinstance(value, str) for value in column.dropna())
+    ):
+        return "string"
+    raise TypeError(f"Unsupported data type {column.dtype!s} in column {column.name!r} from {path!s}")
+
+
 def tables_are_identical(
     first_path: str | Path,
     second_path: str | Path,
@@ -24,11 +42,13 @@ def tables_are_identical(
     rel_tol: float = 1e-4,
     abs_tol: float = 1e-6,
 ) -> bool:
-    """Compare ordered CSV or TSV table contents, allowing small float differences.
+    """Compare ordered CSV or TSV tables containing floats, integers, and strings.
 
-    Table dimensions, column names and order, row order, and non-floating-point
-    values must match exactly. Corresponding missing values are considered equal.
-    Unreadable or malformed inputs raise the underlying parsing exception.
+    Floats compare with tolerance, while integers and strings compare exactly.
+    Table dimensions, column names and order, and row order must also match.
+    Corresponding missing values are considered equal. Other inferred column
+    types raise ``TypeError``; unreadable or malformed inputs raise the underlying
+    parsing exception.
 
     Parameters
     ----------
@@ -46,14 +66,19 @@ def tables_are_identical(
     if first.shape != second.shape or not first.columns.equals(second.columns):
         return False
 
-    for column in first.columns:
+    first_column_kinds = [_table_column_kind(first[column], first_path) for column in first.columns]
+    second_column_kinds = [_table_column_kind(second[column], second_path) for column in second.columns]
+
+    for column, first_kind, second_kind in zip(
+        first.columns,
+        first_column_kinds,
+        second_column_kinds,
+        strict=True,
+    ):
         first_column = first[column]
         second_column = second[column]
-        compare_with_tolerance = (
-            pd.api.types.is_numeric_dtype(first_column)
-            and pd.api.types.is_numeric_dtype(second_column)
-            and (pd.api.types.is_float_dtype(first_column) or pd.api.types.is_float_dtype(second_column))
-        )
+        both_numeric = {first_kind, second_kind} <= {"float", "integer"}
+        compare_with_tolerance = both_numeric and "float" in {first_kind, second_kind}
 
         if compare_with_tolerance:
             try:
@@ -67,7 +92,7 @@ def tables_are_identical(
                 )
             except AssertionError:
                 return False
-        elif not first_column.equals(second_column):
+        elif first_kind != second_kind or not first_column.equals(second_column):
             return False
 
     return True
@@ -127,14 +152,14 @@ def download_test_data_using_files_list(files_list: str, outdir: str) -> None:
             print(f"DEBUG: File {file_url} downloaded")
 
 
-def move_dirs(move_dirs: dict) -> None:
+def move_dirs(move_dirs: dict[str, str]) -> None:
     print("Copying data to correct dirs")
     for dir_to_move, destination_dir in move_dirs.items():
         subprocess.run(["cp", "-vnr", dir_to_move, destination_dir])
 
 
 # TODO: make versatile, don't download if already exists
-def download_test_data_from_s3(outdir: str, move_dirs: dict, clean_up_unzip_dir: bool = False) -> None:
+def download_test_data_from_s3(outdir: str, move_dirs: dict[str, str], clean_up_unzip_dir: bool = False) -> None:
     """Download compressed test data from the s3 storage and
     move the subfolders to the correct destinations inside the repo.
 
