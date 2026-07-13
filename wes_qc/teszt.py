@@ -3,9 +3,75 @@ All service functions required to run tests
 Used Hungarian name to avoid picking this module by pytest
 """
 
+import csv
 import os
 import subprocess
 from pathlib import Path
+
+import pandas as pd
+
+
+def _detect_table_delimiter(path: str | Path) -> str:
+    with open(path) as table_file:
+        sample = table_file.read(8192)
+    return csv.Sniffer().sniff(sample, delimiters=",\t").delimiter
+
+
+def tables_are_identical(
+    first_path: str | Path,
+    second_path: str | Path,
+    *,
+    rel_tol: float = 1e-4,
+    abs_tol: float = 1e-6,
+) -> bool:
+    """Compare ordered CSV or TSV table contents, allowing small float differences.
+
+    Table dimensions, column names and order, row order, and non-floating-point
+    values must match exactly. Corresponding missing values are considered equal.
+    Unreadable or malformed inputs raise the underlying parsing exception.
+
+    Parameters
+    ----------
+    first_path, second_path
+        Paths to comma- or tab-delimited tables.
+    rel_tol, abs_tol
+        Non-negative relative and absolute tolerances for floating-point values.
+    """
+    if rel_tol < 0 or abs_tol < 0:
+        raise ValueError("Comparison tolerances must be non-negative")
+
+    first = pd.read_csv(first_path, sep=_detect_table_delimiter(first_path))
+    second = pd.read_csv(second_path, sep=_detect_table_delimiter(second_path))
+
+    if first.shape != second.shape or not first.columns.equals(second.columns):
+        return False
+
+    for column in first.columns:
+        first_column = first[column]
+        second_column = second[column]
+        compare_with_tolerance = (
+            pd.api.types.is_numeric_dtype(first_column)
+            and pd.api.types.is_numeric_dtype(second_column)
+            and (pd.api.types.is_float_dtype(first_column) or pd.api.types.is_float_dtype(second_column))
+        )
+
+        if compare_with_tolerance:
+            try:
+                pd.testing.assert_series_equal(
+                    first_column,
+                    second_column,
+                    check_dtype=False,
+                    check_exact=False,
+                    rtol=rel_tol,
+                    atol=abs_tol,
+                )
+            except AssertionError:
+                return False
+        elif not first_column.equals(second_column):
+            return False
+
+    return True
+
 
 # === Utils for downloading test data from the s3 storage === #
 
