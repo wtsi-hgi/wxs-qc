@@ -36,7 +36,8 @@ general:
   vcf_export_dir: '${general.data_root}/vcf_after-qc'
   # Number of partitions for the matrix table to repartition after heavy filtering.
   # We recommend having at least 5 partitions per core.
-  n_partitions: 200
+  # Note that the number of partitions can slightly alternate Hail LD pruning and therefore related samples identification.
+  n_partitions: 48
   metadata:
     verifybamid_selfsm:  '${general.metadata_dir}/${general.dataset_name}.verify_bam_id_result.selfSM.tsv'  # Set to null if you don't have freemix data
     self_reported_sex:   '${general.metadata_dir}/${general.dataset_name}.self_reported_sex.tsv'
