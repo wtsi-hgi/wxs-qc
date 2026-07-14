@@ -2,7 +2,7 @@
 
 ## Goal
 
-## Constraints
+## High-level implementation details
 
 ## Scope
 - In scope:
@@ -16,11 +16,3 @@
 - Pipeline contract:
 - Data/config safety:
 - Scope control:
-
-## Validation Plan
-- Commands:
-- Manual checks:
-
-## Risks and Mitigations
-- Risk:
-- Mitigation:

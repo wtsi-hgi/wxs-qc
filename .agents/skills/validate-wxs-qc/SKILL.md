@@ -11,15 +11,19 @@ Use this skill when asked to review or validate implementation quality.
 
 1. Read `AGENTS.md`.
 2. Read `artifacts/1_plan.md` and `artifacts/2_implement.md` when present.
-3. Run `.agents/skills/validate-wxs-qc/scripts/validate.sh`
-4. Run `make test-it-one-step test=test_trios_...` with the concrete trio test name or prefix for each changed step.
-5. Review changed files against the approved scope and actual codebase behavior.
-6. Check Hail/Spark behavior, config compatibility, numbered script sequence, CLI arguments, output paths, and shared helper call sites affected by the change.
-7. Search all call sites in numbered scripts, `wes_qc/`, `utils/`, and tests. Confirm no caller relies on the old behavior.
-8. Save the validation report to `artifacts/3_validate.md` when using the artifacts workflow.
-9. Report findings by severity with file/line references.
-10. If no findings, state that explicitly and note residual risks.
-11. Assume the environment is pre-configured and runnable. If permissions, tools, credentials, data access, cloud access, Spark/Hail setup, or local configuration block validation, stop the affected validation path and report the blocker. Do not install substitutes, alter project code or configuration, relax validation, or widen scope to work around the environment issue.
+3. Review changed files against the approved scope and actual codebase behavior.
+4. Validate whether the implemented changes achieve the goal listed in the `artifacts/1_plan.md`. Especially check that:
+   - The code logic is consistent and achieved the required goal
+   - The touched tests actually test the required behavior
+5. If there are any logical issues, report them and stop the validation.
+6. Search all call sites in numbered scripts, `wes_qc/`, `utils/`, and tests.
+   If there are any parts that rely on the old behavior, report them and stop the validation.
+7. Run `.agents/skills/validate-wxs-qc/scripts/validate.sh` and ensure that there ar no validation errors.
+8. Run `make test-it-one-step test=test_trios_...` with the concrete trio test name or prefix for each changed step.
+9. Save the validation report to `artifacts/3_validate.md`.
+10. Report findings by severity with file/line references.
+11. If no findings, state that explicitly and note residual risks.
+12. Assume the environment is pre-configured and runnable. If permissions, tools, credentials, data access, cloud access, Spark/Hail setup, or local configuration block validation, stop the affected validation path and report the blocker. Do not install substitutes, alter project code or configuration, relax validation, or widen scope to work around the environment issue.
 
 ## Required Checks
 
@@ -29,7 +33,7 @@ Use linters and per-step integration smoke tests as the validation baseline:
 - `make typecheck`
 - `make test-it-one-step test=test_trios_...` for each changed pipeline step, using the same concrete per-step trio tests run by the implementer
 
-Notes:
+**Notes:**
 
 - Unit tests are currently broken and not used for validation.
 - Integration tests may require Hail/Spark setup and generated intermediate files.
@@ -43,12 +47,13 @@ Notes:
 ## Review Focus
 
 - Scope matches the approved plan and `AGENTS.md`.
+- the implemented changes achieve the goal listed in the `artifacts/1_plan.md`.
+   - The code logic is consistent and achieved the required goal
+   - The touched tests actually test the required behavior
 - No unrelated files, stages, docs, config, or formatting were changed.
 - Public scripts, CLI flags, config keys, and output paths remain compatible unless explicitly approved.
 - Hail Table/MatrixTable schemas, keys, annotations, and IO behavior are preserved or intentionally changed.
-- Spark path conversion happens only where needed.
 - Shared helper changes have known call sites reviewed.
-- Per-step integration smoke tests or manual validation cover the changed behavior where practical.
 
 ## Reporting Format
 
@@ -59,10 +64,10 @@ Status: PASS / FAIL / BLOCKED
 Then list findings ordered by severity:
 
 High:
-- Likely bug, regression, data loss, invalid QC result, or unsafe pipeline-contract change
+- Logical issues, regression, data loss, invalid QC result, or unsafe pipeline-contract change
 
 Medium:
-- Behavior gap, insufficient validation, blocked required check, mypy type inconsistency, or scope risk
+- Insufficient validation, blocked required check, mypy type inconsistency, or scope risk
 
 Low:
 - Maintainability/readability issue or minor inconsistency

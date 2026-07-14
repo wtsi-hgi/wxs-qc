@@ -5,23 +5,25 @@ description: Implement an approved scoped change in WxS-QC, preserving Python/Ha
 
 # Implement WxS-QC Skill
 
-Use this skill when implementing code after a human has approved a plan.
+Use this skill when implementing code for the pipeline.
 
 ## Workflow
 
 1. Confirm approval
    - Locate the approved plan in `artifacts/1_plan.md` when one exists.
-   - If approval is not explicit, stop and request approval. Do not implement.
+   - If approval is not explicit, stop and request approval.
 
 2. Re-check repository constraints
    - Read `AGENTS.md`.
    - Confirm the approved scope and files to touch.
-   - Re-read the relevant numbered script, helper module, config, and tests before editing.
+   - Re-read the relevant code, config, and tests before editing.
    - If the approved plan conflicts with the actual codebase, stop and ask for instructions.
    - If required changes fall outside approved scope, stop and ask for confirmation.
-   - Assume the environment is already configured and runnable. If tooling, permissions, credentials, data access, cloud access, Spark/Hail setup, or local configuration are missing or broken, stop and report the blocker instead of working around it.
+   - Assume the environment is already configured and runnable.
+     If tooling, permissions, credentials, data access, cloud access, Spark/Hail setup,
+     or local configuration are missing or broken, stop and report the blocker instead of working around it.
 
-3. Implement minimal changes
+3. Implement the changes
    - Keep the diff small, focused, and behavior-preserving unless behavior change is explicitly approved.
    - Preserve numbered script order, public script names, CLI arguments, config keys, and output paths unless explicitly approved.
    - Follow the style of the touched files.
@@ -31,11 +33,14 @@ Use this skill when implementing code after a human has approved a plan.
    - Keep Hail Table/MatrixTable loading and saving in the same layer unless the approved plan changes that boundary.
    - Prefer passing Hail objects through pipeline functions instead of introducing hidden IO.
    - Treat helper functions as accepting lazy Hail objects by default unless their docstring says otherwise.
-   - When a function requires or strongly recommends materialized Hail input, or materializes its output for correctness or performance, document that explicitly in the docstring with `Input contract:` and/or `Output contract:` sections.
+   - use `.persist()` when Hail object will be reused by a several small actions (Like `count()`), of after a long chain of transformations.
+   - Use `.checkpoint()` to materialize Hail objects when they will be reused several times, of before calling 'heavy' Hail functions.
+   - When a function requires or strongly recommends materialized Hail input, or materializes its output for correctness or performance,
+     document that explicitly in the docstring with `Input contract:` and/or `Output contract:` sections.
      Example: `Input contract: Recommended materialized input MatrixTable. Output contract: Materialized Table.`
-   - For normal lazy transforms, either omit special contract text or state the lazy return behavior in `Returns:`, including that the caller owns checkpointing or writing.
+   - For normal lazy transforms, either omit special contract text or state the lazy return behavior in `Returns:`,
+     including that the caller owns checkpointing or writing.
    - Convert paths to Spark/Hail format only where the Spark/Hail API requires it.
-   - Be careful with keying, row/column annotations, checkpointing, repartitioning, and expensive actions.
 
 5. Update related surfaces only when in scope
    - If config behavior changes, update affected config examples and docs only when approved.
@@ -49,9 +54,7 @@ Use this skill when implementing code after a human has approved a plan.
    - Run the individual trio integration test for each changed pipeline step:
      - `make test-it-one-step test=test_trios_<step-name-or-prefix>`
    - Use the concrete `test_trios_...` target that maps to the changed step or the narrowest available step prefix.
-   - Do not run the full end-to-end integration suites from the implementer role. The user owns those long-running checks:
-     - `make integration-test-trios`
-     - `make integration-test-non-trios`
+   - Do not run the full end-to-end integration suites from the implementer role. The user owns long-running checks.
    - If Hail/Spark, cloud data, permissions, missing tools, credentials, or local configuration block checks,
      stop the affected check path and record the blocker clearly.
      Do not modify code, install substitutes, or change configuration to bypass the environment issue.
