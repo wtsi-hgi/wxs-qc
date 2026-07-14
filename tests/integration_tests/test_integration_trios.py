@@ -11,6 +11,7 @@ import pytest
 from tests.integration_tests.integration_stub import IntegrationTestsStub
 from wes_qc.config import parse_config_file
 from wes_qc.hail_utils import path_spark
+from wes_qc.teszt import tables_are_identical
 
 # /path/to/wes_qc must be in PYTHONPATH
 
@@ -128,6 +129,18 @@ def assert_step_2_2_outputs_match_expected(config_path: str) -> None:
     _assert_pca_matrix_matches_expected(actual_pca["pca_mt_file"], hail_outputs["population_pca_mt"])
 
 
+def assert_step_4_1_outputs_match_expected(config_path: str) -> None:
+    evaluation_config = parse_config_file(config_path)["step4"]["evaluation"]
+    validation_dir = Path(__file__).with_name("validation")
+    print(f"== VALIDATE: Comparing evaluation results to {validation_dir} ==")
+    for variant_type, config_key in (("snv", "snp_tsv"), ("indel", "indel_tsv")):
+        actual_path = evaluation_config[config_key]
+        expected_path = validation_dir / f"hard_filter_evaluation.{variant_type}.tsv"
+        assert tables_are_identical(
+            actual_path, expected_path
+        ), f"{variant_type.upper()} hard-filter evaluation does not match the saved result"
+
+
 @pytest.mark.usefixtures("WES_CONFIG")
 class TestIntegration(IntegrationTestsStub):
     pedigree_file_path = PEDIGREE_FILE_PATH_TRIOS
@@ -200,8 +213,9 @@ class TestIntegration(IntegrationTestsStub):
     def test_trios_3_9_variant_qc(self) -> None:
         self.stub_3_9_variant_qc()
 
-    def test_trios_4_1_genotype_qc(self) -> None:
+    def test_trios_4_1_genotype_qc(self, WES_CONFIG: str) -> None:
         self.stub_4_1_genotype_qc()
+        assert_step_4_1_outputs_match_expected(WES_CONFIG)
 
     def test_trios_4_2_genotype_qc(self) -> None:
         self.stub_4_2_genotype_qc()
