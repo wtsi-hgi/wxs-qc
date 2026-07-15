@@ -205,7 +205,7 @@ step2:
     ld_prune_args: # https://hail.is/docs/0.2/methods/genetics.html#hail.methods.ld_prune
       r2: 0.2
       # bp_window_size:
-      # memory_per_core:
+      memory_per_core: 6000 # in MB
       # keep_higher_maf:
       # block_size:
   pc_relate_params:
