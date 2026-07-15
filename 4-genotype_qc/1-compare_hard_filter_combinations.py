@@ -1008,6 +1008,7 @@ def main():
     model_id: str = config["general"]["rf_model_id"]
     mtdir: str = config["general"]["matrixtables_dir"]
     rf_dir: str = config["general"]["var_qc_rf_dir"]
+    n_partitions = config["general"]["n_partitions"]
 
     hardfilter_evaluate_workdir = os.path.join(mtdir, model_id)
 
@@ -1058,7 +1059,7 @@ def main():
             keep_row = keep_row | hl.or_else(mt_annot.consequence == "synonymous_variant", False)
 
         mt_annot = mt_annot.filter_rows(keep_row)
-        mt_annot = mt_annot.repartition(1000)
+        mt_annot = mt_annot.repartition(n_partitions, shuffle=True)
 
         mt_annot.write(path_spark(mt_annot_path), overwrite=True)
 

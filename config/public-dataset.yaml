@@ -34,7 +34,9 @@ general:
   plots_dir: '${general.data_root}/plots'
   var_qc_rf_dir: '${general.data_root}/variant_qc_random_forest'
   vcf_export_dir: '${general.data_root}/vcf_after-qc'
-  # random forest model ID is generated during step3.3, catch the parameter `runhash` and place it here
+  # Number of partitions for the matrix table to repartition after heavy filtering.
+  # We recommend having at least 5 partitions per core.
+  n_partitions: 200
   metadata:
     verifybamid_selfsm:  '${general.metadata_dir}/${general.dataset_name}.verify_bam_id_result.selfSM.tsv'  # Set to null if you don't have freemix data
     self_reported_sex:   '${general.metadata_dir}/${general.dataset_name}.self_reported_sex.tsv'
@@ -53,7 +55,8 @@ general:
   # * nn - Nearest neighbours (from gnomAD v4)
   # * lr - linera regression (from gnomAD v4)
   sample_qc_method: 'lr'
-  rf_model_id: 'wxs-qc_public' # Random forest model ID for Variant QC
+  # random forest model ID is generated during step3.3, catch the parameter `runhash` and place it here
+  rf_model_id: 'wxs-qc_public'
 
 # Block of cvars variables - use to provide shorter alternatives for long names
 cvars:
