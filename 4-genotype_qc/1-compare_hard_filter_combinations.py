@@ -1015,6 +1015,7 @@ def main():
     # GIAB sample to compare
     giab_vcf: str = config["step4"]["evaluation"]["giab_vcf"]
     giab_cqfile: str = config["step4"]["evaluation"]["giab_cqfile"]
+    giab_sample_id: Optional[str] = config["step4"]["evaluation"]["giab_sample_id"]
     prec_recall_panel_bed = config["step4"]["evaluation"]["prec_recall_panel_bed"]
 
     # Files from VariantQC
@@ -1047,6 +1048,18 @@ def main():
         mt_annot = annotate_with_rf(mt, rf_ht)
         if cqfile is not None:
             mt_annot = annotate_cq(mt_annot, cqfile)
+
+        # Remove all variants that we don't use for metrics calculation
+        print("=== Removing variants not used for the metrics calculation ===")
+        keep_row = hl.or_else(mt_annot.TP, False) | hl.or_else(mt_annot.FP, False)  # For TP/FP
+        if giab_sample_id is not None and prec_recall_panel is not None:  # For Prec-recall
+            keep_row = keep_row | hl.is_defined(prec_recall_panel[mt_annot.locus])
+        if pedigree is not None and cqfile is not None:  # For transmitted/untransmitted singleton variants
+            keep_row = keep_row | hl.or_else(mt_annot.consequence == "synonymous_variant", False)
+
+        mt_annot = mt_annot.filter_rows(keep_row)
+        mt_annot = mt_annot.repartition(1000)
+
         mt_annot.write(path_spark(mt_annot_path), overwrite=True)
 
     ht_giab_control = hl.read_table(path_spark(giab_ht_file))
