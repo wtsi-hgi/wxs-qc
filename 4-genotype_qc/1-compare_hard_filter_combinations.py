@@ -169,7 +169,7 @@ def process_filter_combination(
     gq: int,
     ab: float,
     call_rate: float,
-    ht_giab_control: hl.Table,
+    ht_giab_control: Optional[hl.Table],
     pedigree: Optional[hl.Pedigree],
     var_type: str,
     mtdir: str,
@@ -185,8 +185,8 @@ def process_filter_combination(
     :param int gq: Genotype quality threshold
     :param float ab: Allele balance threshold
     :param float call_rate: Call rate threshold
-    :param hl.Table ht_giab_control: GIAB variants table from the external sample.
-    Used as control
+    :param hl.Table ht_giab_control: Optional GIAB variants table from the external sample.
+    Used as control when giab_sample_id is set.
     :param hl.Pedigree pedigree: Hail pedigree object
     :param str var_type: Variant type (snv/indel)
     :param str mtdir: MatrixTable directory
@@ -225,7 +225,7 @@ def process_filter_combination(
         var_counts["t_u_ratio"] = -2.0
 
     # Calculating precision/recall - possible only if we have GIAB sample
-    if giab_sample_id is not None:
+    if giab_sample_id is not None and ht_giab_control is not None:
         # Extracting GIAB sample for precision/recall calculation
         tmp_ht_giab_dataset_path = os.path.join(mtdir, "pr.ht")
         ht_giab_dataset = get_giab_sample_from_dataset(
@@ -288,7 +288,7 @@ def get_filter_name(bin: int, dp: int, gq: int, ab: float, call_rate: float) -> 
 
 def filter_and_count(
     mt: hl.MatrixTable,
-    ht_giab_control: hl.Table,
+    ht_giab_control: Optional[hl.Table],
     pedigree: Optional[hl.Pedigree],
     cqfile: Optional[str],
     mtdir: str,
@@ -313,29 +313,33 @@ def filter_and_count(
 
     Path(json_dump_folder).mkdir(parents=True, exist_ok=True)
 
-    # Subsetting GIAB table to SNVs or indels, depending on the input parameters
-    giab_ht_type_name = os.path.join(mtdir, f"giab_table.{var_type}.ht")
     if var_type == "snv":
         bins = snv_bins
-        ht_giab_control = ht_giab_control.filter(
-            hl.is_snp(ht_giab_control.alleles[0], ht_giab_control.alleles[1])
-        ).checkpoint(giab_ht_type_name, overwrite=True)
     elif var_type == "indel":
         bins = indel_bins
-        ht_giab_control = ht_giab_control.filter(
-            hl.is_indel(ht_giab_control.alleles[0], ht_giab_control.alleles[1])
-        ).checkpoint(giab_ht_type_name, overwrite=True)
     else:
         print(f"Unknown variant type: {var_type}")
         raise ValueError("The filter_and_count_ function can be called only for snv or for indels")
+
+    # Subset the GIAB table only when precision/recall evaluation is enabled.
+    if giab_sample_id is not None and ht_giab_control is not None:
+        giab_ht_type_name = os.path.join(mtdir, f"giab_table.{var_type}.ht")
+        if var_type == "snv":
+            ht_giab_control = ht_giab_control.filter(hl.is_snp(ht_giab_control.alleles[0], ht_giab_control.alleles[1]))
+        else:
+            ht_giab_control = ht_giab_control.filter(
+                hl.is_indel(ht_giab_control.alleles[0], ht_giab_control.alleles[1])
+            )
+        ht_giab_control = ht_giab_control.checkpoint(giab_ht_type_name, overwrite=True)
 
     start_time = datetime.datetime.now()
 
     results = {var_type: {}}
 
-    sample_ids = set(mt.s.collect())
-    if giab_sample_id is not None and giab_sample_id not in sample_ids:
-        raise ValueError(f"=== Control sample {giab_sample_id} not found in matrixtable")
+    if giab_sample_id is not None:
+        sample_ids = set(mt.s.collect())
+        if giab_sample_id not in sample_ids:
+            raise ValueError(f"=== Control sample {giab_sample_id} not found in matrixtable")
 
     n_step = 0
     total_steps = len(bins) * len(dp_vals) * len(gq_vals) * len(ab_vals) * len(missing_vals)
@@ -1014,9 +1018,12 @@ def main():
 
     # = STEP DEPENDENCIES = #
     # GIAB sample to compare
-    giab_vcf: str = config["step4"]["evaluation"]["giab_vcf"]
+    giab_vcf: Optional[str] = config["step4"]["evaluation"]["giab_vcf"]
     giab_cqfile: str = config["step4"]["evaluation"]["giab_cqfile"]
     giab_sample_id: Optional[str] = config["step4"]["evaluation"]["giab_sample_id"]
+    giab_evaluation_enabled = giab_vcf is not None and giab_sample_id is not None
+    if not giab_evaluation_enabled:
+        giab_sample_id = None
     prec_recall_panel_bed = config["step4"]["evaluation"]["prec_recall_panel_bed"]
 
     # Files from VariantQC
@@ -1037,12 +1044,15 @@ def main():
     prec_recall_panel = hl.import_bed(path_spark(prec_recall_panel_bed)) if prec_recall_panel_bed is not None else None
 
     if args.prepare:
-        print("=== Preparing control GIAB sample ===")
-        ht_giab_control = prepare_giab_ht(giab_vcf, giab_cqfile, prec_recall_panel)
-        ht_giab_control.write(path_spark(giab_ht_file), overwrite=True)
+        if giab_evaluation_enabled:
+            print("=== Preparing control GIAB sample ===")
+            assert giab_vcf is not None
+            ht_giab_control = prepare_giab_ht(giab_vcf, giab_cqfile, prec_recall_panel)
+            ht_giab_control.write(path_spark(giab_ht_file), overwrite=True)
 
         print("=== Annotating matrix table with RF bins ===")
         mt = hl.read_matrix_table(path_spark(mtfile))
+        print(f"=== Initial number of variants: {mt.count_rows()} ===")
         mt = clean_mt(mt)  # Remove all information not required for hard filter evaluation
 
         rf_ht = hl.read_table(path_spark(rf_htfile))
@@ -1061,9 +1071,14 @@ def main():
         mt_annot = mt_annot.filter_rows(keep_row)
         mt_annot = mt_annot.repartition(n_partitions, shuffle=True)
 
-        mt_annot.write(path_spark(mt_annot_path), overwrite=True)
+        mt_annot = mt_annot.checkpoint(path_spark(mt_annot_path), overwrite=True)
+        print(f"=== Variants remaining for hardfilter evaluation: {mt_annot.count_rows()} ===")
 
-    ht_giab_control = hl.read_table(path_spark(giab_ht_file))
+    ht_giab_control = hl.read_table(path_spark(giab_ht_file)) if giab_evaluation_enabled else None
+
+    # Putting empty GIAB ID if we have no GIAB VCF to calculate precision-recall
+    evaluation_config = config["step4"]["evaluation"].copy()
+    evaluation_config["giab_sample_id"] = giab_sample_id
 
     if args.evaluate_snv:
         print("=== Calculating hard filter evaluation for SNV ===")
@@ -1078,7 +1093,7 @@ def main():
             mtdir=path_spark(hardfilter_evaluate_workdir),
             var_type="snv",
             prec_recall_panel=prec_recall_panel,
-            **config["step4"]["evaluation"],
+            **evaluation_config,
         )
 
         os.makedirs(os.path.dirname(outfile_snv), exist_ok=True)
@@ -1099,7 +1114,7 @@ def main():
             mtdir=path_spark(hardfilter_evaluate_workdir),
             var_type="indel",
             prec_recall_panel=prec_recall_panel,
-            **config["step4"]["evaluation"],
+            **evaluation_config,
         )
 
         os.makedirs(os.path.dirname(outfile_indel), exist_ok=True)
