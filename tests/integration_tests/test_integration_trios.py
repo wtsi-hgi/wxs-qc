@@ -1,7 +1,4 @@
-import csv
-import gzip
 import json
-import math
 from pathlib import Path
 from typing import Any, cast
 
@@ -11,7 +8,7 @@ import pytest
 from tests.integration_tests.integration_stub import IntegrationTestsStub
 from wes_qc.config import parse_config_file
 from wes_qc.hail_utils import path_spark
-from wes_qc.teszt import tables_are_identical
+from wes_qc.teszt import assert_saved_tables_match
 
 # /path/to/wes_qc must be in PYTHONPATH
 
@@ -23,21 +20,6 @@ GNOMAD_TABLE_SKIP = pytest.mark.skip(
 )
 
 
-def _read_related_samples(path: str) -> set[str]:
-    with open(path) as f:
-        reader = csv.DictReader(f, delimiter="\t")
-        return {json.loads(row["node"])["s"] for row in reader}
-
-
-def _read_relatedness(path: str) -> dict[tuple[str, str], tuple[float, float]]:
-    with gzip.open(path, "rt") as f:
-        reader = csv.DictReader(f, delimiter="\t")
-        return {
-            (json.loads(row["i"])["s"], json.loads(row["j"])["s"]): (float(row["kin"]), float(row["ibd2"]))
-            for row in reader
-        }
-
-
 def _load_expected_results(suite: str, step: str) -> dict[str, Any]:
     expected_results_path = Path(__file__).with_name("expected_integration_test_results.json")
     with open(expected_results_path) as f:
@@ -45,26 +27,11 @@ def _load_expected_results(suite: str, step: str) -> dict[str, Any]:
     return cast(dict[str, Any], expected_results[suite][step])
 
 
-def _expected_relatedness(records: list[dict[str, Any]]) -> dict[tuple[str, str], tuple[float, float]]:
-    return {(record["i"], record["j"]): (record["kin"], record["ibd2"]) for record in records}
-
-
-def _assert_relatedness_matches(actual_path: str, expected_records: list[dict[str, Any]]) -> None:
-    actual_relatedness = _read_relatedness(actual_path)
-    print(f"== VALIDATE: Actual relatedness results: {actual_relatedness} ==")
-    expected_relatedness = _expected_relatedness(expected_records)
-
-    assert set(actual_relatedness) == set(expected_relatedness)
-    for pair, actual_values in actual_relatedness.items():
-        expected_values = expected_relatedness[pair]
-        assert math.isclose(actual_values[0], expected_values[0], rel_tol=1e-4, abs_tol=1e-6)
-        assert math.isclose(actual_values[1], expected_values[1], rel_tol=1e-4, abs_tol=1e-6)
-
-
 def _assert_hail_table_count_matches(actual_path: str, expected: dict[str, Any]) -> None:
     actual = hl.read_table(path_spark(actual_path))
-    print(f"== VALIDATE: Actual Hail table size: {actual.count()} ==")
-    assert actual.count() == expected["count"]
+    actual_count = actual.count()
+    print(f"== VALIDATE: Actual Hail table size: {actual_count} ==")
+    assert actual_count == expected["count"]
 
 
 def _collect_table_samples(ht: hl.Table) -> set[str]:
@@ -100,14 +67,17 @@ def assert_step_2_2_outputs_match_expected(config_path: str) -> None:
     config = parse_config_file(config_path)
     expected = _load_expected_results("trios", "step_2_2_sample_qc")
 
-    related_samples_path = config["step2"]["relatedness_output"]["samples_to_remove_tsv"]
-    assert _read_related_samples(related_samples_path) == set(expected["related_samples_to_remove"])
-    _assert_relatedness_matches(
-        config["step2"]["relatedness_output"]["relatedness_outfile"],
-        expected["relatedness"],
+    actual_relatedness_output = config["step2"]["relatedness_output"]
+
+    validation_dir = Path(__file__).with_name("validation")
+    assert_saved_tables_match(
+        validation_dir,
+        {
+            "related_samples_to_remove.tsv": actual_relatedness_output["samples_to_remove_tsv"],
+            "relatedness.tsv": actual_relatedness_output["relatedness_outfile"],
+        },
     )
 
-    actual_relatedness_output = config["step2"]["relatedness_output"]
     hail_outputs = expected["hail_outputs"]
     _assert_hail_table_count_matches(
         actual_relatedness_output["samples_to_remove_file"], hail_outputs["samples_to_remove"]
@@ -132,13 +102,13 @@ def assert_step_2_2_outputs_match_expected(config_path: str) -> None:
 def assert_step_4_1_outputs_match_expected(config_path: str) -> None:
     evaluation_config = parse_config_file(config_path)["step4"]["evaluation"]
     validation_dir = Path(__file__).with_name("validation")
-    print(f"== VALIDATE: Comparing evaluation results to {validation_dir} ==")
-    for variant_type, config_key in (("snv", "snp_tsv"), ("indel", "indel_tsv")):
-        actual_path = evaluation_config[config_key]
-        expected_path = validation_dir / f"hard_filter_evaluation.{variant_type}.tsv"
-        assert tables_are_identical(
-            actual_path, expected_path
-        ), f"{variant_type.upper()} hard-filter evaluation does not match the saved result"
+    assert_saved_tables_match(
+        validation_dir,
+        {
+            "hard_filter_evaluation.snv.tsv": evaluation_config["snp_tsv"],
+            "hard_filter_evaluation.indel.tsv": evaluation_config["indel_tsv"],
+        },
+    )
 
 
 @pytest.mark.usefixtures("WES_CONFIG")

@@ -1,43 +1,6 @@
 {
   "trios": {
     "step_2_2_sample_qc": {
-      "related_samples_to_remove": [
-        "EGAN00003332049_remapped",
-        "EGAN00003332050_remapped",
-        "EGAN00003332053_remapped"
-      ],
-      "relatedness": [
-        {
-          "i": "EGAN00003332049_remapped",
-          "j": "EGAN00003332051",
-          "kin": 0.26212,
-          "ibd2": 0.29731
-        },
-        {
-          "i": "EGAN00003332050_remapped",
-          "j": "EGAN00003332050",
-          "kin": 0.23359,
-          "ibd2": 0.45451
-        },
-        {
-          "i": "EGAN00003332051_remapped",
-          "j": "EGAN00003332049_remapped",
-          "kin": 0.26212,
-          "ibd2": 0.29731
-        },
-        {
-          "i": "EGAN00003332051_remapped",
-          "j": "EGAN00003332051",
-          "kin": 0.099882,
-          "ibd2": 0.20318
-        },
-        {
-          "i": "EGAN00003332053",
-          "j": "EGAN00003332053_remapped",
-          "kin": 0.20179,
-          "ibd2": 0.43623
-        }
-      ],
       "hail_outputs": {
         "samples_to_remove": {
           "count": 3

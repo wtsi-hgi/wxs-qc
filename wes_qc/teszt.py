@@ -6,18 +6,28 @@ Used Hungarian name to avoid picking this module by pytest
 from __future__ import annotations
 
 import csv
+import gzip
 import os
 import subprocess
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, Mapping
 
 import pandas as pd
 
 
 def _detect_table_delimiter(path: str | Path) -> str:
-    with open(path) as table_file:
+    table_opener = gzip.open if str(path).endswith(".gz") else open
+    with table_opener(path, "rt") as table_file:
         sample = table_file.read(8192)
-    return csv.Sniffer().sniff(sample, delimiters=",\t").delimiter
+    try:
+        return csv.Sniffer().sniff(sample, delimiters=",\t").delimiter
+    except csv.Error:
+        uncompressed_suffix = Path(str(path).removesuffix(".gz")).suffix
+        if uncompressed_suffix == ".tsv":
+            return "\t"
+        if uncompressed_suffix == ".csv":
+            return ","
+        raise ValueError(f"Could not detect delimiter for {path!s}")
 
 
 def _table_column_kind(
@@ -47,8 +57,9 @@ def tables_are_identical(
     Floats compare with tolerance, while integers and strings compare exactly.
     Table dimensions, column names and order, and row order must also match.
     Corresponding missing values are considered equal. Other inferred column
-    types raise ``TypeError``; unreadable or malformed inputs raise the underlying
-    parsing exception.
+    types raise ``TypeError``;
+    Unreadable or malformed inputs raise the underlying parsing exception.
+    Gzip-compressed tables are supported when their paths end in ``.gz``.
 
     Parameters
     ----------
@@ -96,6 +107,20 @@ def tables_are_identical(
             return False
 
     return True
+
+
+def assert_saved_tables_match(
+    validation_dir: str | Path,
+    actual_paths_by_filename: Mapping[str, str | Path],
+) -> None:
+    """Assert that actual tables match their named saved validation tables."""
+    validation_dir = Path(validation_dir)
+    print(f"== VALIDATE: Comparing table results to {validation_dir} ==")
+    for validation_filename, actual_path in actual_paths_by_filename.items():
+        expected_path = validation_dir / validation_filename
+        assert tables_are_identical(
+            actual_path, expected_path
+        ), f"{validation_filename} does not match the saved result"
 
 
 # === Utils for downloading test data from the s3 storage === #

@@ -112,6 +112,7 @@ def main():
 
     # = STEP PARAMETERS = #
     control_list = config["general"]["metadata"]["control_samples"]
+    n_partitions = config["general"]["n_partitions"]
 
     # = STEP DEPENDENCIES = #
     mt_infile = config["step2"]["impute_sex"]["sex_mt_outfile"]
@@ -138,8 +139,11 @@ def main():
         filtered_mt = filter_matrix_for_ldprune(
             mt, config["step2"]["long_range_ld_file"], **config["step2"]["filter_params"]
         )
+        # We potentially removed a lot of variants, so we need to coalesce partitions
+        # No shuffle because subsequent LD pruning is sensitive to the number of partitions
+        filtered_mt = filtered_mt.repartition(n_partitions, shuffle=False)
         filtered_mt = filtered_mt.checkpoint(path_spark(config["step2"]["filtered_mt_outfile"]), overwrite=True)
-        print(f"=== Variant count after filtering: {mt.count_rows()}")
+        print(f"=== Variant count after filtering: {filtered_mt.count_rows()}")
 
     # -----------------------------------------------------------------------------
     if args.pc_relate:
