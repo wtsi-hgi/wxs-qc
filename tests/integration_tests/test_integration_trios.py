@@ -1,7 +1,4 @@
-import csv
-import gzip
 import json
-import math
 from pathlib import Path
 from typing import Any, cast
 
@@ -23,42 +20,11 @@ GNOMAD_TABLE_SKIP = pytest.mark.skip(
 )
 
 
-def _read_related_samples(path: str) -> set[str]:
-    with open(path) as f:
-        reader = csv.DictReader(f, delimiter="\t")
-        return {json.loads(row["node"])["s"] for row in reader}
-
-
-def _read_relatedness(path: str) -> dict[tuple[str, str], tuple[float, float]]:
-    with gzip.open(path, "rt") as f:
-        reader = csv.DictReader(f, delimiter="\t")
-        return {
-            (json.loads(row["i"])["s"], json.loads(row["j"])["s"]): (float(row["kin"]), float(row["ibd2"]))
-            for row in reader
-        }
-
-
 def _load_expected_results(suite: str, step: str) -> dict[str, Any]:
     expected_results_path = Path(__file__).with_name("expected_integration_test_results.json")
     with open(expected_results_path) as f:
         expected_results = json.load(f)
     return cast(dict[str, Any], expected_results[suite][step])
-
-
-def _expected_relatedness(records: list[dict[str, Any]]) -> dict[tuple[str, str], tuple[float, float]]:
-    return {(record["i"], record["j"]): (record["kin"], record["ibd2"]) for record in records}
-
-
-def _assert_relatedness_matches(actual_path: str, expected_records: list[dict[str, Any]]) -> None:
-    actual_relatedness = _read_relatedness(actual_path)
-    print(f"== VALIDATE: Actual relatedness results: {actual_relatedness} ==")
-    expected_relatedness = _expected_relatedness(expected_records)
-
-    assert set(actual_relatedness) == set(expected_relatedness)
-    for pair, actual_values in actual_relatedness.items():
-        expected_values = expected_relatedness[pair]
-        assert math.isclose(actual_values[0], expected_values[0], rel_tol=1e-4, abs_tol=1e-6)
-        assert math.isclose(actual_values[1], expected_values[1], rel_tol=1e-4, abs_tol=1e-6)
 
 
 def _assert_hail_table_count_matches(actual_path: str, expected: dict[str, Any]) -> None:
@@ -100,14 +66,18 @@ def assert_step_2_2_outputs_match_expected(config_path: str) -> None:
     config = parse_config_file(config_path)
     expected = _load_expected_results("trios", "step_2_2_sample_qc")
 
-    related_samples_path = config["step2"]["relatedness_output"]["samples_to_remove_tsv"]
-    assert _read_related_samples(related_samples_path) == set(expected["related_samples_to_remove"])
-    _assert_relatedness_matches(
-        config["step2"]["relatedness_output"]["relatedness_outfile"],
-        expected["relatedness"],
-    )
-
     actual_relatedness_output = config["step2"]["relatedness_output"]
+
+    validation_dir = Path(__file__).with_name("validation")
+    print(f"== VALIDATE: Comparing related-sample results to {validation_dir} ==")
+    for config_key, validation_filename in (
+        ("samples_to_remove_tsv", "related_samples_to_remove.tsv"),
+        ("relatedness_outfile", "relatedness.tsv"),
+    ):
+        assert tables_are_identical(
+            actual_relatedness_output[config_key], validation_dir / validation_filename
+        ), f"{validation_filename} does not match the saved result"
+
     hail_outputs = expected["hail_outputs"]
     _assert_hail_table_count_matches(
         actual_relatedness_output["samples_to_remove_file"], hail_outputs["samples_to_remove"]
