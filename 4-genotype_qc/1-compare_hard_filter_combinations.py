@@ -1069,7 +1069,7 @@ def main():
             keep_row = keep_row | hl.or_else(mt_annot.consequence == "synonymous_variant", False)
 
         mt_annot = mt_annot.filter_rows(keep_row)
-        mt_annot = mt_annot.repartition(n_partitions, shuffle=True)
+        mt_annot = mt_annot.repartition(n_partitions, shuffle=False)
 
         mt_annot = mt_annot.checkpoint(path_spark(mt_annot_path), overwrite=True)
         print(f"=== Variants remaining for hardfilter evaluation: {mt_annot.count_rows()} ===")
