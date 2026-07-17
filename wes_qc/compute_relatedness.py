@@ -58,9 +58,10 @@ def prune_pc_relate(
     pca_scores = pca_scores.checkpoint(path_spark(pc_relate_params["unrelated_samples_scores_file"]), overwrite=True)
     pca_loadings = pca_loadings.checkpoint(path_spark(pc_relate_params["pca_loadings_file_pc_relate"]), overwrite=True)
     if dataset == "study":
-        related_mt = related_mt.drop(  # For some reason unrelated_mt doesn't have these in study data
-            "AD", "DP", "GQ", "MIN_DP", "PGT", "PID", "PL", "PS", "SB", "RGQ"
-        )
+        # For study dataset gnomAD relatedness functions generate additional entries,
+        # that ew need to remove prior to merging
+        entries_to_drop = ["AD", "DP", "GQ", "MIN_DP", "PGT", "PID", "PL", "PS", "SB", "RGQ"]
+        related_mt = related_mt.drop(*[entry for entry in entries_to_drop if entry in related_mt.entry])
     pruned_mt = related_mt.union_cols(unrelated_mt)
     print("=== Calculating relatedness")
     # calculate relatedness using PC relate
