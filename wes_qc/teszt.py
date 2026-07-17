@@ -10,7 +10,7 @@ import gzip
 import os
 import subprocess
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, Mapping
 
 import pandas as pd
 
@@ -107,6 +107,20 @@ def tables_are_identical(
             return False
 
     return True
+
+
+def assert_saved_tables_match(
+    validation_dir: str | Path,
+    actual_paths_by_filename: Mapping[str, str | Path],
+) -> None:
+    """Assert that actual tables match their named saved validation tables."""
+    validation_dir = Path(validation_dir)
+    print(f"== VALIDATE: Comparing table results to {validation_dir} ==")
+    for validation_filename, actual_path in actual_paths_by_filename.items():
+        expected_path = validation_dir / validation_filename
+        assert tables_are_identical(
+            actual_path, expected_path
+        ), f"{validation_filename} does not match the saved result"
 
 
 # === Utils for downloading test data from the s3 storage === #

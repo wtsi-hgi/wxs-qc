@@ -8,7 +8,7 @@ import pytest
 from tests.integration_tests.integration_stub import IntegrationTestsStub
 from wes_qc.config import parse_config_file
 from wes_qc.hail_utils import path_spark
-from wes_qc.teszt import tables_are_identical
+from wes_qc.teszt import assert_saved_tables_match
 
 # /path/to/wes_qc must be in PYTHONPATH
 
@@ -29,8 +29,9 @@ def _load_expected_results(suite: str, step: str) -> dict[str, Any]:
 
 def _assert_hail_table_count_matches(actual_path: str, expected: dict[str, Any]) -> None:
     actual = hl.read_table(path_spark(actual_path))
-    print(f"== VALIDATE: Actual Hail table size: {actual.count()} ==")
-    assert actual.count() == expected["count"]
+    actual_count = actual.count()
+    print(f"== VALIDATE: Actual Hail table size: {actual_count} ==")
+    assert actual_count == expected["count"]
 
 
 def _collect_table_samples(ht: hl.Table) -> set[str]:
@@ -69,14 +70,13 @@ def assert_step_2_2_outputs_match_expected(config_path: str) -> None:
     actual_relatedness_output = config["step2"]["relatedness_output"]
 
     validation_dir = Path(__file__).with_name("validation")
-    print(f"== VALIDATE: Comparing related-sample results to {validation_dir} ==")
-    for config_key, validation_filename in (
-        ("samples_to_remove_tsv", "related_samples_to_remove.tsv"),
-        ("relatedness_outfile", "relatedness.tsv"),
-    ):
-        assert tables_are_identical(
-            actual_relatedness_output[config_key], validation_dir / validation_filename
-        ), f"{validation_filename} does not match the saved result"
+    assert_saved_tables_match(
+        validation_dir,
+        {
+            "related_samples_to_remove.tsv": actual_relatedness_output["samples_to_remove_tsv"],
+            "relatedness.tsv": actual_relatedness_output["relatedness_outfile"],
+        },
+    )
 
     hail_outputs = expected["hail_outputs"]
     _assert_hail_table_count_matches(
@@ -102,13 +102,13 @@ def assert_step_2_2_outputs_match_expected(config_path: str) -> None:
 def assert_step_4_1_outputs_match_expected(config_path: str) -> None:
     evaluation_config = parse_config_file(config_path)["step4"]["evaluation"]
     validation_dir = Path(__file__).with_name("validation")
-    print(f"== VALIDATE: Comparing evaluation results to {validation_dir} ==")
-    for variant_type, config_key in (("snv", "snp_tsv"), ("indel", "indel_tsv")):
-        actual_path = evaluation_config[config_key]
-        expected_path = validation_dir / f"hard_filter_evaluation.{variant_type}.tsv"
-        assert tables_are_identical(
-            actual_path, expected_path
-        ), f"{variant_type.upper()} hard-filter evaluation does not match the saved result"
+    assert_saved_tables_match(
+        validation_dir,
+        {
+            "hard_filter_evaluation.snv.tsv": evaluation_config["snp_tsv"],
+            "hard_filter_evaluation.indel.tsv": evaluation_config["indel_tsv"],
+        },
+    )
 
 
 @pytest.mark.usefixtures("WES_CONFIG")
