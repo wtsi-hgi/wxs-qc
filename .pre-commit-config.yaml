@@ -32,13 +32,10 @@ repos:
     hooks:
     -   id: shellcheck
 
-#-   repo: local
-#    hooks:
-#    -   id: mypy
-#        name: mypy
-#        entry: bash -c 'scripts/stage_mypy_numbered_scripts.sh && mypy --config-file=pyproject.toml'
-#        language: system
-#        types: [python]
-#        pass_filenames: false
-#        always_run: true
-#        stages: [manual]
+-   repo: local
+    hooks:
+    -   id: mypy
+        name: mypy
+        entry: mypy --config-file=pyproject.toml
+        language: system
+        types: [python]

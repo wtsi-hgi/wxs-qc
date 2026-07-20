@@ -10,6 +10,7 @@ Before finishing implementation:
 - [ ] No out-of-scope files were edited
 - [ ] Numbered pipeline order, CLI flags, config keys, and output paths are preserved unless explicitly approved
 - [ ] Hail/Spark IO boundaries are preserved unless explicitly approved
-- [ ] Pre-commit checks were run for changed files, or blockers were documented
+- [ ] Ruff and the other applicable pre-commit checks were run for every modified file, or blockers were documented
+- [ ] Mypy was run for every modified Python file, or blockers were documented
 - [ ] Individual integration tests were run for changed pipeline steps, or blockers were documented
 - [ ] Implementation notes include risks and validation evidence

@@ -48,9 +48,8 @@ Use this skill when implementing code for the pipeline.
    - Add or update focused tests when the touched area has an existing pattern.
 
 6. Run implementation checks
-   - Run checks against modified files:
-       - `make check`
-       - `make typecheck`
+   - Run Ruff, mypy, and the other configured pre-commit hooks against every modified Python file:
+     - `make check`
    - Run the individual trio integration test for each changed pipeline step:
      - `make test-it-one-step test=test_trios_<step-name-or-prefix>`
    - Use the concrete `test_trios_...` target that maps to the changed step or the narrowest available step prefix.

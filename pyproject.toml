@@ -47,10 +47,14 @@ target-version = "py312"
 [tool.mypy]
 python_version = "3.12"
 files = [
-    ".mypy_stage",
+    "stage0_resource_preparation",
+    "stage1_import_data",
+    "stage2_sample_qc",
+    "stage3_variant_qc",
+    "stage4_genotype_qc",
     "tests",
     "utils",
-    "wes_qc",
+    "wxs_qc",
 ]
 strict = true
 plugins = []

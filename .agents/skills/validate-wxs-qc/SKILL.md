@@ -29,8 +29,8 @@ Use this skill when asked to review or validate implementation quality.
 
 Use linters and per-step integration smoke tests as the validation baseline:
 
-- `make check`
-- `make typecheck`
+- `make check` to run Ruff and mypy on every modified Python file, plus the other applicable pre-commit hooks on all modified files
+- `make typecheck` to run the standalone mypy check on every modified Python file
 - `make test-it-one-step test=test_trios_...` for each changed pipeline step, using the same concrete per-step trio tests run by the implementer
 
 **Notes:**

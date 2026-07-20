@@ -64,13 +64,14 @@ and manually commit changes.
 
 All available checks are implemented as Makefile targets.
 
-Pre-commit checks through the repository target:
+Run Ruff and mypy on every modified Python file,
+plus the other applicable pre-commit checks on all modified files, through the repository target:
 
 ```bash
 make check
 ```
 
-A separate target for type checking:
+A separate target runs mypy on every modified Python file:
 
 ```bash
 make typecheck
@@ -111,7 +112,6 @@ commands can still be useful:
 ```bash
 pre-commit run --all-files
 pre-commit run --files <file1> <file2>
-pre-commit run mypy --hook-stage manual
 ```
 
 ## Development and code organization best practices
