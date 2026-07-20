@@ -116,7 +116,7 @@ To start a new task via `hlrun_remote`, first end the existing tmux session, if 
 ### Running the code via Jupyter notebook
 
 You can run the code in the provided Jupyter notebook
-where all the steps are arranged in a sequence and divided into sections
+where all the steps are arranged in sequence and grouped by pipeline stage
 (e.g. 0-resource_preparation, 1-import_data, 2-sample_qc, 3-variant_qc, 4-genotype_qc).
 
 The notebook is located as `scripts/run-wxs-qc-pipeline-all-steps.ipynb`.

@@ -122,14 +122,16 @@ Prefer the local style and contracts of the files you are touching.
 
 ### Scripts organization and sequence
 
+- Use “stage” for major pipeline blocks, “step” for individual scripts,
+- and “substage” for CLI-selectable blocks within a script.
 - Use numbered scripts for pipeline steps.
-- Break complex steps into smaller substeps using command-line arguments when
-  that pattern already fits the stage.
+- Break complex steps into smaller substages using command-line arguments when
+  that pattern already fits the step.
 
 ### Main function structure
 
 - Keep data loading and saving, especially Hail structures, in the `main()` layer when that matches nearby code.
-- Follow the `main()` standard function structure for the stage being changed.
+- Follow the `main()` standard function structure for the step being changed.
 - Where possible, avoid moving expensive Hail/Spark IO across function boundaries.
 
 ### Pipeline step function design

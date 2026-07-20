@@ -104,7 +104,7 @@ To start processing your own data, check and modify the following parameters:
     If you work with your own data, change it to downloaded full-sized 1000 genomes data, as described in
     the [resources howto](wxs-qc_prepare-resources.md).
   * `rf_model_id` leave it empty for now and specify after creating the random forest model
-    on the VariantQC stage
+    on the Variant QC stage
 * `stage0 -> indir` and `stage0 -> kg_pop_file` the directory for the 1000G genomes sample data. See below how to obtain it.
 
 All other files and resources you need are described in the corresponding sections
@@ -217,8 +217,8 @@ python stage1_import_data/imt2_import_annotations.py
 For each available annotation, the script prints out the list of samples that don't have annotations.
 For the Freemix score it performs validation and saves the Freemix plot.
 
-The `remove_freemix_outliers` config option of the `validate_verifybamid` step
-controls whether we remove all Freemix outliers at this stage
+The `remove_freemix_outliers` option in the `validate_verifybamid` config section
+controls whether we remove all Freemix outliers at this step
 or pass it to the sample QC.
 
 ### Annotate and validate GtCheck results
@@ -351,7 +351,7 @@ a conflict between self-reported sex and genetically imputed sex, and saves it i
 ### Identify samples from related individuals with PC-Relate
 
 This script identifies related individuals in the dataset
-to ensure they do not bias population structure analysis on later stages.
+to ensure they do not bias population structure analysis in later steps.
 
 To identify related samples
 and to perform stratified outlier detection on the subsequent steps,
@@ -393,7 +393,7 @@ The script uses a two-pass approach:
 This two-pass approach correctly identifies related samples
 even in datasets with diverse superpopulations.
 
-The script is split into resumable stages. Run the stages in order:
+The script is split into resumable substeps. Run the substeps in order:
 
 ```shell
 python stage2_sample_qc/sqc2_identify_related_samples.py --filter-mt
@@ -401,17 +401,17 @@ python stage2_sample_qc/sqc2_identify_related_samples.py --pc-relate
 python stage2_sample_qc/sqc2_identify_related_samples.py --plot-pca
 ```
 
-The same stages can also be run in a single invocation:
+The same substeps can also be run in a single invocation:
 
 ```shell
 python stage2_sample_qc/sqc2_identify_related_samples.py --all
 ```
 
-The `--filter-mt` stage removes control samples and filters to high-quality variants,
-The `--pc-relate` stage splits samples into KING-related and KING-unrelated sets,
+The `--filter-mt` substep removes control samples and filters to high-quality variants,
+The `--pc-relate` substep splits samples into KING-related and KING-unrelated sets,
 runs PCA on the KING-unrelated samples, projects the KING-related samples, runs PC-Relate,
 and writes the final table of related samples.
-The `--plot-pca` stage plots relatedness, computes the final PCA after PC-Relate pruning,
+The `--plot-pca` substep plots relatedness, computes the final PCA after PC-Relate pruning,
 and writes the PCA matrix, scores, and loadings used by later sample-QC steps.
 
 The step outputs the list of related samples and PCA scores.
@@ -446,7 +446,7 @@ and PCs from different studies are more comparable.
 python stage2_sample_qc/sqc3_pca_population_prediction.py --pca
 ```
 
-Plot 1KG PCA. On this step, all dataset samples should be labelled as `N/A`.
+Plot 1KG PCA. In this substep, all dataset samples should be labelled as `N/A`.
 
 Since the set of variations for the PCA run is unique for each dataset,
 the PCA results for 1000 genomes can differ between runs. However, for the suggested cohort sizes,
@@ -455,12 +455,12 @@ the number of high-quality variants in the dataset is big enough to make PCA res
 ```shell
 python stage2_sample_qc/sqc3_pca_population_prediction.py --pca-plot
 ```
-On this step, all dataset samples should be labelled as `N/A`.
+In this substep, all dataset samples should be labelled as `N/A`.
 
 Project the study samples onto these principal components,
 run a **Random Forest classifier** to assign populations,
 and plot the results.
-The plot step PCA clustering for merged dataset (1000 genomes + the dataset), and for the dataset only.
+The plotting substep shows PCA clustering for the merged dataset (1000 Genomes + the dataset) and for the dataset only.
 You can specify the number of PCA components you want in the config file.
 
 The projection ensures that the study cohort’s structure is measured against
@@ -524,7 +524,7 @@ Depending on the chosen method, the step outputs can slightly differ:
 
 The final step in sample QC is filtering the data to remove samples which are identified as failing in the previous script.
 
-At this stage, you can provide an additional list of samples to remove.
+At this step, you can provide an additional list of samples to remove.
 It could be the samples failing FreeMix score, F-start check, or any other.
 To use it, specify the file in the `samples_to_remove_file` section of the config.
 This is a plain text file without a header, containing one sample per line.
@@ -542,10 +542,10 @@ Samples that fail sample QC are saved in the file
 
 ## Stage 3. Variant QC
 
-The VariantQC steps trains and runs a random forest model to estimate variation quality
+The Variant QC stage trains and runs a random forest model to estimate variation quality
 and rank all variations by this estimation.
 
-Historically, this step was designed for “classic” variant callers,
+Historically, this stage was designed for “classic” variant callers,
 which produce a large set of variant-level statistics.
 In the development version, we’re updating this part to support DeepVariant and other neural network-based callers,
 which provide a very brief set of statistics.
@@ -577,7 +577,7 @@ This is an unheaded, tab-delimited file that contains the following columns:
 - Proband affected status (0 or 1)
 
 If you have it, specify the pedigree file in the `general->metadata->pedigree` section of the config file.
-If you don't have pedigree data, several sub-steps will be skipped, and some metrics
+If you don't have pedigree data, several substeps will be skipped, and some metrics
 for the final graphs won't be calculated.
 
 ### Generate family statistics
@@ -623,7 +623,7 @@ Put this ID in the config file in the `rf_model_id:` parameter under the `genera
 The function `train_rf_model()`
 could work incorrectly in the parallel SPARK environment,
 depending on the Hail library version.
-If and VariantQC step fails with some weird message
+If a Variant QC step fails with some weird message
 (no space left on the device, wrong imports, etc),
 try running model training on the master node only by adding `--master local[*]`
 to the `spark-submit` parameters,
@@ -663,7 +663,7 @@ python stage3_variant_qc/vqc5_annotate_ht_after_rf.py
 
 ### Group variants by ranks
 
-At this stage, we rank all variants depending on their RF score and
+At this step, we rank all variants depending on their RF score and
 group it into 100 bins (bin 1 is the most quality variants.)
 
 ```shell
@@ -714,7 +714,7 @@ python stage3_variant_qc/vqc9_filter_mt_manual_vqc.py --snv snv_bin --indel inde
 
 ## Stage 4. Genotype QC
 
-On the GenotypeQc step we need to remove genotypes that are not quality enough.
+In the genotype QC stage we need to remove genotypes that are not high quality enough.
 However, by removing genotypes that don't match certain filter thresholds,
 we always remove some percentage of real existing genotypes.
 
@@ -726,14 +726,14 @@ The first script of the genotype QC helps you to analyze different combinations 
 and choose optimal values.
 
 The first hard filter that we use, is the random forest bin,
-determined on the VariantQC step.
+determined in the variant QC stage.
 This filter applies on the variation level, removing
 all genotypes for the variation above the threshold
 (for RF bin smaller values are better)
 
 ### Choose the set of hard filters for evaluation
 
-Based on the results of the VariantQC step populate the provisional values
+Based on the results of the variant QC stage, populate the provisional values
 for the SNV and indel random forest bins in the `evaluation` part of the config file.
 For example:
 
@@ -808,7 +808,7 @@ python stage4_genotype_qc/gqc1_compare_hard_filter_combinations.py --all
 
 The script calculates all possible combinations of hard filters.
 Depending on the dataset size and number of evaluated combinations, the calculation can take significant time.
-The script prints elapsed time and estimated time to complete after each step.
+The script prints elapsed time and estimated time to complete after each filter combination.
 
 ### Evaluate step outputs
 
@@ -824,7 +824,7 @@ For more detailed explanation of this process you could review some relevant pub
 
 For each hardfilter combination, the script calculates the following metrics:
 * Percentage of likely-true-positives (TP) and likely-false-positives (FP) variants
-  (see the explanation above in the variant QC step description).
+  (see the explanation above in the variant QC stage description).
 * Precision and Recall, calculated on the GIAB sample (if it is present in the data).
   For the GIAB sample, we can calculate the real true-positive, false-positive, and false-negative variations.
   Therefore, we assume these data as more confident for choosing the optimal hardfilter evaluation
