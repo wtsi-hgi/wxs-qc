@@ -1018,25 +1018,25 @@ def main():
 
     # = STEP DEPENDENCIES = #
     # GIAB sample to compare
-    giab_vcf: Optional[str] = config["step4"]["evaluation"]["giab_vcf"]
-    giab_cqfile: str = config["step4"]["evaluation"]["giab_cqfile"]
-    giab_sample_id: Optional[str] = config["step4"]["evaluation"]["giab_sample_id"]
+    giab_vcf: Optional[str] = config["stage4"]["evaluation"]["giab_vcf"]
+    giab_cqfile: str = config["stage4"]["evaluation"]["giab_cqfile"]
+    giab_sample_id: Optional[str] = config["stage4"]["evaluation"]["giab_sample_id"]
     giab_evaluation_enabled = giab_vcf is not None and giab_sample_id is not None
     if not giab_evaluation_enabled:
         giab_sample_id = None
-    prec_recall_panel_bed = config["step4"]["evaluation"]["prec_recall_panel_bed"]
+    prec_recall_panel_bed = config["stage4"]["evaluation"]["prec_recall_panel_bed"]
 
     # Files from VariantQC
-    mtfile: str = config["step3"]["split_multi_and_var_qc"]["varqc_mtoutfile_split"]
+    mtfile: str = config["stage3"]["split_multi_and_var_qc"]["varqc_mtoutfile_split"]
     cqfile: str = config["general"]["metadata"]["vep_consequences"]
-    pedfile: str = config["step3"]["pedfile"]
+    pedfile: str = config["stage3"]["pedfile"]
     rf_htfile: str = os.path.join(rf_dir, model_id, "_gnomad_score_binning_tmp.ht")
 
     # = STEP OUTPUTS = #
     mt_annot_path: str = os.path.join(hardfilter_evaluate_workdir, "tmp.hard_filters_combs.mt")
-    outfile_snv: str = config["step4"]["evaluation"]["snp_tsv"]
-    outfile_indel: str = config["step4"]["evaluation"]["indel_tsv"]
-    giab_ht_file: str = config["step4"]["evaluation"]["giab_ht_file"]
+    outfile_snv: str = config["stage4"]["evaluation"]["snp_tsv"]
+    outfile_indel: str = config["stage4"]["evaluation"]["indel_tsv"]
+    giab_ht_file: str = config["stage4"]["evaluation"]["giab_ht_file"]
 
     # = STEP LOGIC = #
     hail_utils.init_hl(tmp_dir)
@@ -1077,7 +1077,7 @@ def main():
     ht_giab_control = hl.read_table(path_spark(giab_ht_file)) if giab_evaluation_enabled else None
 
     # Putting empty GIAB ID if we have no GIAB VCF to calculate precision-recall
-    evaluation_config = config["step4"]["evaluation"].copy()
+    evaluation_config = config["stage4"]["evaluation"].copy()
     evaluation_config["giab_sample_id"] = giab_sample_id
 
     if args.evaluate_snv:
@@ -1127,7 +1127,7 @@ def main():
         df_snv = pd.read_csv(outfile_snv, sep="\t")
         df_indel = pd.read_csv(outfile_indel, sep="\t")
         # Plot hard filter combinations
-        for k, v in config["step4"]["plot"].items():
+        for k, v in config["stage4"]["plot"].items():
             type_, x, y = k.split("-")
             df = df_snv if type_ == "snv" else df_indel
             match_aspect = (x, y) in [("TP", "FP"), ("precision", "recall")]

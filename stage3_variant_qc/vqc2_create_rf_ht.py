@@ -156,22 +156,22 @@ def main():
     tmp_dir = config["general"]["tmp_dir"]
 
     # = STEP PARAMETERS = #
-    pedfile = config["step3"]["pedfile"]
-    fail_hard_filters_QD_less_than: float = config["step3"]["create_rf_ht"]["fail_hard_filters_QD_less_than"]
-    fail_hard_filters_FS_greater_than: float = config["step3"]["create_rf_ht"]["fail_hard_filters_FS_greater_than"]
-    fail_hard_filters_MQ_less_than: float = config["step3"]["create_rf_ht"]["fail_hard_filters_MQ_less_than"]
+    pedfile = config["stage3"]["pedfile"]
+    fail_hard_filters_QD_less_than: float = config["stage3"]["create_rf_ht"]["fail_hard_filters_QD_less_than"]
+    fail_hard_filters_FS_greater_than: float = config["stage3"]["create_rf_ht"]["fail_hard_filters_FS_greater_than"]
+    fail_hard_filters_MQ_less_than: float = config["stage3"]["create_rf_ht"]["fail_hard_filters_MQ_less_than"]
 
     # = STEP DEPENDENCIES = #
-    truthset_file = config["step3"]["create_rf_ht"]["truthset_file"]
-    mtfile = config["step3"]["create_rf_ht"]["mtfile"]
-    trio_stats_file = config["step3"]["create_rf_ht"]["trio_stats_file"]
-    allele_data_file = config["step3"]["create_rf_ht"]["allele_data_file"]
-    allele_counts_file = config["step3"]["create_rf_ht"]["allele_counts_file"]
-    inbreeding_file = config["step3"]["create_rf_ht"]["inbreeding_file"]
+    truthset_file = config["stage3"]["create_rf_ht"]["truthset_file"]
+    mtfile = config["stage3"]["create_rf_ht"]["mtfile"]
+    trio_stats_file = config["stage3"]["create_rf_ht"]["trio_stats_file"]
+    allele_data_file = config["stage3"]["create_rf_ht"]["allele_data_file"]
+    allele_counts_file = config["stage3"]["create_rf_ht"]["allele_counts_file"]
+    inbreeding_file = config["stage3"]["create_rf_ht"]["inbreeding_file"]
 
     # = STEP OUTPUTS = #
-    htoutfile_rf_var_type_all_cols = config["step3"]["create_rf_ht"]["htoutfile_rf_var_type_all_cols"]
-    variant_stats_plot_file = config["step3"]["create_rf_ht"]["variant_stats_plot_file"]
+    htoutfile_rf_var_type_all_cols = config["stage3"]["create_rf_ht"]["htoutfile_rf_var_type_all_cols"]
+    variant_stats_plot_file = config["stage3"]["create_rf_ht"]["variant_stats_plot_file"]
 
     # = STEP LOGIC = #
     hail_utils.init_hl(tmp_dir)
@@ -194,7 +194,7 @@ def main():
         allele_data_ht,
         allele_counts_ht,
         inbreeding_ht,
-        **config["step3"]["create_rf_ht"],
+        **config["stage3"]["create_rf_ht"],
     )
     ht.write(path_spark(htoutfile_rf_var_type_all_cols), overwrite=True)
 

@@ -354,20 +354,20 @@ def main():
 
     # = STEP PARAMETERS = #
     model_id = config["general"]["rf_model_id"]
-    hard_filters = config["step4"]["apply_hard_filters"]["hard_filters"]
+    hard_filters = config["stage4"]["apply_hard_filters"]["hard_filters"]
 
     # Get sex chromosome filtering flag from config (default to False if not present)
-    diff_sex_chromosome_filter = config["step4"]["apply_hard_filters"]["sex_chromosome_specific_filtering"]
+    diff_sex_chromosome_filter = config["stage4"]["apply_hard_filters"]["sex_chromosome_specific_filtering"]
 
     # = STEP DEPENDENCIES = #
     rf_dir = path_spark(
         config["general"]["var_qc_rf_dir"]
     )  # TODO: use adapters inside the functions to enhance robustness
-    mtfile = config["step4"]["annotate_cq_rf"]["mtfile"]
-    cqfile = config["step4"]["annotate_cq_rf"]["cqfile"]
-    sex_annotation_file = config["step4"]["apply_hard_filters"]["sex_annotation_file"]
+    mtfile = config["stage4"]["annotate_cq_rf"]["mtfile"]
+    cqfile = config["stage4"]["annotate_cq_rf"]["cqfile"]
+    sex_annotation_file = config["stage4"]["apply_hard_filters"]["sex_annotation_file"]
     # = STEP OUTPUTS = #
-    mtfile_annot = config["step4"]["mtoutfile_annot"]
+    mtfile_annot = config["stage4"]["mtoutfile_annot"]
 
     # = STEP LOGIC = #
     hail_utils.init_hl(tmp_dir)

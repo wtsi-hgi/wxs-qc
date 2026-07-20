@@ -77,7 +77,7 @@ def train_rf(ht: hl.Table, test_intervals: str, config: dict) -> Tuple[hl.Table,
     :param str test_intervals: Test intervals
     :return: Hail table and RF model
     """
-    conf = config["step3"]["train_rf"]
+    conf = config["stage3"]["train_rf"]
     features = constants.FEATURES
     print("test_intervals")
     print(test_intervals)
@@ -168,11 +168,11 @@ def main():
     tmp_dir = config["general"]["tmp_dir"]
 
     # = STEP PARAMETERS = #
-    test_interval = config["step3"]["rf_test_interval"]  # used in multiple functions
-    runs_json = config["step3"]["runs_json"]
+    test_interval = config["stage3"]["rf_test_interval"]  # used in multiple functions
+    runs_json = config["stage3"]["runs_json"]
 
     # = STEP DEPENDENCIES = #
-    input_ht_file = config["step3"]["train_rf"]["input_ht_file"]
+    input_ht_file = config["stage3"]["train_rf"]["input_ht_file"]
 
     # = STEP OUTPUTS = #
     rf_dir = path_spark(config["general"]["var_qc_rf_dir"])

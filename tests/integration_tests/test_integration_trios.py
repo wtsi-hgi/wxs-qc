@@ -67,7 +67,7 @@ def assert_step_2_2_outputs_match_expected(config_path: str) -> None:
     config = parse_config_file(config_path)
     expected = _load_expected_results("trios", "step_2_2_sample_qc")
 
-    actual_relatedness_output = config["step2"]["relatedness_output"]
+    actual_relatedness_output = config["stage2"]["relatedness_output"]
 
     validation_dir = Path(__file__).with_name("validation")
     assert_saved_tables_match(
@@ -83,7 +83,7 @@ def assert_step_2_2_outputs_match_expected(config_path: str) -> None:
         actual_relatedness_output["samples_to_remove_file"], hail_outputs["samples_to_remove"]
     )
 
-    actual_pc_relate = config["step2"]["pc_relate_params"]
+    actual_pc_relate = config["stage2"]["pc_relate_params"]
     _assert_pca_scores_match_expected(actual_pc_relate["scores_file"], hail_outputs["pc_relate_scores"])
     _assert_pca_scores_match_expected(
         actual_pc_relate["unrelated_samples_scores_file"], hail_outputs["pc_relate_unrelated_scores"]
@@ -92,7 +92,7 @@ def assert_step_2_2_outputs_match_expected(config_path: str) -> None:
         actual_pc_relate["pca_loadings_file_pc_relate"], hail_outputs["pc_relate_pca_loadings"]
     )
 
-    actual_pca = config["step2"]["prune_plot_pca"]
+    actual_pca = config["stage2"]["prune_plot_pca"]
     _assert_pca_scores_match_expected(actual_pca["union_pca_scores_file"], hail_outputs["population_pca_scores"])
     _assert_pca_scores_match_expected(actual_pca["pca_scores_file"], hail_outputs["population_pca_unrelated_scores"])
     _assert_hail_table_count_matches(actual_pca["pca_loadings_file"], hail_outputs["population_pca_loadings"])
@@ -100,7 +100,7 @@ def assert_step_2_2_outputs_match_expected(config_path: str) -> None:
 
 
 def assert_step_4_1_outputs_match_expected(config_path: str) -> None:
-    evaluation_config = parse_config_file(config_path)["step4"]["evaluation"]
+    evaluation_config = parse_config_file(config_path)["stage4"]["evaluation"]
     validation_dir = Path(__file__).with_name("validation")
     assert_saved_tables_match(
         validation_dir,

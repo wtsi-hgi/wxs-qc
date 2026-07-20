@@ -105,7 +105,7 @@ To start processing your own data, check and modify the following parameters:
     the [resources howto](wxs-qc_prepare-resources.md).
   * `rf_model_id` leave it empty for now and specify after creating the random forest model
     on the VariantQC stage
-* `step0 -> indir` and `step0 -> kg_pop_file` the directory for the 1000G genomes sample data. See below how to obtain it.
+* `stage0 -> indir` and `stage0 -> kg_pop_file` the directory for the 1000G genomes sample data. See below how to obtain it.
 
 All other files and resources you need are described in the corresponding sections
 of this manual.
@@ -118,7 +118,7 @@ will be stored in a specific analysis folder.
 To create the folder for your dataset with all required subfolders, you can run the script:
 
 ```shell
-python stage0_resource_preparation/res_0_create_project_folder.py
+python stage0_resource_preparation/res0_create_project_folder.py
 ```
 
 The script will take all values from the config file and create the dataset folder
@@ -146,7 +146,7 @@ This resource set is required for the super-population prediction on the populat
 It converts the 1000 genomes VCFs into the matrixtable.
 
 ```shell
-python stage0_resource_preparation/res_1_import_1kg.py --all
+python stage0_resource_preparation/res1_import_1kg.py --all
 ```
 
 ### Create the combined Truth Set table
@@ -155,7 +155,7 @@ Run this step to combine all available variation resources (1000 Genomes, Mills,
 into a single table of truth variants.
 
 ```shell
-python stage0_resource_preparation/res_2_generate_truthset_ht.py
+python stage0_resource_preparation/res2_generate_truthset_ht.py
 ```
 
 ### (Optional) Extract whole-genome gnomAD frequencies
@@ -174,7 +174,7 @@ This stage focuses on the variations loading and validation against external dat
 
 ### Load VCFs into Hail and save as a Hail MatrixTable
 
-Specify in the config file under the `step1 -> gatk_vcf_indir` data entry
+Specify in the config file under the `stage1 -> gatk_vcf_indir` data entry
 the path to the directory that you created for pre-QC VCFs.
 
 Run data import:
@@ -296,7 +296,7 @@ For metric description, see the
 function description.
 You can set up the number of PCA components for the script
 `3-population_pca_prediction.py`
-in the section `step2 -> pop_pca` of the config file.
+in the section `stage2 -> pop_pca` of the config file.
 
 **Warning:** The PCA superpopulation prediction and stratified filtering can incorrectly mark as outliers
 samples whose ancestries are not represented in the 1000 Genomes data
@@ -318,7 +318,7 @@ that do not fit neatly into major superpopulations.
 Further details on this approach are available in the [gnomAD v4 post](https://gnomad.broadinstitute.org/news/2023-11-gnomad-v4-0/).
 
 You can set ll the parameters for this function in the section
-`step2 -> stratified_sample_qc -> determine_nearest_neighbors_args`
+`stage2 -> stratified_sample_qc -> determine_nearest_neighbors_args`
 
 
 #### Linear Regression Residuals (lr)
@@ -795,7 +795,7 @@ bedtools intersect -a HG001_GRCh38_1_22_v4.2.1_benchmark.bed -b your_exome_panel
 Place the resulting panel file to the `metadata` folder and add it to the config:
 
 ```yaml
-step4:
+stage4:
   evaluation:
     prec_recall_panel_bed: '${cvars.metadir}/HG001_exome_intersected.bed'
 ```
@@ -882,14 +882,14 @@ The example of the file can be found in the
 
 To export VEP consequences of VCF files,
 you need to provide the correct VCF header
-via the option `step4 -> annotate_cq_rf -> csq_header`.
+via the option `stage4 -> annotate_cq_rf -> csq_header`.
 To create it, run:
 
 ```bash
 bcftools view -h dataset.vep-annotated.vcf.gz > dataset..csq_header.txt'
 ```
 The consequence export works only if **both** `general->metadata->vep_consequences`
-and `step4 -> annotate_cq_rf -> csq_header` are specified.
+and `stage4 -> annotate_cq_rf -> csq_header` are specified.
 
 ```shell
 python stage4_genotype_qc/gqc2_apply_range_of_hard_filters.py

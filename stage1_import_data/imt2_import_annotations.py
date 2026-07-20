@@ -159,13 +159,13 @@ def main() -> None:
     # = STEP PARAMETERS = #
 
     # = STEP DEPENDENCIES = #
-    mtpath = config["step1"]["gatk_mt_outfile"]
-    verifybamid_selfsm = config["step1"]["validate_verifybamid"]["verifybamid_selfsm"]
+    mtpath = config["stage1"]["gatk_mt_outfile"]
+    verifybamid_selfsm = config["stage1"]["validate_verifybamid"]["verifybamid_selfsm"]
     # TODO: change after merging previous config changes from main
-    sex_metadata_file = config["step1"]["sex_metadata_file"]
-    batch_metadata_file = config["step1"]["batch_metadata_file"]
+    sex_metadata_file = config["stage1"]["sex_metadata_file"]
+    batch_metadata_file = config["stage1"]["batch_metadata_file"]
     # = STEP OUTPUTS = #
-    mtoutpath = config["step1"]["mt_metadata_annotated"]
+    mtoutpath = config["stage1"]["mt_metadata_annotated"]
 
     # = STEP LOGIC = #
     _ = hail_utils.init_hl(tmp_dir)
@@ -175,7 +175,7 @@ def main() -> None:
     if verifybamid_selfsm is not None:
         print("=== Running verifyBamID validation ")
         verifybamid = hl.import_table(path_spark(verifybamid_selfsm), types=verifybamid_types)
-        mt = validate_verifybamid(mt, verifybamid, **config["step1"]["validate_verifybamid"])
+        mt = validate_verifybamid(mt, verifybamid, **config["stage1"]["validate_verifybamid"])
 
     else:
         print("=== Skipping verifyBamID validation")

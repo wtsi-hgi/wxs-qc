@@ -11,11 +11,11 @@ def main():
     tmp_dir = config["general"]["tmp_dir"]
 
     # = STEP DEPENDENCIES = #
-    mtpath = config["step1"]["gatk_mt_outfile"]
+    mtpath = config["stage1"]["gatk_mt_outfile"]
 
     # = STEP OUTPUTS = #
-    mut_spectra_path = config["step1"]["plot_mutation_spectra_preqc"]["mut_spectra_path"]
-    mut_spectra_plot_path = config["step1"]["plot_mutation_spectra_preqc"]["mut_spectra_plot_path"]
+    mut_spectra_path = config["stage1"]["plot_mutation_spectra_preqc"]["mut_spectra_path"]
+    mut_spectra_plot_path = config["stage1"]["plot_mutation_spectra_preqc"]["mut_spectra_plot_path"]
 
     # = STEP LOGIC = #
     hail_utils.init_hl(tmp_dir)
@@ -27,7 +27,7 @@ def main():
 
     # Save the combined plot
     mut_spectra_plot = visualize.plot_mutation_spectra_combined(
-        mut_spectra, **config["step1"]["plot_mutation_spectra_preqc"]
+        mut_spectra, **config["stage1"]["plot_mutation_spectra_preqc"]
     )
     bokeh.io.output_file(mut_spectra_plot_path)
     bokeh.io.save(mut_spectra_plot)

@@ -116,14 +116,14 @@ def main():
     tmp_dir = config["general"]["tmp_dir"]
 
     # = STEP DEPENDENCIES = #
-    mt_infile = config["step1"]["validate_gtcheck"]["mt_gtcheck_validated"]  # input from 1.3
+    mt_infile = config["stage1"]["validate_gtcheck"]["mt_gtcheck_validated"]  # input from 1.3
 
     # = STEP OUTPUTS = #
-    sex_mt_file = config["step2"]["impute_sex"]["sex_mt_outfile"]
-    sex_ht_outfile = config["step2"]["impute_sex"]["sex_ht_outfile"]
-    conflicting_sex_report_file = config["step2"]["sex_inconsistencies"]["conflicting_sex_report_file"]
-    fstat_outliers_report_file = config["step2"]["f_stat_outliers"]["fstat_outliers_report_file"]
-    fstat_hist_path = config["step2"]["f_stat_outliers"]["fstat_hist_path"]
+    sex_mt_file = config["stage2"]["impute_sex"]["sex_mt_outfile"]
+    sex_ht_outfile = config["stage2"]["impute_sex"]["sex_ht_outfile"]
+    conflicting_sex_report_file = config["stage2"]["sex_inconsistencies"]["conflicting_sex_report_file"]
+    fstat_outliers_report_file = config["stage2"]["f_stat_outliers"]["fstat_outliers_report_file"]
+    fstat_hist_path = config["stage2"]["f_stat_outliers"]["fstat_hist_path"]
 
     # = STEP LOGIC = #
     _ = hail_utils.init_hl(tmp_dir)
@@ -132,18 +132,18 @@ def main():
     mt_unfiltered = hl.read_matrix_table(path_spark(mt_infile))
 
     # apply hard filters
-    mt_filtered = apply_hard_filters(mt_unfiltered, **config["step2"]["sex_annotation_hard_filters"])
+    mt_filtered = apply_hard_filters(mt_unfiltered, **config["stage2"]["sex_annotation_hard_filters"])
 
     # impute sex
-    mt_sex, sex_ht = impute_sex(mt_filtered, **config["step2"]["impute_sex"])
+    mt_sex, sex_ht = impute_sex(mt_filtered, **config["stage2"]["impute_sex"])
     sex_ht.export(path_spark(sex_ht_outfile))
 
     # Save f-stat outliers in the separate file
-    f_stat_ht_outliers = select_fstat_outliers(sex_ht, **config["step2"]["f_stat_outliers"])
+    f_stat_ht_outliers = select_fstat_outliers(sex_ht, **config["stage2"]["f_stat_outliers"])
     f_stat_ht_outliers.export(path_spark(fstat_outliers_report_file))  # output
 
     # Plot F-stat histogram
-    fstat_hist = plot_f_stat_histogram(sex_ht, **config["step2"]["f_stat_outliers"])
+    fstat_hist = plot_f_stat_histogram(sex_ht, **config["stage2"]["f_stat_outliers"])
     bokeh.io.output_file(fstat_hist_path)
     bokeh.io.save(fstat_hist)
 

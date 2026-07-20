@@ -41,9 +41,9 @@ def run_filtering_and_sample_qc(
     param float min_vaf: minimum variant allele fraction threshold for het calls
 
     ### Config fields
-    step2.stratified_sample_qc.min_depth : int : minimum DP threshold
-    step2.stratified_sample_qc.min_genotype_quality : float : minimum GQ threshold
-    step2.stratified_sample_qc.min_vaf : float : minimum VAF threshold
+    stage2.stratified_sample_qc.min_depth : int : minimum DP threshold
+    stage2.stratified_sample_qc.min_genotype_quality : float : minimum GQ threshold
+    stage2.stratified_sample_qc.min_vaf : float : minimum VAF threshold
     """
     # removing control samples
     mt = filtering.remove_samples(mt, control_list)
@@ -77,13 +77,13 @@ def modify_metric_dict(compute_stratified_metrics_filter_args: dict) -> dict:
     param dict compute_stratified_metrics_filter_args: arguments for stratified metrics filter
 
     ### Config fields
-    step2.stratified_sample_qc.metric_threshold : dict : metric-specific thresholds
-    step2.stratified_sample_qc.upper_threshold : float : default upper threshold
-    step2.stratified_sample_qc.lower_threshold : float : default upper threshold
+    stage2.stratified_sample_qc.metric_threshold : dict : metric-specific thresholds
+    stage2.stratified_sample_qc.upper_threshold : float : default upper threshold
+    stage2.stratified_sample_qc.lower_threshold : float : default upper threshold
 
     """
     metric_dict = compute_stratified_metrics_filter_args.get("metric_threshold", None)
-    if metric_dict != None:
+    if metric_dict is not None:
         compute_stratified_metrics_filter_args["metric_threshold"] = {
             k: tuple(eval(v_i, {"math": math}) if isinstance(v_i, str) else v_i for v_i in v)
             for k, v in metric_dict.items()
@@ -107,12 +107,12 @@ def modify_metric_names(compute_stratified_metrics_filter_args: dict) -> dict:
     param dict compute_stratified_metrics_filter_args: arguments for stratified metrics filter
 
     ### Config fields
-    step2.stratified_sample_qc.metric_threshold : dict : metric-specific thresholds
+    stage2.stratified_sample_qc.metric_threshold : dict : metric-specific thresholds
 
     ### Indirect config fields
     """
     metric_dict = compute_stratified_metrics_filter_args.get("metric_threshold", None)
-    if metric_dict != None:
+    if metric_dict is not None:
         for key in list(compute_stratified_metrics_filter_args["metric_threshold"].keys()):
             compute_stratified_metrics_filter_args["metric_threshold"][key + "_residual"] = (
                 compute_stratified_metrics_filter_args["metric_threshold"].pop(key)
@@ -127,9 +127,9 @@ def get_threshold_dict(compute_stratified_metrics_filter_args: dict, qc_metrics:
     param list qc_metrics: list of QC metrics
 
     ### Config fields
-    step2.stratified_sample_qc.lower_threshold : float : default lower threshold
-    step2.stratified_sample_qc.upper_threshold : float : default upper threshold
-    step2.stratified_sample_qc.metric_threshold : dict : metric-specific overrides
+    stage2.stratified_sample_qc.lower_threshold : float : default lower threshold
+    stage2.stratified_sample_qc.upper_threshold : float : default upper threshold
+    stage2.stratified_sample_qc.metric_threshold : dict : metric-specific overrides
     """
     threshold_dict = {}
     for metric in qc_metrics:
@@ -137,7 +137,7 @@ def get_threshold_dict(compute_stratified_metrics_filter_args: dict, qc_metrics:
             -compute_stratified_metrics_filter_args["lower_threshold"],
             compute_stratified_metrics_filter_args["upper_threshold"],
         )
-    if compute_stratified_metrics_filter_args.get("metric_threshold", None) != None:
+    if compute_stratified_metrics_filter_args.get("metric_threshold", None) is not None:
         for metric in compute_stratified_metrics_filter_args["metric_threshold"].keys():
             threshold_dict[metric] = (
                 -compute_stratified_metrics_filter_args["metric_threshold"][metric][0],
@@ -275,9 +275,9 @@ def annotate_mt(raw_mt_file: str, pop_ht_file: str) -> hl.MatrixTable:
     None
 
     ### Indirect config fields
-    step1.gatk_mt_outfile : input path : used in main
-    step2.predict_populations.pop_ht_file : input path : used in main
-    step2.annotate_with_pop.annotated_mt_file : output path : used in main
+    stage1.gatk_mt_outfile : input path : used in main
+    stage2.predict_populations.pop_ht_file : input path : used in main
+    stage2.annotate_with_pop.annotated_mt_file : output path : used in main
     """
     mt = hl.read_matrix_table(path_spark(raw_mt_file))
     pop_ht = hl.read_table(path_spark(pop_ht_file))
@@ -306,17 +306,17 @@ def stratified_sample_qc_pop(
     TODO: note about `if min_depth > 0 or min_genotype_quality > 0 or min_vaf > 0`
 
     ### Config fields
-    step2.stratified_sample_qc.min_depth : float : TODO
-    step2.stratified_sample_qc.min_genotype_quality : float : TODO
-    step2.stratified_sample_qc.min_vaf : float : TODO
-    step2.stratified_sample_qc.output_text_file : output path : TODO
-    step2.stratified_sample_qc.output_globals_json_file : output path : TODO
+    stage2.stratified_sample_qc.min_depth : float : TODO
+    stage2.stratified_sample_qc.min_genotype_quality : float : TODO
+    stage2.stratified_sample_qc.min_vaf : float : TODO
+    stage2.stratified_sample_qc.output_text_file : output path : TODO
+    stage2.stratified_sample_qc.output_globals_json_file : output path : TODO
 
     ### Indirect config fields
-    step2.annotate_with_pop.annotated_mt_file : input path : used in main
-    step2.stratified_sample_qc.mt_qc_outfile : output path : used in main
-    step2.stratified_sample_qc.ht_qc_cols_outfile : output path : used in main
-    step2.stratified_sample_qc.qc_filter_file : output path : used in main
+    stage2.annotate_with_pop.annotated_mt_file : input path : used in main
+    stage2.stratified_sample_qc.mt_qc_outfile : output path : used in main
+    stage2.stratified_sample_qc.ht_qc_cols_outfile : output path : used in main
+    stage2.stratified_sample_qc.qc_filter_file : output path : used in main
     """
     # filtering variants and running sample QC
     mt_with_sampleqc = run_filtering_and_sample_qc(mt, control_list, min_depth, min_genotype_quality, min_vaf)
@@ -382,13 +382,13 @@ def stratified_sample_qc_nn(
     param dict determine_nearest_neighbors_args: arguments for Determing nearest neighbors
 
     ### Config fields
-    step2.stratified_sample_qc.use_batch : bool : use batch for stratification
-    step2.stratified_sample_qc.min_depth : int : minimum DP threshold
-    step2.stratified_sample_qc.min_genotype_quality : float : minimum GQ threshold
-    step2.stratified_sample_qc.min_vaf : float : minimum VAF threshold
+    stage2.stratified_sample_qc.use_batch : bool : use batch for stratification
+    stage2.stratified_sample_qc.min_depth : int : minimum DP threshold
+    stage2.stratified_sample_qc.min_genotype_quality : float : minimum GQ threshold
+    stage2.stratified_sample_qc.min_vaf : float : minimum VAF threshold
 
     ### Indirect config fields
-    step2.prune_plot_pca.union_pca_scores_file : input path : PCA scores
+    stage2.prune_plot_pca.union_pca_scores_file : input path : PCA scores
     """
     pca_scores = hl.read_table(path_spark(pca_score_file))
     mt = hl.read_matrix_table(path_spark(raw_mt_file))
@@ -472,13 +472,13 @@ def stratified_sample_qc_lr(
     param dict compute_qc_metrics_residuals_args: arguments for residual computing
 
     ### Config fields
-    step2.stratified_sample_qc.use_batch : bool : use batch for stratification
-    step2.stratified_sample_qc.min_depth : int : minimum DP threshold
-    step2.stratified_sample_qc.min_genotype_quality : float : minimum GQ threshold
-    step2.stratified_sample_qc.min_vaf : float : minimum VAF threshold
+    stage2.stratified_sample_qc.use_batch : bool : use batch for stratification
+    stage2.stratified_sample_qc.min_depth : int : minimum DP threshold
+    stage2.stratified_sample_qc.min_genotype_quality : float : minimum GQ threshold
+    stage2.stratified_sample_qc.min_vaf : float : minimum VAF threshold
 
     ### Indirect config fields
-    step2.prune_plot_pca.union_pca_scores_file : input path : PCA scores
+    stage2.prune_plot_pca.union_pca_scores_file : input path : PCA scores
     """
     pca_scores = hl.read_table(path_spark(pca_score_file))
     mt = hl.read_matrix_table(path_spark(raw_mt_file))
@@ -883,26 +883,26 @@ def main():
     tmp_dir = config["general"]["tmp_dir"]
 
     # = STEP PARAMETERS = #
-    runmode = config["step2"]["stratified_sample_qc"]["sample_qc_method"]
+    runmode = config["stage2"]["stratified_sample_qc"]["sample_qc_method"]
     control_list = config["general"]["metadata"]["control_samples"]
     if control_list is None:
         control_list = []
 
     # = STEP DEPENDENCIES = #
-    raw_mt_file = config["step1"]["validate_gtcheck"]["mt_gtcheck_validated"]
-    pop_ht_file = config["step2"]["predict_pops"]["pop_ht_outfile"]
-    pc_scores_file = config["step2"]["prune_plot_pca"]["union_pca_scores_file"]
+    raw_mt_file = config["stage1"]["validate_gtcheck"]["mt_gtcheck_validated"]
+    pop_ht_file = config["stage2"]["predict_pops"]["pop_ht_outfile"]
+    pc_scores_file = config["stage2"]["prune_plot_pca"]["union_pca_scores_file"]
 
     # = STEP OUTPUTS = #
-    annotated_mt_file = config["step2"]["annotate_with_pop"]["annotated_mt_file"]
-    ht_qc_cols_outfile = config["step2"]["stratified_sample_qc"]["ht_qc_cols_outfile"]
-    qc_filter_file = config["step2"]["stratified_sample_qc"]["qc_filter_file"]
-    mad_file = config["step2"]["stratified_sample_qc"]["mad_file"]
-    output_text_file = config["step2"]["stratified_sample_qc"]["output_text_file"]
-    output_stratified_metrics_json = config["step2"]["stratified_sample_qc"]["output_stratified_metrics_json_file"]
-    output_nn_file = config["step2"]["stratified_sample_qc"]["output_nn_file"]
-    output_residuals_file = config["step2"]["stratified_sample_qc"]["output_residuals_file"]
-    output_lms_json = config["step2"]["stratified_sample_qc"]["output_lms_json_file"]
+    annotated_mt_file = config["stage2"]["annotate_with_pop"]["annotated_mt_file"]
+    ht_qc_cols_outfile = config["stage2"]["stratified_sample_qc"]["ht_qc_cols_outfile"]
+    qc_filter_file = config["stage2"]["stratified_sample_qc"]["qc_filter_file"]
+    mad_file = config["stage2"]["stratified_sample_qc"]["mad_file"]
+    output_text_file = config["stage2"]["stratified_sample_qc"]["output_text_file"]
+    output_stratified_metrics_json = config["stage2"]["stratified_sample_qc"]["output_stratified_metrics_json_file"]
+    output_nn_file = config["stage2"]["stratified_sample_qc"]["output_nn_file"]
+    output_residuals_file = config["stage2"]["stratified_sample_qc"]["output_residuals_file"]
+    output_lms_json = config["stage2"]["stratified_sample_qc"]["output_lms_json_file"]
 
     # = STEP LOGIC = #
     _ = hail_utils.init_hl(tmp_dir)
@@ -923,7 +923,7 @@ def main():
         mt.write(path_spark(annotated_mt_file), overwrite=True)
         # run sample QC and stratify by population
         mt_with_sampleqc, sample_qc_ht, mad_ht, threshold_dict = stratified_sample_qc_pop(
-            mt, qc_metrics, control_list, **config["step2"]["stratified_sample_qc"]
+            mt, qc_metrics, control_list, **config["stage2"]["stratified_sample_qc"]
         )
         mt_with_sampleqc.cols().write(path_spark(ht_qc_cols_outfile), overwrite=True)
         sample_qc_ht.write(path_spark(qc_filter_file), overwrite=True)
@@ -937,7 +937,7 @@ def main():
         plot_mad_metrics(
             mad_ht,
             qc_metrics,
-            **config["step2"]["plot_sample_qc_metrics"],
+            **config["stage2"]["plot_sample_qc_metrics"],
             use_strata=True,
             metric_thresholds=threshold_dict,
             color_scheme="1KG",
@@ -947,7 +947,7 @@ def main():
         # run sample QC and stratify by batch if specified
         mt_with_sampleqc, sample_qc_ht, qc_metrics_stats, mad_ht, nn_ht, use_batch, threshold_dict = (
             stratified_sample_qc_nn(
-                raw_mt_file, pc_scores_file, qc_metrics, control_list, **config["step2"]["stratified_sample_qc"]
+                raw_mt_file, pc_scores_file, qc_metrics, control_list, **config["stage2"]["stratified_sample_qc"]
             )
         )
         mt_with_sampleqc.cols().write(path_spark(ht_qc_cols_outfile), overwrite=True)
@@ -966,7 +966,7 @@ def main():
             mad_ht,
             qc_metrics,
             color_scheme=None,
-            **config["step2"]["plot_sample_qc_metrics"],
+            **config["stage2"]["plot_sample_qc_metrics"],
             use_strata=use_batch,
             metric_thresholds=threshold_dict,
         )
@@ -974,7 +974,7 @@ def main():
     elif runmode == "lr":
         # run sample QC and stratify by batch if specified
         mt_with_sampleqc, qc_metrics_ht, mad_ht, sample_qc_res_ht, use_batch, threshold_dict = stratified_sample_qc_lr(
-            raw_mt_file, pc_scores_file, qc_metrics, control_list, **config["step2"]["stratified_sample_qc"]
+            raw_mt_file, pc_scores_file, qc_metrics, control_list, **config["stage2"]["stratified_sample_qc"]
         )
         mt_with_sampleqc.cols().write(path_spark(ht_qc_cols_outfile), overwrite=True)
         qc_metrics_ht.write(path_spark(qc_filter_file), overwrite=True)
@@ -988,7 +988,7 @@ def main():
         plot_mad_metrics(
             mad_ht,
             qc_metrics,
-            **config["step2"]["plot_sample_qc_metrics"],
+            **config["stage2"]["plot_sample_qc_metrics"],
             use_strata=use_batch,
             metric_thresholds=threshold_dict,
         )

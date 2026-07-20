@@ -92,7 +92,7 @@ def create_binned_data_initial(
     :param dict config: Dictionary with threshold values
     :return: Table with bins added
     """
-    conf = config["step3"]["create_binned_data_initial"]
+    conf = config["stage3"]["create_binned_data_initial"]
     # Count variants for ranking
     # count_expr = {x: hl.agg.filter(hl.is_defined(ht[x]), hl.agg.counter(hl.cond(hl.is_snp(
     #     ht.alleles[0], ht.alleles[1]), 'snv', 'indel'))) for x in ht.row if x.endswith('rank')}
@@ -329,7 +329,7 @@ def main():
 
     # = STEP PARAMETERS = #
     model_id = config["general"]["rf_model_id"]
-    pedfile: str = config["step3"]["pedfile"]
+    pedfile: str = config["stage3"]["pedfile"]
 
     # = STEP DEPENDENCIES = #
     rf_dir: str = path_spark(config["general"]["var_qc_rf_dir"])
@@ -338,7 +338,7 @@ def main():
 
     # = STEP OUTPUTS = #
     htrankedfile: str = os.path.join(rf_dir, model_id, "rf_result_ranked.ht")
-    truth_htfile: str = config["step3"]["create_binned_data_initial"]["truth_htfile"]
+    truth_htfile: str = config["stage3"]["create_binned_data_initial"]["truth_htfile"]
     # TODO: should be in the config
     bin_tmp_htfile: str = os.path.join(rf_dir, model_id, "_gnomad_score_binning_tmp.ht")
     bin_htfile: str = os.path.join(rf_dir, model_id, "_rf_result_ranked_BINS.ht")

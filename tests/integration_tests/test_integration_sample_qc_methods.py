@@ -15,10 +15,10 @@ def assert_sample_qc_outputs(
 ) -> None:
     config = parse_config_file(config_path)
     assert config["general"]["sample_qc_method"] == sample_qc_method
-    assert config["step2"]["stratified_sample_qc"]["sample_qc_method"] == sample_qc_method
+    assert config["stage2"]["stratified_sample_qc"]["sample_qc_method"] == sample_qc_method
 
     for output_key in output_keys:
-        output_path = Path(config["step2"]["stratified_sample_qc"][output_key])
+        output_path = Path(config["stage2"]["stratified_sample_qc"][output_key])
         assert output_path.exists(), f"Expected {sample_qc_method} output does not exist: {output_path}"
         assert output_path.stat().st_size > 0, f"Expected {sample_qc_method} output is empty: {output_path}"
 

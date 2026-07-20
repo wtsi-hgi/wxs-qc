@@ -566,9 +566,9 @@ def main():
     tmp_dir = config["general"]["tmp_dir"]
 
     # = STEP PARAMETERS = #
-    qc_plots_settings = config["step3"]["create_plots"]["qc_plots_settings"]
+    qc_plots_settings = config["stage3"]["create_plots"]["qc_plots_settings"]
     model_id: str = config["general"]["rf_model_id"]
-    pedfile: str = config["step3"]["pedfile"]
+    pedfile: str = config["stage3"]["pedfile"]
 
     # = STEP DEPENDENCIES = #
     rf_dir = path_spark(config["general"]["var_qc_rf_dir"])

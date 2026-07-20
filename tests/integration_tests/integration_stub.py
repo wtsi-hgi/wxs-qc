@@ -5,10 +5,10 @@ from unittest.mock import patch
 
 import pytest
 from stage0_resource_preparation import (
-    res_0_create_project_folder as qc_step_0_0,
-    res_1_import_1kg as qc_step_0_1,
-    res_2_generate_truthset_ht as qc_step_0_2,
-    res_3_prepare_gnomad_ht as qc_step_0_3,
+    res0_create_project_folder as qc_step_0_0,
+    res1_import_1kg as qc_step_0_1,
+    res2_generate_truthset_ht as qc_step_0_2,
+    res3_prepare_gnomad_ht as qc_step_0_3,
 )
 from stage1_import_data import (
     imt_4_mutation_spectra_preqc as qc_step_1_4,

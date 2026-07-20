@@ -11,11 +11,11 @@ def main():
     tmp_dir = config["general"]["tmp_dir"]
 
     # = STEP DEPENDENCIES = #
-    mtpath = config["step4"]["export_vcfs_a"]["mtfile"]
+    mtpath = config["stage4"]["export_vcfs_a"]["mtfile"]
 
     # = STEP OUTPUTS = #
-    mut_spectra_path = config["step4"]["plot_mutation_spectra_afterqc"]["mut_spectra_path"]
-    mut_spectra_plot_path = config["step4"]["plot_mutation_spectra_afterqc"]["mut_spectra_plot_path"]
+    mut_spectra_path = config["stage4"]["plot_mutation_spectra_afterqc"]["mut_spectra_path"]
+    mut_spectra_plot_path = config["stage4"]["plot_mutation_spectra_afterqc"]["mut_spectra_plot_path"]
 
     # = STEP LOGIC = #
     hail_utils.init_hl(tmp_dir)
@@ -26,7 +26,7 @@ def main():
 
     # Save the plot
     mut_spectra_plot = visualize.plot_mutation_spectra_combined(
-        mut_spectra, **config["step4"]["plot_mutation_spectra_afterqc"]
+        mut_spectra, **config["stage4"]["plot_mutation_spectra_afterqc"]
     )
     bokeh.io.output_file(mut_spectra_plot_path)
     bokeh.io.save(mut_spectra_plot)

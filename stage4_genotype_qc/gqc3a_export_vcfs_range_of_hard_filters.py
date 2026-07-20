@@ -243,16 +243,16 @@ def main():
     tmp_dir = config["general"]["tmp_dir"]
 
     # = STEP PARAMETERS = #
-    hard_filters = config["step4"]["apply_hard_filters"]["hard_filters"]  # set in step 4.1a
+    hard_filters = config["stage4"]["apply_hard_filters"]["hard_filters"]  # set in step 4.1a
     model_id = config["general"]["rf_model_id"]
 
     # = STEP DEPENDENCIES = #
-    mtfile = config["step4"]["export_vcfs_a"]["mtfile"]
-    csq_file = config["step4"]["annotate_cq_rf"]["cqfile"]
-    csq_header_file = config["step4"]["annotate_cq_rf"]["csq_header"]
+    mtfile = config["stage4"]["export_vcfs_a"]["mtfile"]
+    csq_file = config["stage4"]["annotate_cq_rf"]["cqfile"]
+    csq_header_file = config["stage4"]["annotate_cq_rf"]["csq_header"]
 
     # = STEP OUTPUTS = #
-    filtered_vcf_dir = config["step4"]["export_vcfs_a"]["vcf_output_dir"]
+    filtered_vcf_dir = config["stage4"]["export_vcfs_a"]["vcf_output_dir"]
 
     # = STEP LOGIC = #
     _ = hail_utils.init_hl(tmp_dir)

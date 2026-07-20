@@ -227,12 +227,12 @@ def main():
     model_id = config["general"]["rf_model_id"]
 
     # = STEP DEPENDENCIES = #
-    mt_prefiltered_file = config["step4"]["annotate_cq_rf"]["mtfile"]
-    cqfile = config["step4"]["annotate_cq_rf"]["cqfile"]
+    mt_prefiltered_file = config["stage4"]["annotate_cq_rf"]["mtfile"]
+    cqfile = config["stage4"]["annotate_cq_rf"]["cqfile"]
     rf_dir = path_spark(config["general"]["var_qc_rf_dir"])
 
-    mtfile = config["step4"]["annotate_gnomad"]["mtfile"]
-    gnomad_htfile = config["step4"]["annotate_gnomad"]["gnomad_htfile"]
+    mtfile = config["stage4"]["annotate_gnomad"]["mtfile"]
+    gnomad_htfile = config["stage4"]["annotate_gnomad"]["gnomad_htfile"]
 
     # = STEP LOGIC = #
     _ = hail_utils.init_hl(tmp_dir)
@@ -292,13 +292,13 @@ def main():
     cq_stats_df = cq_stats_df[
         vep_csq_coding_present + ["total_coding"] + vep_csq_non_coding_present + ["total_noncoding"]
     ]
-    cq_stats_df.to_csv(config["step4"]["get_counts_per_cq"]["cq_stats_df"], sep="\t")
+    cq_stats_df.to_csv(config["stage4"]["get_counts_per_cq"]["cq_stats_df"], sep="\t")
 
     mt = annotate_gnomad(mt, gnomad_htfile)
     # TODO: make optional as it only prints info to stdout
-    # pedfile = config["step4"]["get_trans_untrans_synon_singleton_counts"]["pedfile"]
+    # pedfile = config["stage4"]["get_trans_untrans_synon_singleton_counts"]["pedfile"]
     # get_trans_untrans_synon_singleton_counts(mt, pedfile) # test data has no trios
-    cq_out_file = config["step4"]["get_counts_per_cq"]["cq_out_file"]
+    cq_out_file = config["stage4"]["get_counts_per_cq"]["cq_out_file"]
     get_counts_per_cq(mt, cq_out_file)
 
 

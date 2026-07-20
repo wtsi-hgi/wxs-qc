@@ -33,10 +33,10 @@ def main() -> None:
     # = STEP PARAMETERS = #
 
     # = STEP DEPENDENCIES = #
-    input_gnomad_htfile = config["step0"]["prepare_gnomad_ht"]["input_gnomad_htfile"]
+    input_gnomad_htfile = config["stage0"]["prepare_gnomad_ht"]["input_gnomad_htfile"]
 
     # = STEP OUTPUTS = #
-    processed_gnomad_htfile = config["step0"]["prepare_gnomad_ht"]["processed_gnomad_htfile"]
+    processed_gnomad_htfile = config["stage0"]["prepare_gnomad_ht"]["processed_gnomad_htfile"]
 
     # = STEP LOGIC = #
     _ = hail_utils.init_hl(tmp_dir)

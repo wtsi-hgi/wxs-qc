@@ -321,26 +321,26 @@ def main():
     tmp_dir = config["general"]["tmp_dir"]
 
     # = STEP PARAMETERS = #
-    pedfile = config["step3"]["pedfile"]
+    pedfile = config["stage3"]["pedfile"]
 
     # = STEP DEPENDENCIES = #
-    mtfile = config["step3"]["split_multi_and_var_qc"]["mtfile"]
+    mtfile = config["stage3"]["split_multi_and_var_qc"]["mtfile"]
 
     # = STEP OUTPUTS = #
-    varqc_mtoutfile = config["step3"]["split_multi_and_var_qc"]["varqc_mtoutfile"]
-    varqc_mtoutfile_split = config["step3"]["split_multi_and_var_qc"]["varqc_mtoutfile_split"]
+    varqc_mtoutfile = config["stage3"]["split_multi_and_var_qc"]["varqc_mtoutfile"]
+    varqc_mtoutfile_split = config["stage3"]["split_multi_and_var_qc"]["varqc_mtoutfile_split"]
 
-    trio_mtoutfile = config["step3"]["trio_family_dnm_annotation"]["trio_mtoutfile"]
-    trio_stats_htoutfile = config["step3"]["trio_family_dnm_annotation"]["trio_stats_htoutfile"]
-    fam_stats_htoutfile = config["step3"]["trio_family_dnm_annotation"]["fam_stats_htoutfile"]
-    fam_stats_mtoutfile = config["step3"]["trio_family_dnm_annotation"]["fam_stats_mtoutfile"]
-    fam_stats_gnomad_mtoutfile = config["step3"]["trio_family_dnm_annotation"]["fam_stats_gnomad_mtoutfile"]
-    gnomad_htfile = config["step3"]["trio_family_dnm_annotation"]["gnomad_htfile"]
-    dnm_htoutfile = config["step3"]["trio_family_dnm_annotation"]["dnm_htoutfile"]
+    trio_mtoutfile = config["stage3"]["trio_family_dnm_annotation"]["trio_mtoutfile"]
+    trio_stats_htoutfile = config["stage3"]["trio_family_dnm_annotation"]["trio_stats_htoutfile"]
+    fam_stats_htoutfile = config["stage3"]["trio_family_dnm_annotation"]["fam_stats_htoutfile"]
+    fam_stats_mtoutfile = config["stage3"]["trio_family_dnm_annotation"]["fam_stats_mtoutfile"]
+    fam_stats_gnomad_mtoutfile = config["stage3"]["trio_family_dnm_annotation"]["fam_stats_gnomad_mtoutfile"]
+    gnomad_htfile = config["stage3"]["trio_family_dnm_annotation"]["gnomad_htfile"]
+    dnm_htoutfile = config["stage3"]["trio_family_dnm_annotation"]["dnm_htoutfile"]
 
-    inbreeding_htoutfile = config["step3"]["create_inbreeding_ht_with_ac_and_allele_data"]["inbreeding_htoutfile"]
-    qc_ac_htoutfile = config["step3"]["create_inbreeding_ht_with_ac_and_allele_data"]["qc_ac_htoutfile"]
-    allele_data_htoutfile = config["step3"]["create_inbreeding_ht_with_ac_and_allele_data"]["allele_data_htoutfile"]
+    inbreeding_htoutfile = config["stage3"]["create_inbreeding_ht_with_ac_and_allele_data"]["inbreeding_htoutfile"]
+    qc_ac_htoutfile = config["stage3"]["create_inbreeding_ht_with_ac_and_allele_data"]["qc_ac_htoutfile"]
+    allele_data_htoutfile = config["stage3"]["create_inbreeding_ht_with_ac_and_allele_data"]["allele_data_htoutfile"]
 
     # = STEP LOGIC = #
     hail_utils.init_hl(tmp_dir)

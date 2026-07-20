@@ -73,7 +73,7 @@ cvars:
   vcf_export_dir: '${general.vcf_export_dir}'
 
 
-step0:
+stage0:
   # --- Step 0.1 --- #
   create_1kg_mt:
     indir: '${general.onekg_resource_dir}'
@@ -131,7 +131,7 @@ step0:
     processed_gnomad_htfile: '${cvars.resdir}/gnomad.exomes.r4.1.freq_only.ht'
 
 
-step1:
+stage1:
   # --- Step 1.1 --- #
   gatk_vcf_header_infile:
   gatk_vcf_indir: '${general.data_root}/vcfs_pre-qc'
@@ -169,7 +169,7 @@ step1:
     width: 800
     height: 600
 
-step2:
+stage2:
   # --- Step 2.1 --- #
   sex_annotation_hard_filters:
     n_alt_alleles_threshold: 0.01
@@ -333,7 +333,7 @@ step2:
     samples_to_remove_file: null #'${cvars.metadir}/wxs-qc_public_dataset_v3.samples_to_remove_after_sampleqc.tsv'
 
 
-step3:
+stage3:
   # To skip all trios-related computations, put here the `null` value
   pedfile: ${general.metadata.pedigree}
 
@@ -442,7 +442,7 @@ step3:
     mtoutfile_after_varqc: '${cvars.mtdir}/mt_after_var_qc.mt'
 
 
-step4:
+stage4:
   # --- Step 4.1 --- #
   evaluation:
     giab_vcf:    '${cvars.resdir}/HG001_GRCh38_1_22_v4.2.1_benchmark.vcf.gz'

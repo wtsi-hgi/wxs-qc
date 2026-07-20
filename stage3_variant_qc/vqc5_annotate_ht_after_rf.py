@@ -270,22 +270,22 @@ def main():
     tmp_dir = config["general"]["tmp_dir"]
 
     # = STEP PARAMETERS = #
-    pedfile: str = config["step3"]["pedfile"]
+    pedfile: str = config["stage3"]["pedfile"]
     model_id: str = config["general"]["rf_model_id"]
-    synonymous_file: str = config["step3"]["add_cq_annotation"]["cqfile"]
-    gnomad_htfile: str = config["step3"]["annotate_gnomad"]["gnomad_htfile"]
+    synonymous_file: str = config["stage3"]["add_cq_annotation"]["cqfile"]
+    gnomad_htfile: str = config["stage3"]["annotate_gnomad"]["gnomad_htfile"]
 
     # = STEP DEPENDENCIES = #
     rf_dir = path_spark(config["general"]["var_qc_rf_dir"])
     htfile: str = os.path.join(rf_dir, model_id, "rf_result.ht")
 
     # = STEP OUTPUTS = #
-    dnm_htfile: str = config["step3"]["dnm_and_family_annotation"]["dnm_htfile"]
-    fam_stats_htfile: str = config["step3"]["dnm_and_family_annotation"]["fam_stats_htfile"]
-    trio_stats_htfile: str = config["step3"]["dnm_and_family_annotation"]["trio_stats_htfile"]
+    dnm_htfile: str = config["stage3"]["dnm_and_family_annotation"]["dnm_htfile"]
+    fam_stats_htfile: str = config["stage3"]["dnm_and_family_annotation"]["fam_stats_htfile"]
+    trio_stats_htfile: str = config["stage3"]["dnm_and_family_annotation"]["trio_stats_htfile"]
     family_annot_htfile: str = os.path.join(rf_dir, model_id, "rf_result_denovo_family_stats.ht")
-    trio_mtfile: str = config["step3"]["transmitted_singleton_annotation"]["trio_mtfile"]
-    # trio_filtered_mtfile:str = config["step3"]["transmitted_singleton_annotation"]["trio_filtered_mtfile"] # TODO: remove form config if not needed
+    trio_mtfile: str = config["stage3"]["transmitted_singleton_annotation"]["trio_mtfile"]
+    # trio_filtered_mtfile:str = config["stage3"]["transmitted_singleton_annotation"]["trio_filtered_mtfile"] # TODO: remove form config if not needed
     trans_sing_htfile: str = os.path.join(rf_dir, model_id, "rf_result_trans_sing.ht")
     ht_cq_file: str = os.path.join(rf_dir, model_id, "rf_result_with_synonymous.ht")
     final_htfile: str = os.path.join(rf_dir, model_id, "rf_result_final_for_ranking.ht")

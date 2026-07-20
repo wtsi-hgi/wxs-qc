@@ -36,13 +36,13 @@ def main() -> None:
     # = STEP PARAMETERS = #
 
     # = STEP DEPENDENCIES = #
-    omni = config["step0"]["generate_truthset_ht"]["omni"]
-    mills = config["step0"]["generate_truthset_ht"]["mills"]
-    thousand_genomes = config["step0"]["generate_truthset_ht"]["thousand_genomes"]
-    hapmap = config["step0"]["generate_truthset_ht"]["hapmap"]
+    omni = config["stage0"]["generate_truthset_ht"]["omni"]
+    mills = config["stage0"]["generate_truthset_ht"]["mills"]
+    thousand_genomes = config["stage0"]["generate_truthset_ht"]["thousand_genomes"]
+    hapmap = config["stage0"]["generate_truthset_ht"]["hapmap"]
 
     # = STEP OUTPUTS = #
-    truth_ht_outfile = config["step0"]["generate_truthset_ht"]["truth_ht_outfile"]
+    truth_ht_outfile = config["stage0"]["generate_truthset_ht"]["truth_ht_outfile"]
 
     # = STEP LOGIC = #
     hail_utils.init_hl(tmp_dir)

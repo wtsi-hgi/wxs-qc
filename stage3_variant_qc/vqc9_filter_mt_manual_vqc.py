@@ -67,10 +67,10 @@ def main():
     # = STEP DEPENDENCIES = #
     rf_dir = path_spark(config["general"]["var_qc_rf_dir"])
     htfile = os.path.join(rf_dir, model_id, "_gnomad_score_binning_tmp.ht")
-    mtfile = config["step3"]["annotate_mt_with_cq_rf_score_and_bin"]["mtfile"]
+    mtfile = config["stage3"]["annotate_mt_with_cq_rf_score_and_bin"]["mtfile"]
 
     # = STEP OUTPUTS = #
-    mtoutfile_after_varqc = config["step3"]["annotate_mt_with_cq_rf_score_and_bin"]["mtoutfile_after_varqc"]
+    mtoutfile_after_varqc = config["stage3"]["annotate_mt_with_cq_rf_score_and_bin"]["mtoutfile_after_varqc"]
 
     # = STEP LOGIC = #
     _ = hail_utils.init_hl(tmp_dir)

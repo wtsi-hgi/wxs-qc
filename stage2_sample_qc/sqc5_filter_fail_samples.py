@@ -66,15 +66,15 @@ def main():
     tmp_dir = config["general"]["tmp_dir"]
 
     # = STEP DEPENDENCIES = #
-    raw_mt_file = config["step1"]["validate_gtcheck"]["mt_gtcheck_validated"]  # Raw mt file
-    qc_filter_ht_file = config["step2"]["stratified_sample_qc"]["qc_filter_file"]  # Results of stratified filtering
-    samples_to_remove_file = config["step2"]["sample_qc_combine_results"]["samples_to_remove_file"]
+    raw_mt_file = config["stage1"]["validate_gtcheck"]["mt_gtcheck_validated"]  # Raw mt file
+    qc_filter_ht_file = config["stage2"]["stratified_sample_qc"]["qc_filter_file"]  # Results of stratified filtering
+    samples_to_remove_file = config["stage2"]["sample_qc_combine_results"]["samples_to_remove_file"]
 
     # = STEP OUTPUTS = #
-    samples_failing_qc_file = config["step2"]["remove_sample_qc_fails"][
+    samples_failing_qc_file = config["stage2"]["remove_sample_qc_fails"][
         "samples_failing_qc_file"
     ]  # Table of samples failed Stratified QC
-    sample_qc_filtered_mt_file = config["step2"]["remove_sample_qc_fails"]["sample_qc_filtered_mt_file"]
+    sample_qc_filtered_mt_file = config["stage2"]["remove_sample_qc_fails"]["sample_qc_filtered_mt_file"]
 
     # = STEP LOGIC = #
     hail_utils.init_hl(tmp_dir)

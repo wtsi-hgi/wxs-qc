@@ -18,7 +18,7 @@ def main() -> None:
     plots_dir = conf["plots_dir"]
     var_qc_rf_dir = conf["var_qc_rf_dir"]
     vcf_export_dir = conf["vcf_export_dir"]
-    gatk_vcf_indir = config["step1"]["gatk_vcf_indir"]
+    gatk_vcf_indir = config["stage1"]["gatk_vcf_indir"]
 
     # = STEP LOGIC = #
     os.makedirs(data_root, exist_ok=True)

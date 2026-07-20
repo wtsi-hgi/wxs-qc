@@ -432,20 +432,20 @@ def main() -> None:
 
     # = STEP PARAMETERS = #
     dataset: str = config["general"]["dataset_name"]
-    wes_id_col: str = config["step1"]["validate_gtcheck"]["wes_id_col"]
-    microarray_id_col: str = config["step1"]["validate_gtcheck"]["microarray_id_col"]
-    gtcheck_score_threshold: float = config["step1"]["validate_gtcheck"]["gtcheck_score_threshold"]
+    wes_id_col: str = config["stage1"]["validate_gtcheck"]["wes_id_col"]
+    microarray_id_col: str = config["stage1"]["validate_gtcheck"]["microarray_id_col"]
+    gtcheck_score_threshold: float = config["stage1"]["validate_gtcheck"]["gtcheck_score_threshold"]
 
     # = STEP DEPENDENCIES = #
-    mtpath: str = config["step1"]["mt_metadata_annotated"]
-    wes_microarray_mapping: Optional[str] = config["step1"]["validate_gtcheck"]["wes_microarray_mapping"]
-    microarray_ids: str = config["step1"]["validate_gtcheck"]["microarray_ids"]
-    gtcheck_report: str = config["step1"]["validate_gtcheck"]["gtcheck_report"]
+    mtpath: str = config["stage1"]["mt_metadata_annotated"]
+    wes_microarray_mapping: Optional[str] = config["stage1"]["validate_gtcheck"]["wes_microarray_mapping"]
+    microarray_ids: str = config["stage1"]["validate_gtcheck"]["microarray_ids"]
+    gtcheck_report: str = config["stage1"]["validate_gtcheck"]["gtcheck_report"]
 
     # = STEP OUTPUTS = #
-    gtcheck_results_folder: str = config["step1"]["validate_gtcheck"]["gtcheck_results_folder"]
+    gtcheck_results_folder: str = config["stage1"]["validate_gtcheck"]["gtcheck_results_folder"]
     gtcheck_results_prefix = os.path.join(gtcheck_results_folder, dataset)
-    mt_gtcheck_validated: str = config["step1"]["validate_gtcheck"]["mt_gtcheck_validated"]
+    mt_gtcheck_validated: str = config["stage1"]["validate_gtcheck"]["mt_gtcheck_validated"]
 
     # = STEP LOGIC = #
     _ = hail_utils.init_hl(tmp_dir)

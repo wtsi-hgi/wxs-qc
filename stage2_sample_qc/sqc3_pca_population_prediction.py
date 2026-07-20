@@ -148,24 +148,22 @@ def main():
     tmp_dir = config["general"]["tmp_dir"]
 
     # = STEP PARAMETERS = #
-    control_list = config["general"]["metadata"]["control_samples"]
-
     # = STEP DEPENDENCIES = #
-    # mtfile = path_spark(config["step2"]["impute_sex"]["sex_mt_outfile"])
-    mtfile = path_spark(config["step2"]["filtered_mt_outfile"])
-    kg_mt_file = path_spark(config["step0"]["create_1kg_mt"]["kg_out_mt"])
-    kg_pop_file = path_spark(config["step0"]["create_1kg_mt"]["kg_pop_file"])
+    # mtfile = path_spark(config["stage2"]["impute_sex"]["sex_mt_outfile"])
+    mtfile = path_spark(config["stage2"]["filtered_mt_outfile"])
+    kg_mt_file = path_spark(config["stage0"]["create_1kg_mt"]["kg_out_mt"])
+    kg_pop_file = path_spark(config["stage0"]["create_1kg_mt"]["kg_pop_file"])
 
     # = STEP OUTPUTS = #
-    merged_mt_file = path_spark(config["step2"]["merge_1kg_and_ldprune"]["pruned_and_merged_mt_outfile"])
-    pca_1kg_scores_file = path_spark(config["step2"]["pop_pca"]["pca_1kg_scores_file"])
-    pca_1kg_loadings_file = path_spark(config["step2"]["pop_pca"]["pca_1kg_loadings_file"])
-    pca_union_scores_file = path_spark(config["step2"]["pop_pca"]["pca_union_scores_file"])
-    pop_pca_1kg_graph = config["step2"]["plot_pop_pca"]["pop_pca_1kg_graph"]
-    pop_pca_union_graph = config["step2"]["plot_pop_pca"]["pop_pca_union_graph"]
-    pop_ht_file = path_spark(config["step2"]["predict_pops"]["pop_ht_outfile"])
-    pop_assigned_pca_union_graph = config["step2"]["plot_pop_pca_assigned"]["pop_assigned_pca_union_graph"]
-    pop_pca_assigned_dataset_graph = config["step2"]["plot_pop_pca_assigned"]["pop_assigned_pca_dataset_graph"]
+    merged_mt_file = path_spark(config["stage2"]["merge_1kg_and_ldprune"]["pruned_and_merged_mt_outfile"])
+    pca_1kg_scores_file = path_spark(config["stage2"]["pop_pca"]["pca_1kg_scores_file"])
+    pca_1kg_loadings_file = path_spark(config["stage2"]["pop_pca"]["pca_1kg_loadings_file"])
+    pca_union_scores_file = path_spark(config["stage2"]["pop_pca"]["pca_union_scores_file"])
+    pop_pca_1kg_graph = config["stage2"]["plot_pop_pca"]["pop_pca_1kg_graph"]
+    pop_pca_union_graph = config["stage2"]["plot_pop_pca"]["pop_pca_union_graph"]
+    pop_ht_file = path_spark(config["stage2"]["predict_pops"]["pop_ht_outfile"])
+    pop_assigned_pca_union_graph = config["stage2"]["plot_pop_pca_assigned"]["pop_assigned_pca_union_graph"]
+    pop_pca_assigned_dataset_graph = config["stage2"]["plot_pop_pca_assigned"]["pop_assigned_pca_dataset_graph"]
 
     # = STEP LOGIC = #
     _ = hail_utils.init_hl(tmp_dir)
@@ -173,13 +171,13 @@ def main():
     if args.merge_and_ldprune:
         mt = hl.read_matrix_table(mtfile)
         kg_mt = hl.read_matrix_table(kg_mt_file)
-        pruned_mt = merge_1kg_and_ldprune(mt, kg_mt, **config["step2"]["merge_1kg_and_ldprune"])
+        pruned_mt = merge_1kg_and_ldprune(mt, kg_mt, **config["stage2"]["merge_1kg_and_ldprune"])
         pruned_mt.write(merged_mt_file, overwrite=True)
 
     # run pca
     if args.pca:
         filtered_mt = hl.read_matrix_table(merged_mt_file)
-        pca_1kg_scores, pca_1kg_loadings, union_PCA_scores = pop_pca(filtered_mt, **config["step2"]["pop_pca"])
+        pca_1kg_scores, pca_1kg_loadings, union_PCA_scores = pop_pca(filtered_mt, **config["stage2"]["pop_pca"])
         pca_1kg_scores.write(pca_1kg_scores_file, overwrite=True)
         pca_1kg_loadings.write(pca_1kg_loadings_file, overwrite=True)
         union_PCA_scores.write(pca_union_scores_file, overwrite=True)
@@ -188,7 +186,7 @@ def main():
         print(f"Plotting PCA components for {pca_union_scores_file}")
         pca_union_scores = hl.read_table(pca_union_scores_file)
         print("Union components:", pca_union_scores.count())
-        n_pca = config["step2"]["plot_pop_pca"]["pca_components"]
+        n_pca = config["stage2"]["plot_pop_pca"]["pca_components"]
         visualize.plot_pop_pca(pca_union_scores, pop_pca_union_graph, n_pca, pop="known_pop")
         print(f"Plotting PCA components for {pca_1kg_scores_file}")
         pca_1kg_scores = hl.read_table(pca_1kg_scores_file)
@@ -205,11 +203,11 @@ def main():
     # assign pops
     if args.assign_pops:
         union_PCA_scores = hl.read_table(pca_union_scores_file)
-        pop_ht = predict_pops(union_PCA_scores, **config["step2"]["predict_pops"])
+        pop_ht = predict_pops(union_PCA_scores, **config["stage2"]["predict_pops"])
         pop_ht.write(pop_ht_file, overwrite=True)
 
     if args.pca_plot_assigned:
-        n_pca = config["step2"]["plot_pop_pca_assigned"]["pca_components"]
+        n_pca = config["stage2"]["plot_pop_pca_assigned"]["pca_components"]
         print(f"Plotting PCA components for assigned populations: {pop_ht_file}")
         pop_ht = hl.read_table(pop_ht_file)
         pop_ht = pop_ht.transmute(scores=pop_ht.pca_scores)

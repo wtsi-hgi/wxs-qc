@@ -141,7 +141,7 @@ Prefer the local style and contracts of the files you are touching.
   If needed, unpack the `config` dictionary into individual arguments when it matches the existing call pattern
 
 ```python
-fstat_hist = plot_f_stat_histogram(sex_ht, **config["step2"]["f_stat_outliers"])
+fstat_hist = plot_f_stat_histogram(sex_ht, **config["stage2"]["f_stat_outliers"])
 ```
 
 - Convert file paths to Spark format, such as `file://`, only at the point where

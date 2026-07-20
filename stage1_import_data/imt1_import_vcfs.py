@@ -18,15 +18,15 @@ def load_vcfs_to_mt(config):
 
     ### Config fields
     ```
-    step1.gatk_vcf_header_infile
-    step1.gatk_vcf_indir
-    step1.gatk_mt_outfile
+    stage1.gatk_vcf_header_infile
+    stage1.gatk_vcf_indir
+    stage1.gatk_mt_outfile
     ```
     """
     indir, header, outfile = (
-        config["step1"]["gatk_vcf_indir"],
-        config["step1"].get("gatk_vcf_header_infile"),  # optional
-        config["step1"]["gatk_mt_outfile"],
+        config["stage1"]["gatk_vcf_indir"],
+        config["stage1"].get("gatk_vcf_header_infile"),  # optional
+        config["stage1"]["gatk_mt_outfile"],
     )
     anndir = config["general"]["annotation_dir"]
 
