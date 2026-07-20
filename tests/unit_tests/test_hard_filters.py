@@ -4,7 +4,7 @@ from unittest.mock import patch
 import importlib
 import hail as hl
 
-qc_step_4_1 = importlib.import_module("4-genotype_qc.1-compare_hard_filter_combinations")
+qc_step_4_1 = importlib.import_module("stage4_genotype_qc.1-compare_hard_filter_combinations")
 
 
 def test_hard_filters_cache_filter_results(tmp_path):

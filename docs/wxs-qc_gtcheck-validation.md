@@ -61,7 +61,7 @@ microarray_id_col: 'Microarray_ID'
 Run the validation script:
 
 ```shell
-python 1-import_data/3-validate-gtcheck.py
+python stage1_import_data/imt3_validate_gtcheck.py
 ```
 
 ## Gtcheck validation results and interpretation:

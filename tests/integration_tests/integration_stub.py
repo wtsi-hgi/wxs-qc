@@ -88,7 +88,7 @@ def render_config(
 
 class IntegrationTestsStub:
     def stub_0_0_create_data_folder(self) -> None:
-        qc_step_0_0 = importlib.import_module("0-resource_preparation.0-create_data_folder")
+        qc_step_0_0 = importlib.import_module("stage0_resource_preparation.0-create_data_folder")
         try:
             qc_step_0_0.main()
         except Exception as e:
@@ -101,14 +101,14 @@ class IntegrationTestsStub:
         ),
     )
     def stub_0_1_import_data(self, mock_args: Any) -> None:
-        qc_step_0_1 = importlib.import_module("0-resource_preparation.1-import_1kg")
+        qc_step_0_1 = importlib.import_module("stage0_resource_preparation.1-import_1kg")
         try:
             qc_step_0_1.main()
         except Exception as e:
             pytest.fail(f"Step 0.1 failed with an exception: {e}")
 
     def stub_0_2_import_data(self) -> None:
-        qc_step_0_2 = importlib.import_module("0-resource_preparation.2-generate-truthset-ht")
+        qc_step_0_2 = importlib.import_module("stage0_resource_preparation.2-generate-truthset-ht")
         try:
             qc_step_0_2.main()
         except Exception as e:
@@ -119,35 +119,35 @@ class IntegrationTestsStub:
         "Instead we download the resulting table from the bucket and use it as a resource.\n"
     )
     def stub_0_3_import_data(self) -> None:
-        qc_step_0_3 = importlib.import_module("0-resource_preparation.3-prepare-gnomad-table")
+        qc_step_0_3 = importlib.import_module("stage0_resource_preparation.3-prepare-gnomad-table")
         try:
             qc_step_0_3.main()
         except Exception as e:
             pytest.fail(f"Step 0.3 failed with an exception: {e}")
 
     def stub_1_1_import_data(self) -> None:
-        qc_step_1_1 = importlib.import_module("1-import_data.1-import_gatk_vcfs_to_hail")
+        qc_step_1_1 = importlib.import_module("stage1_import_data.1-import_gatk_vcfs_to_hail")
         try:
             qc_step_1_1.main()
         except Exception as e:
             pytest.fail(f"Step 1.1 failed with an exception: {e}")
 
     def stub_1_2_import_data(self) -> None:
-        qc_step_1_2 = importlib.import_module("1-import_data.2-import_annotations")
+        qc_step_1_2 = importlib.import_module("stage1_import_data.2-import_annotations")
         try:
             qc_step_1_2.main()
         except Exception as e:
             pytest.fail(f"Step 1.2 failed with an exception: {e}")
 
     def stub_1_3_import_data(self) -> None:
-        qc_step_1_3 = importlib.import_module("1-import_data.3-validate-gtcheck")
+        qc_step_1_3 = importlib.import_module("stage1_import_data.3-validate-gtcheck")
         try:
             qc_step_1_3.main()
         except Exception as e:
             pytest.fail(f"Step 1.3 failed with an exception: {e}")
 
     def stub_1_4_import_data(self) -> None:
-        qc_step_1_4 = importlib.import_module("1-import_data.4-mutation-spectra_preqc")
+        qc_step_1_4 = importlib.import_module("stage1_import_data.4-mutation-spectra_preqc")
         try:
             qc_step_1_4.main()
         except Exception as e:
@@ -155,7 +155,7 @@ class IntegrationTestsStub:
 
     ### === Sample QC === ###
     def stub_2_1_sample_qc(self) -> None:
-        qc_step_2_1 = importlib.import_module("2-sample_qc.1-hard_filters_sex_annotation")
+        qc_step_2_1 = importlib.import_module("stage2_sample_qc.1-hard_filters_sex_annotation")
         try:
             qc_step_2_1.main()
         except Exception as e:
@@ -166,7 +166,7 @@ class IntegrationTestsStub:
         return_value=argparse.Namespace(filter_mt=True, pc_relate=True, plot_pca=True, all=False),
     )
     def stub_2_2_sample_qc(self, mock_args: Any) -> None:
-        qc_step_2_2 = importlib.import_module("2-sample_qc.2-prune_related_samples")
+        qc_step_2_2 = importlib.import_module("stage2_sample_qc.2-prune_related_samples")
 
         try:
             qc_step_2_2.main()
@@ -180,7 +180,7 @@ class IntegrationTestsStub:
         ),
     )
     def stub_2_3_sample_qc(self, mock_args: Any) -> None:
-        qc_step_2_3 = importlib.import_module("2-sample_qc.3-population_pca_prediction")
+        qc_step_2_3 = importlib.import_module("stage2_sample_qc.3-population_pca_prediction")
 
         try:
             qc_step_2_3.main()
@@ -188,7 +188,7 @@ class IntegrationTestsStub:
             pytest.fail(f"Step 2.3 failed with an exception: {e}")
 
     def stub_2_4_sample_qc(self) -> None:
-        qc_step_2_4 = importlib.import_module("2-sample_qc.4-find_population_outliers")
+        qc_step_2_4 = importlib.import_module("stage2_sample_qc.4-find_population_outliers")
 
         try:
             qc_step_2_4.main()
@@ -196,7 +196,7 @@ class IntegrationTestsStub:
             pytest.fail(f"Step 2.4 failed with an exception: {e}")
 
     def stub_2_5_sample_qc(self) -> None:
-        qc_step_2_5 = importlib.import_module("2-sample_qc.5-filter_fail_sample_qc")
+        qc_step_2_5 = importlib.import_module("stage2_sample_qc.5-filter_fail_sample_qc")
         try:
             qc_step_2_5.main()
         except Exception as e:
@@ -209,14 +209,14 @@ class IntegrationTestsStub:
         return_value=argparse.Namespace(all=False, split_qc=True, trios_stats=True, inbreeding=True),
     )
     def stub_3_1_variant_qc(self, mock_args: Any) -> None:
-        qc_step_3_1 = importlib.import_module("3-variant_qc.1-split_and_family_annotate")
+        qc_step_3_1 = importlib.import_module("stage3_variant_qc.1-split_and_family_annotate")
         try:
             qc_step_3_1.main()
         except Exception as e:
             pytest.fail(f"Step 3.1 failed with an exception: {e}")
 
     def stub_3_2_variant_qc(self) -> None:
-        qc_step_3_2 = importlib.import_module("3-variant_qc.2-create_rf_ht")
+        qc_step_3_2 = importlib.import_module("stage3_variant_qc.2-create_rf_ht")
         try:
             qc_step_3_2.main()
         except Exception as e:
@@ -224,7 +224,7 @@ class IntegrationTestsStub:
 
     @patch("argparse.ArgumentParser.parse_args", return_value=argparse.Namespace(manual_model_id=RF_RUN_TEST_HASH))
     def stub_3_3_variant_qc(self, mock_args: Any) -> None:
-        qc_step_3_3 = importlib.import_module("3-variant_qc.3-train_rf")
+        qc_step_3_3 = importlib.import_module("stage3_variant_qc.3-train_rf")
         try:
             qc_step_3_3.main()
         except Exception as e:
@@ -232,7 +232,7 @@ class IntegrationTestsStub:
 
     # mock cli arguments
     def stub_3_4_variant_qc(self) -> None:
-        qc_step_3_4 = importlib.import_module("3-variant_qc.4-apply_rf")
+        qc_step_3_4 = importlib.import_module("stage3_variant_qc.4-apply_rf")
         try:
             qc_step_3_4.main()
         except Exception as e:
@@ -240,7 +240,7 @@ class IntegrationTestsStub:
 
     # mock cli arguments
     def stub_3_5_variant_qc(self) -> None:
-        qc_step_3_5 = importlib.import_module("3-variant_qc.5-annotate_ht_after_rf")
+        qc_step_3_5 = importlib.import_module("stage3_variant_qc.5-annotate_ht_after_rf")
         try:
             qc_step_3_5.main()
         except Exception as e:
@@ -248,7 +248,7 @@ class IntegrationTestsStub:
 
     # mock cli arguments
     def stub_3_6_variant_qc(self) -> None:
-        qc_step_3_6 = importlib.import_module("3-variant_qc.6-rank_and_bin")
+        qc_step_3_6 = importlib.import_module("stage3_variant_qc.6-rank_and_bin")
         try:
             qc_step_3_6.main()
         except Exception as e:
@@ -256,7 +256,7 @@ class IntegrationTestsStub:
 
     # mock cli arguments
     def stub_3_7_variant_qc(self) -> None:
-        qc_step_3_7 = importlib.import_module("3-variant_qc.7-plot_rf_output")
+        qc_step_3_7 = importlib.import_module("stage3_variant_qc.7-plot_rf_output")
         try:
             qc_step_3_7.main()
         except Exception as e:
@@ -268,7 +268,7 @@ class IntegrationTestsStub:
         return_value=argparse.Namespace(snv=92, indel=68),
     )
     def stub_3_8_variant_qc(self, mock_args: Any) -> None:
-        qc_step_3_8 = importlib.import_module("3-variant_qc.8-select_thresholds")
+        qc_step_3_8 = importlib.import_module("stage3_variant_qc.8-select_thresholds")
         try:
             qc_step_3_8.main()
         except Exception as e:
@@ -280,7 +280,7 @@ class IntegrationTestsStub:
         return_value=argparse.Namespace(snv=84, indel=60),
     )
     def stub_3_9_variant_qc(self, mock_args: Any) -> None:
-        qc_step_3_9 = importlib.import_module("3-variant_qc.9-filter_mt_after_variant_qc")
+        qc_step_3_9 = importlib.import_module("stage3_variant_qc.9-filter_mt_after_variant_qc")
         try:
             qc_step_3_9.main()
         except Exception as e:
@@ -292,21 +292,21 @@ class IntegrationTestsStub:
         return_value=argparse.Namespace(prepare=True, evaluate_snv=True, evaluate_indel=True, plot=True, all=False),
     )
     def stub_4_1_genotype_qc(self, mock_args: Any) -> None:
-        qc_step_4_1 = importlib.import_module("4-genotype_qc.1-compare_hard_filter_combinations")
+        qc_step_4_1 = importlib.import_module("stage4_genotype_qc.1-compare_hard_filter_combinations")
         try:
             qc_step_4_1.main()
         except Exception as e:
             pytest.fail(f"Step 4.1 failed with an exception: {e}")
 
     def stub_4_2_genotype_qc(self) -> None:
-        qc_step_4_2 = importlib.import_module("4-genotype_qc.2-apply_range_of_hard_filters")
+        qc_step_4_2 = importlib.import_module("stage4_genotype_qc.2-apply_range_of_hard_filters")
         try:
             qc_step_4_2.main()
         except Exception as e:
             pytest.fail(f"Step 4.2 failed with an exception: {e}")
 
     def stub_4_3a_genotype_qc(self) -> None:
-        qc_step_4_3a = importlib.import_module("4-genotype_qc.3a-export_vcfs_range_of_hard_filters")
+        qc_step_4_3a = importlib.import_module("stage4_genotype_qc.3a-export_vcfs_range_of_hard_filters")
         try:
             qc_step_4_3a.main()
         except Exception as e:
@@ -314,21 +314,21 @@ class IntegrationTestsStub:
 
     @patch("argparse.ArgumentParser.parse_args", return_value=argparse.Namespace(filter_level="stringent"))
     def stub_4_3b_genotype_qc(self, mock_args: Any) -> None:
-        qc_step_4_3b = importlib.import_module("4-genotype_qc.3b-export_vcfs_stringent_filters")
+        qc_step_4_3b = importlib.import_module("stage4_genotype_qc.3b-export_vcfs_stringent_filters")
         try:
             qc_step_4_3b.main()
         except Exception as e:
             pytest.fail(f"Step 4.3b failed with an exception: {e}")
 
     def stub_4_4_genotype_qc(self) -> None:
-        qc_step_4_4 = importlib.import_module("4-genotype_qc.4-counts_per_sample")
+        qc_step_4_4 = importlib.import_module("stage4_genotype_qc.4-counts_per_sample")
         try:
             qc_step_4_4.main()
         except Exception as e:
             pytest.fail(f"Step 4.4 failed with an exception: {e}")
 
     def stub_4_5_genotype_qc(self) -> None:
-        qc_step_4_5 = importlib.import_module("4-genotype_qc.5-mutation-spectra_afterqc")
+        qc_step_4_5 = importlib.import_module("stage4_genotype_qc.5-mutation-spectra_afterqc")
         try:
             qc_step_4_5.main()
         except Exception as e:

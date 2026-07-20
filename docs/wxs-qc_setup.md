@@ -67,7 +67,7 @@ To manually run the code on a local machine,
 activate the environment, run Python, and provide the path to the pipeline script:
 
 ```shell
-python 1-import_data/1-import_gatk_vcfs_to_hail.py
+python stage1_import_data/imt1_import_vcfs.py
 ```
 
 ### Manually running the code on a Hail cluster
@@ -85,7 +85,7 @@ export PYSPARK_DRIVER_PYTHON=$(which python)
 No you can run the pipeline script via `spark-submit`:
 
 ```shell
-spark-submit 1-import_data/1-import_gatk_vcfs_to_hail.py
+spark-submit stage1_import_data/imt1_import_vcfs.py
 ```
 
 We suggest running all code on a cluster in `tmux`/`screen` session to avoid

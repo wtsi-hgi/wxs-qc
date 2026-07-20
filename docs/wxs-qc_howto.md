@@ -118,7 +118,7 @@ will be stored in a specific analysis folder.
 To create the folder for your dataset with all required subfolders, you can run the script:
 
 ```shell
-python 0-resource_preparation/0-create_data_folder.py
+python stage0_resource_preparation/res_0_create_project_folder.py
 ```
 
 The script will take all values from the config file and create the dataset folder
@@ -146,7 +146,7 @@ This resource set is required for the super-population prediction on the populat
 It converts the 1000 genomes VCFs into the matrixtable.
 
 ```shell
-python 0-resource_preparation/1-import_1kg.py --all
+python stage0_resource_preparation/res_1_import_1kg.py --all
 ```
 
 ### Create the combined Truth Set table
@@ -155,7 +155,7 @@ Run this step to combine all available variation resources (1000 Genomes, Mills,
 into a single table of truth variants.
 
 ```shell
-python 0-resource_preparation/2-generate-truthset-ht.py
+python stage0_resource_preparation/res_2_generate_truthset_ht.py
 ```
 
 ### (Optional) Extract whole-genome gnomAD frequencies
@@ -180,7 +180,7 @@ the path to the directory that you created for pre-QC VCFs.
 Run data import:
 
 ```shell
-python 1-import_data/1-import_gatk_vcfs_to_hail.py
+python stage1_import_data/imt1_import_vcfs.py
 ```
 
 ### Annotate metadata
@@ -211,7 +211,7 @@ in the `tests/test_data/metadata` folder created on the [Obtain resource files](
 Run the annotation script:
 
 ```shell
-python 1-import_data/2-import_annotations.py
+python stage1_import_data/imt2_import_annotations.py
 ```
 
 For each available annotation, the script prints out the list of samples that don't have annotations.
@@ -236,7 +236,7 @@ To do it, set the `wes_microarray_mapping: none`
 under the `validate_gtcheck` section of the config file, and run the step:
 
 ```shell
-python 1-import_data/3-validate-gtcheck.py
+python stage1_import_data/imt3_validate_gtcheck.py
 ```
 
 
@@ -246,7 +246,7 @@ Plotting the mutation spectra can help you to identify batch-level artifacts.
 To do it, run the calculation script:
 
 ```shell
-python 1-import_data/4-mutation-spectra_preqc.py
+python stage1_import_data/imt_4_mutation_spectra_preqc.py
 ```
 
 The script saves the plot in the HTML file specified under the
@@ -336,7 +336,7 @@ Relevant technical details can be found in the
 ### Run sex imputation
 
 ```shell
-python 2-sample_qc/1-hard_filters_sex_annotation.py
+python stage2_sample_qc/sqc1_sex_annotation.py
 ```
 
 The script imputes genetic sex for all samples, and saves the results in the
@@ -396,15 +396,15 @@ even in datasets with diverse superpopulations.
 The script is split into resumable stages. Run the stages in order:
 
 ```shell
-python 2-sample_qc/2-prune_related_samples.py --filter-mt
-python 2-sample_qc/2-prune_related_samples.py --pc-relate
-python 2-sample_qc/2-prune_related_samples.py --plot-pca
+python stage2_sample_qc/sqc2_identify_related_samples.py --filter-mt
+python stage2_sample_qc/sqc2_identify_related_samples.py --pc-relate
+python stage2_sample_qc/sqc2_identify_related_samples.py --plot-pca
 ```
 
 The same stages can also be run in a single invocation:
 
 ```shell
-python 2-sample_qc/2-prune_related_samples.py --all
+python stage2_sample_qc/sqc2_identify_related_samples.py --all
 ```
 
 The `--filter-mt` stage removes control samples and filters to high-quality variants,
@@ -432,7 +432,7 @@ This ensures that the LD structure is defined by the reference,
 making results more stable and comparable across studies.
 
 ```shell
-python 2-sample_qc/3-population_pca_prediction.py --merge-and-ldprune
+python stage2_sample_qc/sqc3_pca_population_prediction.py --merge-and-ldprune
 ```
 
 Next, we run PAC only for 1000 genomes samples,
@@ -443,7 +443,7 @@ As a result, we can handle datasets with any number of related individuals,
 and PCs from different studies are more comparable.
 
 ```shell
-python 2-sample_qc/3-population_pca_prediction.py --pca
+python stage2_sample_qc/sqc3_pca_population_prediction.py --pca
 ```
 
 Plot 1KG PCA. On this step, all dataset samples should be labelled as `N/A`.
@@ -453,7 +453,7 @@ the PCA results for 1000 genomes can differ between runs. However, for the sugge
 the number of high-quality variants in the dataset is big enough to make PCA results visually comparable.
 
 ```shell
-python 2-sample_qc/3-population_pca_prediction.py --pca-plot
+python stage2_sample_qc/sqc3_pca_population_prediction.py --pca-plot
 ```
 On this step, all dataset samples should be labelled as `N/A`.
 
@@ -467,8 +467,8 @@ The projection ensures that the study cohort’s structure is measured against
 a known global reference without biasing the principal components themselves.
 
 ```shell
-python 2-sample_qc/3-population_pca_prediction.py --assign_pops
-python 2-sample_qc/3-population_pca_prediction.py --pca-plot-assigned
+python stage2_sample_qc/sqc3_pca_population_prediction.py --assign_pops
+python stage2_sample_qc/sqc3_pca_population_prediction.py --pca-plot-assigned
 ```
 The script outputs population assignment tables and PCA plots.
 Review graphs to ensure that the superpopulation structure matches your expectations.
@@ -488,7 +488,7 @@ For metric description, see the
 function description.
 
 ```shell
-python 2-sample_qc/4-find_population_outliers.py
+python stage2_sample_qc/sqc4_find_outliers.py
 ```
 
 WxS-QC pipeline identifies outliers using the gnomAD function
@@ -534,7 +534,7 @@ If you don't want t remove any additional samples, put `null` in the config inst
 **Note:** more convenient combined sample statistics are in the implementation.
 
 ```shell
-python 2-sample_qc/5-filter_fail_sample_qc.py
+python stage2_sample_qc/sqc5_filter_fail_samples.py
 ```
 
 Samples that fail sample QC are saved in the file
@@ -585,7 +585,7 @@ for the final graphs won't be calculated.
 The first step of variant QC is to split multi-allelic variants and annotate it with family statistics.
 
 ```shell
-python 3-variant_qc/1-split_and_family_annotate.py --all
+python stage3_variant_qc/vqc1_split_and_family_annotate.py --all
 ```
 
 ### Generate RF test data
@@ -601,7 +601,7 @@ put the annoations available in the `INFO` field of your VCF file in the
 `INFO_FEATURES` of the `constants.py` file.
 
 ```shell
-python 3-variant_qc/2-create_rf_ht.py
+python stage3_variant_qc/vqc2_create_rf_ht.py
 ```
 
 ### Train the random forest model
@@ -612,7 +612,7 @@ manually set the random forest model ID
 (called _runhash_ previously, so you can find this term in the code)
 
 ```shell
-python  3-variant_qc/3-train_rf.py --manual-model-id wxs-qc_public
+python  stage3_variant_qc/vqc3_train_rf_model.py --manual-model-id wxs-qc_public
 ```
 
 If you don't set the the RF ID, the script will
@@ -634,7 +634,7 @@ or try to downgrade Hail to the previous version.
 Now apply the random forest to the entire dataset.
 
 ```shell
-python 3-variant_qc/4-apply_rf.py
+python stage3_variant_qc/vqc4_apply_rf_model.py
 ```
 
 ### Annotate random forest model results
@@ -658,7 +658,7 @@ If you don't have VEP annotation, you can set `general->metadata->vep_consequenc
 This will disable calculation of singleton metrics.
 
 ```shell
-python 3-variant_qc/5-annotate_ht_after_rf.py
+python stage3_variant_qc/vqc5_annotate_ht_after_rf.py
 ```
 
 ### Group variants by ranks
@@ -667,7 +667,7 @@ At this stage, we rank all variants depending on their RF score and
 group it into 100 bins (bin 1 is the most quality variants.)
 
 ```shell
-python 3-variant_qc/6-rank_and_bin.py
+python stage3_variant_qc/vqc6_rank_and_bin.py
 ```
 
 ### Plot and analyse the results
@@ -676,7 +676,7 @@ Create plots of the binned random forest output to use in the selection of thres
 Separate thresholds are used for SNPs and indels.
 
 ```shell
-python 3-variant_qc/7-plot_rf_output.py
+python stage3_variant_qc/vqc7_plot_metrics.py
 ```
 
 The Variant QC is always a trading between sensitivity and quality.
@@ -702,14 +702,14 @@ However, the hard filter evaluation provides more comprehensive information, so 
 Use for `snv_bin` and `indel_bin` the thresholds selected for SNVs and indels respectively).
 
 ```shell
-python 3-variant_qc/8-select_thresholds.py --snv snv_bin --indel indel_bin
+python stage3_variant_qc/vqc8_select_thresholds.py --snv snv_bin --indel indel_bin
 ```
 
 If you want to manually explore remaining variations,
 you can filter the variants in the Hail MatrixTable based on the selected threshold for SNVs and indels.
 
 ```shell
-python 3-variant_qc/9-filter_mt_after_variant_qc.py --snv snv_bin --indel indel_bin
+python stage3_variant_qc/vqc9_filter_mt_manual_vqc.py --snv snv_bin --indel indel_bin
 ```
 
 ## Stage 4. Genotype QC
@@ -803,7 +803,7 @@ step4:
 ### Run the hard-filter evaluation step
 
 ```shell
-python 4-genotype_qc/1-compare_hard_filter_combinations.py --all
+python stage4_genotype_qc/gqc1_compare_hard_filter_combinations.py --all
 ```
 
 The script calculates all possible combinations of hard filters.
@@ -892,7 +892,7 @@ The consequence export works only if **both** `general->metadata->vep_consequenc
 and `step4 -> annotate_cq_rf -> csq_header` are specified.
 
 ```shell
-python 4-genotype_qc/2-apply_range_of_hard_filters.py
+python stage4_genotype_qc/gqc2_apply_range_of_hard_filters.py
 ```
 
 #### (Optional) Sex chromosome-specific filtering
@@ -910,7 +910,7 @@ Script `3a` tags all variations with the corresponding filter (relaxed, medium, 
 removes all variants not passing the relaxed filter, and saves the resulting data to VCF files.
 
 ```shell
-python 4-genotype_qc/3a-export_vcfs_range_of_hard_filters.py
+python stage4_genotype_qc/gqc3a_export_vcfs_range_of_hard_filters.py
 ```
 
 Alternatively, to export VCFs with only a single filter level applied,
@@ -919,7 +919,7 @@ You can specify which filter level to apply using the `--filter-level` option
 (choices: `relaxed`, `medium`, `stringent`; default: `stringent`):
 
 ```shell
-python 4-genotype_qc/3b-export_vcfs_stringent_filters.py --filter-level stringent
+python stage4_genotype_qc/gqc3b_export_vcfs_single_filter.py --filter-level stringent
 ```
 
 ### Information stored in the VCF data
@@ -942,7 +942,7 @@ If you want to additionally evaluate the variant QC and genotypeQC statistics,
 use the following script:
 
 ```shell
-python 4-genotype_qc/4-counts_per_sample.py
+python stage4_genotype_qc/gqc5_counts_per_sample.py
 ```
 
 The script makes the summary table of variations by variation consequence
@@ -975,7 +975,7 @@ and validate that results match the expected distribution.
 To do it, run the calculation script:
 
 ```shell
-python 4-genotype_qc/5-mutation-spectra_afterqc.py
+python stage4_genotype_qc/gqc4_mutation_spectra_afterqc.py
 ```
 
 The script saves the plot in the HTML file specified under the

@@ -42,7 +42,7 @@ def get_config(path: Optional[str] = None) -> WxsqcConfig:
     script_dir = get_script_path()
     print("info: script_dir ", script_dir)
     config_dir = "../config"
-    # to handle 3-variant_qc subdirs
+    # to handle stage3_variant_qc subdirs
     if not os.path.exists(os.path.join(script_dir, config_dir)):
         config_dir = "../../config"
     config_dir = os.path.join(script_dir, config_dir)

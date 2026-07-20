@@ -2,7 +2,7 @@ import importlib
 import pandas as pd
 from pytest import mark as m
 
-qc_step_1_3 = importlib.import_module("1-import_data.3-validate-gtcheck")
+qc_step_1_3 = importlib.import_module("stage1_import_data.3-validate-gtcheck")
 
 
 @m.context("Given lists of IDs from data and mapping")

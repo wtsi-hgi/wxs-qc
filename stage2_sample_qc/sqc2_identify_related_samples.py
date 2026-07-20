@@ -1,5 +1,5 @@
 # identify and prune related samples prior to PCA
-# use mt with hard filters and sex annotation from 2-sample_qc/1-hard_filters_sex_annotation.py
+# use mt with hard filters and sex annotation from stage2_sample_qc/sqc1_sex_annotation.py
 import argparse
 import os
 
@@ -36,7 +36,7 @@ def plot_relatedness(
     bkplt.save(layout)
 
 
-# TODO: How is this step different from 2-sample_qc/3-population_pca_prediction.py/run_pca()? Only PCA plotting?
+# TODO: How is this step different from stage2_sample_qc/sqc3_pca_population_prediction.py/run_pca()? Only PCA plotting?
 def run_population_pca(
     filtered_mt: hl.MatrixTable,
     samples_to_remove: hl.Table,

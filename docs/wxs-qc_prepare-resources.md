@@ -181,7 +181,7 @@ you need to manually download it from https://gnomad.broadinstitute.org/download
 place the path to the table in the config file section `prepare_gnomad_ht -> input_gnomad_htfile`,
 and run the script to extract population frequencies:
   ```shell
-  spark-submit 0-resource_preparation/3-prepare-gnomad-table.py
+  spark-submit stage0_resource_preparation/res_3_prepare_gnomad_ht.py
   ```
 
 Please note that this step overwrites existing gnomAD frequencies in the resources folder.

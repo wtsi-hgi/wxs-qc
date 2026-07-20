@@ -31,10 +31,10 @@ If the issue remains, you can run these steps on a local Spark environment:
 export PYTHONPATH=$(pwd):$PYTHONPATH
 export PYSPARK_PYTHON=/home/ubuntu/venv/bin/python
 export PYSPARK_DRIVER_PYTHON=/home/ubuntu/venv/bin/python
-spark-submit --master 'local[*]' 3-variant_qc/3-train_rf.py
+spark-submit --master 'local[*]' stage3_variant_qc/vqc3_train_rf_model.py
 
 If the spark-submit still returns an error, try to run it via a regular Python:
-python 3-variant_qc/3-train_rf.py
+python stage3_variant_qc/vqc3_train_rf_model.py
 --------------------------------
 """
 
