@@ -1,6 +1,6 @@
 import pathlib
 from pytest import mark as m
-from wes_qc import hail_utils, visualize
+from wxs_qc import hail_utils, visualize
 
 
 @m.context("When the temp folder does not have file:// prefix")

@@ -1,6 +1,6 @@
 import hail as hl
 from utils.utils import path_spark
-from wes_qc.pca_utils import prune_mt, run_pc_project
+from wxs_qc.pca_utils import prune_mt, run_pc_project
 
 
 def run_king(mt: hl.MatrixTable, king_args: dict, prune_args: dict) -> (hl.MatrixTable, hl.MatrixTable):

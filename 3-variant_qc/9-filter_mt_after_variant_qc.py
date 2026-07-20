@@ -3,7 +3,7 @@ import hail as hl
 import argparse
 import os.path
 from utils.utils import parse_config, path_spark
-from wes_qc import hail_utils
+from wxs_qc import hail_utils
 
 
 def get_options():

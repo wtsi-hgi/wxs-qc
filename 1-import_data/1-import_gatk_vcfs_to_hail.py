@@ -3,9 +3,9 @@ import re
 
 import hail as hl
 
-from wes_qc.hail_utils import path_spark
-from wes_qc.config import get_config
-from wes_qc import hail_utils, filtering
+from wxs_qc.hail_utils import path_spark
+from wxs_qc.config import get_config
+from wxs_qc import hail_utils, filtering
 
 # DEBUG: for some reason, paths prefix is `file:`, not a `file://`
 VCF_PATTERN = re.compile("file:.*vcf.b?gz$")

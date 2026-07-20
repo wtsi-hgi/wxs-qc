@@ -10,7 +10,7 @@ import utils.constants as constants
 from utils.utils import parse_config, get_rf, path_spark
 from gnomad.variant_qc.pipeline import train_rf_model
 from gnomad.variant_qc.random_forest import pretty_print_runs, save_model
-from wes_qc import hail_utils
+from wxs_qc import hail_utils
 
 spark_local_message = """\n===== WARNING =====
 The gnomAD functions that train and apply RF model

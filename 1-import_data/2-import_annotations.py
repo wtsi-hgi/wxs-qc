@@ -3,8 +3,8 @@ import hail.plot
 import bokeh
 
 from utils.utils import parse_config
-from wes_qc.hail_utils import path_spark
-from wes_qc import hail_utils, constants
+from wxs_qc.hail_utils import path_spark
+from wxs_qc import hail_utils, constants
 
 verifybamid_types = {
     "#SEQ_ID": "str",
@@ -130,6 +130,7 @@ def annotate_self_reported_sex(mt: hl.MatrixTable, sex_metadata_file: str, **kwa
 
     return mt_sex_annotated
 
+
 def annotate_batch(mt: hl.MatrixTable, batch_metadata_file: str, **kwargs) -> hl.MatrixTable:
     """
     Annotates samples in the matrix-table with the batch information
@@ -147,6 +148,7 @@ def annotate_batch(mt: hl.MatrixTable, batch_metadata_file: str, **kwargs) -> hl
     else:
         print("=== OK: All samples are annotated with batch information")
     return mt_batch_annotated
+
 
 def main() -> None:
     # = STEP SETUP = #
@@ -183,7 +185,7 @@ def main() -> None:
         mt = annotate_self_reported_sex(mt, path_spark(sex_metadata_file))
     else:
         print("=== Skipping self-reported sex annotation")
-    
+
     if batch_metadata_file is not None:
         print("=== Annotating batch ")
         mt = annotate_batch(mt, path_spark(batch_metadata_file))

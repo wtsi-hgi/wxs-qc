@@ -1,18 +1,20 @@
 from typing import Optional
 import re
+
+
 def extract_csq_header(header_file: str, metadata: dict) -> dict:
     """
     Modify metadata to include the CSQ description used for VCF export.
     """
-    info={}
+    info = {}
     with open(header_file) as f:
         for line in f:
             if line.startswith("##INFO=<ID=CSQ"):
                 pattern = re.compile(
-                r'ID=(?P<ID>[^,]+),'
-                r'Number=(?P<Number>[^,]+),'
-                r'Type=(?P<Type>[^,]+),'
-                r'Description="(?P<Description>.*)"'
+                    r"ID=(?P<ID>[^,]+),"
+                    r"Number=(?P<Number>[^,]+),"
+                    r"Type=(?P<Type>[^,]+),"
+                    r'Description="(?P<Description>.*)"'
                 )
                 match = pattern.search(line)
                 info = match.groupdict()
@@ -27,29 +29,32 @@ def extract_csq_header(header_file: str, metadata: dict) -> dict:
         }
     return metadata
 
+
 def modify_vcf_metadata(metadata: dict, csq_file: Optional[str] = None, header_file: Optional[str] = None) -> dict:
     """
     Modify metadata to include information about the CSQ annotation file and header file used for VCF export.
     """
     if header_file is not None and csq_file is not None:
-        metadata=extract_csq_header(header_file, metadata)
+        metadata = extract_csq_header(header_file, metadata)
     elif csq_file is not None and header_file is None:
         print("===No CSQ header found. CSQ won't be added to the VCFs===")
-        metadata["info"].update({
-            "consequence": {
-                "Description": "Most severe consequence from VEP",
-                "Number": "A",
-                "Type": "String",
-            },
-            "gene": {
-                "Description": "Gene affected by the most severe consequence from VEP",
-                "Number": "A",
-                "Type": "String",
-            },
-            "hgnc_id": {
-                "Description": "HGNC id of the gene affected by the most severe consequence from VEP",
-                "Number": "A",
-                "Type": "String",
+        metadata["info"].update(
+            {
+                "consequence": {
+                    "Description": "Most severe consequence from VEP",
+                    "Number": "A",
+                    "Type": "String",
+                },
+                "gene": {
+                    "Description": "Gene affected by the most severe consequence from VEP",
+                    "Number": "A",
+                    "Type": "String",
+                },
+                "hgnc_id": {
+                    "Description": "HGNC id of the gene affected by the most severe consequence from VEP",
+                    "Number": "A",
+                    "Type": "String",
+                },
             }
-        })
+        )
     return metadata

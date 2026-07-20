@@ -11,7 +11,7 @@ from bokeh.plotting import output_file, save, figure
 # ruff: noqa: F403
 from gnomad.utils.plotting import *
 from utils.utils import parse_config, path_spark
-from wes_qc import hail_utils
+from wxs_qc import hail_utils
 
 
 # TODO: move to utils?

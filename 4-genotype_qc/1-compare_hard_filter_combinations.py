@@ -9,10 +9,10 @@ import logging
 from typing import Optional, Any, Union
 
 
-from wes_qc.hail_utils import path_spark
-from wes_qc.config import get_config
+from wxs_qc.hail_utils import path_spark
+from wxs_qc.config import get_config
 from utils.utils import select_founders, collect_pedigree_samples
-from wes_qc import hail_utils, filtering, hail_patches, constants
+from wxs_qc import hail_utils, filtering, hail_patches, constants
 import pandas as pd
 import bokeh.plotting
 import bokeh.layouts

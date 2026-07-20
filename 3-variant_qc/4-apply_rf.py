@@ -3,7 +3,7 @@ import hail as hl
 from utils.utils import parse_config, get_rf, path_spark
 import utils.constants as constants
 from gnomad.variant_qc.random_forest import apply_rf_model, load_model
-from wes_qc import hail_utils
+from wxs_qc import hail_utils
 
 
 def main():

@@ -7,7 +7,7 @@ import utils.constants as constants
 from utils.utils import parse_config, path_spark
 from gnomad.variant_qc.random_forest import median_impute_features
 
-from wes_qc import hail_utils, visualize
+from wxs_qc import hail_utils, visualize
 
 
 def prepare_matrix_table(mt: hl.MatrixTable) -> hl.MatrixTable:

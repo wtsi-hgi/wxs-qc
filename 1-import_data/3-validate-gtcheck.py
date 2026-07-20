@@ -34,9 +34,9 @@ from collections import Counter
 from pathlib import Path
 import hail as hl
 import numpy as np
-from wes_qc.hail_utils import path_spark
+from wxs_qc.hail_utils import path_spark
 from utils.utils import parse_config
-from wes_qc import hail_utils
+from wxs_qc import hail_utils
 
 Id = str
 IdList = list[Id]

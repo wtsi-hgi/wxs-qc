@@ -2,7 +2,7 @@
 # Filter to remove samples sequenced at Broad
 import hail as hl
 from utils.utils import parse_config, path_spark
-from wes_qc import hail_utils
+from wxs_qc import hail_utils
 
 
 def remove_sample_qc_fails(
@@ -66,7 +66,7 @@ def main():
     tmp_dir = config["general"]["tmp_dir"]
 
     # = STEP DEPENDENCIES = #
-    raw_mt_file = config["step1"]["validate_gtcheck"]["mt_gtcheck_validated"] # Raw mt file
+    raw_mt_file = config["step1"]["validate_gtcheck"]["mt_gtcheck_validated"]  # Raw mt file
     qc_filter_ht_file = config["step2"]["stratified_sample_qc"]["qc_filter_file"]  # Results of stratified filtering
     samples_to_remove_file = config["step2"]["sample_qc_combine_results"]["samples_to_remove_file"]
 

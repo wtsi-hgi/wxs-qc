@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 import pytest
 
-# /path/to/wes_qc must be in PYTHONPATH
+# /path/to/wxs_qc must be in PYTHONPATH
 
 # List with the test files must be located in the test directory in the repo
 TEST_FILES_LIST = "../test_files_list_in_bucket.txt"

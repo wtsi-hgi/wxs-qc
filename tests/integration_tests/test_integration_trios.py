@@ -6,11 +6,11 @@ import hail as hl
 import pytest
 
 from tests.integration_tests.integration_stub import IntegrationTestsStub
-from wes_qc.config import parse_config_file
-from wes_qc.hail_utils import path_spark
-from wes_qc.teszt import assert_saved_tables_match
+from wxs_qc.config import parse_config_file
+from wxs_qc.hail_utils import path_spark
+from wxs_qc.teszt import assert_saved_tables_match
 
-# /path/to/wes_qc must be in PYTHONPATH
+# /path/to/wxs_qc must be in PYTHONPATH
 
 PEDIGREE_FILE_PATH_TRIOS = """ '${cvars.metadir}/control_set_small.trios.fam' """
 

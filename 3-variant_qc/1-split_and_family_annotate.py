@@ -13,7 +13,7 @@ from gnomad.utils.annotations import (
 )
 from gnomad.sample_qc.relatedness import generate_trio_stats_expr
 
-from wes_qc import hail_utils, hail_patches
+from wxs_qc import hail_utils, hail_patches
 
 
 def split_multi_and_var_qc(mt: hl.MatrixTable, varqc_mtfile: str, varqc_mtfile_split: str) -> None:

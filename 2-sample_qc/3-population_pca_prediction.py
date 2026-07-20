@@ -3,12 +3,12 @@ import argparse
 from typing import Tuple
 
 import hail as hl
-from gnomad.sample_qc.ancestry import assign_population_pcs, pc_project
+from gnomad.sample_qc.ancestry import assign_population_pcs
 
-from wes_qc.pca_utils import prune_mt, run_pc_project
-from wes_qc.hail_utils import path_local, path_spark
+from wxs_qc.pca_utils import prune_mt, run_pc_project
+from wxs_qc.hail_utils import path_local, path_spark
 from utils.utils import parse_config
-from wes_qc import hail_utils, filtering, visualize
+from wxs_qc import hail_utils, visualize
 
 
 def merge_1kg_and_ldprune(
@@ -51,7 +51,7 @@ def merge_1kg_and_ldprune(
     kg_mt = kg_mt.semi_join_rows(mt_filtered.rows())
 
     # prunning of the linked Variants in kg_mt
-    pruned_mt=prune_mt(kg_mt, ld_prune_args)
+    pruned_mt = prune_mt(kg_mt, ld_prune_args)
     pruned_mt = pruned_mt.checkpoint(pruned_mt_outfile, overwrite=True)
 
     # merging matrices
@@ -148,10 +148,10 @@ def main():
     tmp_dir = config["general"]["tmp_dir"]
 
     # = STEP PARAMETERS = #
-    control_list=config["general"]["metadata"]["control_samples"]
+    control_list = config["general"]["metadata"]["control_samples"]
 
     # = STEP DEPENDENCIES = #
-    #mtfile = path_spark(config["step2"]["impute_sex"]["sex_mt_outfile"])
+    # mtfile = path_spark(config["step2"]["impute_sex"]["sex_mt_outfile"])
     mtfile = path_spark(config["step2"]["filtered_mt_outfile"])
     kg_mt_file = path_spark(config["step0"]["create_1kg_mt"]["kg_out_mt"])
     kg_pop_file = path_spark(config["step0"]["create_1kg_mt"]["kg_pop_file"])

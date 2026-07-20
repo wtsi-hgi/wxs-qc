@@ -5,7 +5,7 @@ import hail as hl
 import bokeh
 from utils.utils import parse_config, path_spark
 
-from wes_qc import hail_utils, hail_patches, constants
+from wxs_qc import hail_utils, hail_patches, constants
 
 
 def apply_hard_filters(

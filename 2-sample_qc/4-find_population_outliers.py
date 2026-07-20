@@ -5,9 +5,13 @@ import hail as hl
 import pandas as pd
 from typing import Optional
 
-from wes_qc import hail_utils, constants,filtering
+from wxs_qc import hail_utils, constants, filtering
 from utils.utils import parse_config, path_spark
-from gnomad.sample_qc.filtering import determine_nearest_neighbors, compute_qc_metrics_residuals, compute_stratified_metrics_filter
+from gnomad.sample_qc.filtering import (
+    determine_nearest_neighbors,
+    compute_qc_metrics_residuals,
+    compute_stratified_metrics_filter,
+)
 import bokeh.plotting as bkplot
 import bokeh.layouts as bklayouts
 from bokeh.models import Div, Span, Range1d, Label
@@ -16,8 +20,9 @@ from collections import defaultdict
 import math
 import json
 
+
 #######################################
-#for all
+# for all
 #######################################
 def run_filtering_and_sample_qc(
     mt: hl.MatrixTable,
@@ -57,13 +62,14 @@ def run_filtering_and_sample_qc(
         print(f"Filtering {fraction_filtered * 100:.2f}% entries out of downstream analysis.")
         filtered_mt = mt.filter_entries(filter_condition)
     print("=== Runnig sample QC ===")
-    mt_with_sampleqc=hl.sample_qc(filtered_mt)
+    mt_with_sampleqc = hl.sample_qc(filtered_mt)
     mt_with_sampleqc = mt_with_sampleqc.annotate_cols(
         sample_qc=mt_with_sampleqc.sample_qc.annotate(
             heterozygosity_rate=mt_with_sampleqc.sample_qc.n_het / mt_with_sampleqc.sample_qc.n_called
         )
     )
     return mt_with_sampleqc
+
 
 def modify_metric_dict(compute_stratified_metrics_filter_args: dict) -> dict:
     """
@@ -76,15 +82,24 @@ def modify_metric_dict(compute_stratified_metrics_filter_args: dict) -> dict:
     step2.stratified_sample_qc.lower_threshold : float : default upper threshold
 
     """
-    metric_dict=compute_stratified_metrics_filter_args.get("metric_threshold", None)
-    if metric_dict!=None:
+    metric_dict = compute_stratified_metrics_filter_args.get("metric_threshold", None)
+    if metric_dict != None:
         compute_stratified_metrics_filter_args["metric_threshold"] = {
             k: tuple(eval(v_i, {"math": math}) if isinstance(v_i, str) else v_i for v_i in v)
             for k, v in metric_dict.items()
         }
-    compute_stratified_metrics_filter_args["upper_threshold"] = math.inf if compute_stratified_metrics_filter_args.get("upper_threshold") == "math.inf" else compute_stratified_metrics_filter_args.get("upper_threshold")
-    compute_stratified_metrics_filter_args["lower_threshold"] = math.inf if compute_stratified_metrics_filter_args.get("lower_threshold") == "math.inf" else compute_stratified_metrics_filter_args.get("lower_threshold")
+    compute_stratified_metrics_filter_args["upper_threshold"] = (
+        math.inf
+        if compute_stratified_metrics_filter_args.get("upper_threshold") == "math.inf"
+        else compute_stratified_metrics_filter_args.get("upper_threshold")
+    )
+    compute_stratified_metrics_filter_args["lower_threshold"] = (
+        math.inf
+        if compute_stratified_metrics_filter_args.get("lower_threshold") == "math.inf"
+        else compute_stratified_metrics_filter_args.get("lower_threshold")
+    )
     return compute_stratified_metrics_filter_args
+
 
 def modify_metric_names(compute_stratified_metrics_filter_args: dict) -> dict:
     """
@@ -96,13 +111,16 @@ def modify_metric_names(compute_stratified_metrics_filter_args: dict) -> dict:
 
     ### Indirect config fields
     """
-    metric_dict=compute_stratified_metrics_filter_args.get("metric_threshold", None)
-    if metric_dict!=None:
-        for key in list(compute_stratified_metrics_filter_args['metric_threshold'].keys()):
-            compute_stratified_metrics_filter_args['metric_threshold'][key + '_residual'] = compute_stratified_metrics_filter_args['metric_threshold'].pop(key)
+    metric_dict = compute_stratified_metrics_filter_args.get("metric_threshold", None)
+    if metric_dict != None:
+        for key in list(compute_stratified_metrics_filter_args["metric_threshold"].keys()):
+            compute_stratified_metrics_filter_args["metric_threshold"][key + "_residual"] = (
+                compute_stratified_metrics_filter_args["metric_threshold"].pop(key)
+            )
     return compute_stratified_metrics_filter_args
 
-def get_threshold_dict (compute_stratified_metrics_filter_args: dict, qc_metrics: list) -> dict:
+
+def get_threshold_dict(compute_stratified_metrics_filter_args: dict, qc_metrics: list) -> dict:
     """
     Generate threshold dictionary for plotting
     param dict compute_stratified_metrics_filter_args: arguments with threshold settings
@@ -113,13 +131,20 @@ def get_threshold_dict (compute_stratified_metrics_filter_args: dict, qc_metrics
     step2.stratified_sample_qc.upper_threshold : float : default upper threshold
     step2.stratified_sample_qc.metric_threshold : dict : metric-specific overrides
     """
-    threshold_dict={}
+    threshold_dict = {}
     for metric in qc_metrics:
-        threshold_dict[metric]=(-compute_stratified_metrics_filter_args['lower_threshold'], compute_stratified_metrics_filter_args['upper_threshold'])
-    if compute_stratified_metrics_filter_args.get('metric_threshold', None) != None:
-        for metric in compute_stratified_metrics_filter_args['metric_threshold'].keys():
-            threshold_dict[metric]=(-compute_stratified_metrics_filter_args['metric_threshold'][metric][0], compute_stratified_metrics_filter_args['metric_threshold'][metric][1])
+        threshold_dict[metric] = (
+            -compute_stratified_metrics_filter_args["lower_threshold"],
+            compute_stratified_metrics_filter_args["upper_threshold"],
+        )
+    if compute_stratified_metrics_filter_args.get("metric_threshold", None) != None:
+        for metric in compute_stratified_metrics_filter_args["metric_threshold"].keys():
+            threshold_dict[metric] = (
+                -compute_stratified_metrics_filter_args["metric_threshold"][metric][0],
+                compute_stratified_metrics_filter_args["metric_threshold"][metric][1],
+            )
     return threshold_dict
+
 
 def compute_mad_score(metric, median, mad):
     """
@@ -130,17 +155,18 @@ def compute_mad_score(metric, median, mad):
     """
     return hl.if_else(
         mad == 0,
-        hl.if_else(metric == median, 0.0, hl.float64('inf')),#recheck how this will work
-        (metric - median) / mad
+        hl.if_else(metric == median, 0.0, hl.float64("inf")),  # recheck how this will work
+        (metric - median) / mad,
     )
 
-def get_mad_ht (
-        metric_stat_ht: hl.Table,
-        qc_ht: hl.Table,
-        filter_ht: hl.Table,
-        run_with_strata: bool,
-        qc_type: str,
-        qc_metrics: list,
+
+def get_mad_ht(
+    metric_stat_ht: hl.Table,
+    qc_ht: hl.Table,
+    filter_ht: hl.Table,
+    run_with_strata: bool,
+    qc_type: str,
+    qc_metrics: list,
 ) -> hl.Table:
     """
     Compute MAD-normalized QC metrics table for plotting
@@ -151,8 +177,8 @@ def get_mad_ht (
     param str qc_type: type of QC ('pop', 'nn', 'lr')
     param list qc_metrics: list of QC metrics
     """
-    #get dicts with median and mad for each strata or per sample if nn used
-    if qc_type=="pop" or qc_type=="lr":
+    # get dicts with median and mad for each strata or per sample if nn used
+    if qc_type == "pop" or qc_type == "lr":
         qc_stats_raw = filter_ht.globals.collect()[0].qc_metrics_stats
         qc_metrics_mad_info = {}
         if run_with_strata:
@@ -161,8 +187,8 @@ def get_mad_ht (
                 qc_metrics_mad_info[stratum] = {}
                 for metric_name, stats in qc_stats_raw[entry].items():
                     qc_metrics_mad_info[stratum][metric_name] = {
-                        'median': float(stats.median),
-                        'mad': float(stats.mad),
+                        "median": float(stats.median),
+                        "mad": float(stats.mad),
                     }
         else:
             stratum = "all"
@@ -170,71 +196,69 @@ def get_mad_ht (
             for metric_name in qc_stats_raw:
                 for stats in qc_stats_raw[metric_name]:
                     qc_metrics_mad_info[stratum][metric_name] = {
-                    'median': float(qc_stats_raw[metric_name]["median"]),
-                    'mad': float(qc_stats_raw[metric_name]["mad"]),
+                        "median": float(qc_stats_raw[metric_name]["median"]),
+                        "mad": float(qc_stats_raw[metric_name]["mad"]),
                     }
-    elif qc_type=="nn":
+    elif qc_type == "nn":
         qc_metrics_mad_info = {}
-        for row in filter_ht.key_by().select('s', 'qc_metrics_stats').collect():
+        for row in filter_ht.key_by().select("s", "qc_metrics_stats").collect():
             stratum = row.s
             qc_metrics_mad_info[stratum] = {}
             for metric in qc_metrics:
                 metric_data = getattr(row.qc_metrics_stats, metric)
-                qc_metrics_mad_info[stratum][metric] = {
-                    'median': metric_data.median,
-                    'mad': metric_data.mad
-                }
+                qc_metrics_mad_info[stratum][metric] = {"median": metric_data.median, "mad": metric_data.mad}
     stats_dict = hl.literal(qc_metrics_mad_info)
-    #run stats annotation with strata if it's used
+    # run stats annotation with strata if it's used
     if run_with_strata:
-        if qc_type=="pop":
+        if qc_type == "pop":
             metric_stat_ht = metric_stat_ht.annotate(strata=qc_ht[metric_stat_ht.s].assigned_pop)
         else:
             metric_stat_ht = metric_stat_ht.annotate(strata=qc_ht[metric_stat_ht.s].batch)
-    #rename QC metrics for lr
-    if qc_type=="lr":
-        qc_metrics=[metric + "_residual" for metric in qc_metrics]
-    #computing MAD-normalized QC metrics per sample
-    if qc_type=="pop" or (qc_type=="lr" and run_with_strata):
+    # rename QC metrics for lr
+    if qc_type == "lr":
+        qc_metrics = [metric + "_residual" for metric in qc_metrics]
+    # computing MAD-normalized QC metrics per sample
+    if qc_type == "pop" or (qc_type == "lr" and run_with_strata):
         mad_scores_ht = metric_stat_ht.annotate(
             **{
                 f'{metric.removesuffix("_residual")}_mad': compute_mad_score(
                     metric_stat_ht[metric],
-                    stats_dict[metric_stat_ht.strata][metric]['median'],  # Change 'batch' to your field
-                    stats_dict[metric_stat_ht.strata][metric]['mad']
+                    stats_dict[metric_stat_ht.strata][metric]["median"],  # Change 'batch' to your field
+                    stats_dict[metric_stat_ht.strata][metric]["mad"],
                 )
                 for metric in qc_metrics
             }
         )
-    elif qc_type=="lr" and not run_with_strata:
+    elif qc_type == "lr" and not run_with_strata:
         mad_scores_ht = metric_stat_ht.annotate(
             **{
                 f'{metric.removesuffix("_residual")}_mad': compute_mad_score(
-                    metric_stat_ht[metric],
-                    stats_dict['all'][metric]['median'],
-                    stats_dict['all'][metric]['mad']
+                    metric_stat_ht[metric], stats_dict["all"][metric]["median"], stats_dict["all"][metric]["mad"]
                 )
                 for metric in qc_metrics
             }
         )
-    elif qc_type=="nn":
+    elif qc_type == "nn":
         mad_scores_ht = metric_stat_ht.annotate(
             **{
-                f'{metric}_mad': compute_mad_score(
+                f"{metric}_mad": compute_mad_score(
                     metric_stat_ht[metric],
-                    stats_dict[metric_stat_ht.s][metric]['median'],
-                    stats_dict[metric_stat_ht.s][metric]['mad']
+                    stats_dict[metric_stat_ht.s][metric]["median"],
+                    stats_dict[metric_stat_ht.s][metric]["mad"],
                 )
                 for metric in qc_metrics
             }
         )
-    #cleaning final table
-    mad_scores_ht=mad_scores_ht.drop(*qc_metrics)
-    mad_scores_ht = mad_scores_ht.select(**{col.removesuffix('_mad'): mad_scores_ht[col] for col in mad_scores_ht.row_value})
+    # cleaning final table
+    mad_scores_ht = mad_scores_ht.drop(*qc_metrics)
+    mad_scores_ht = mad_scores_ht.select(
+        **{col.removesuffix("_mad"): mad_scores_ht[col] for col in mad_scores_ht.row_value}
+    )
     return mad_scores_ht
 
+
 #######################################
-#pop
+# pop
 #######################################
 # TODO: rename to annotate_with_pop
 def annotate_mt(raw_mt_file: str, pop_ht_file: str) -> hl.MatrixTable:
@@ -270,7 +294,7 @@ def stratified_sample_qc_pop(
     min_vaf: float,
     compute_stratified_metrics_filter_args: dict,
     **kwargs,
-)-> tuple[hl.MatrixTable, hl.Table, hl.Table, dict]:
+) -> tuple[hl.MatrixTable, hl.Table, hl.Table, dict]:
     """
     Run sample QC and stratify by population
     param str annotated_mt_file: population and run id annotated MT file
@@ -294,15 +318,17 @@ def stratified_sample_qc_pop(
     step2.stratified_sample_qc.ht_qc_cols_outfile : output path : used in main
     step2.stratified_sample_qc.qc_filter_file : output path : used in main
     """
-    #filtering variants and running sample QC
-    mt_with_sampleqc=run_filtering_and_sample_qc(mt, control_list, min_depth, min_genotype_quality, min_vaf)
-    sample_qc_ht=mt_with_sampleqc.cols()
+    # filtering variants and running sample QC
+    mt_with_sampleqc = run_filtering_and_sample_qc(mt, control_list, min_depth, min_genotype_quality, min_vaf)
+    sample_qc_ht = mt_with_sampleqc.cols()
 
-    #modifying compute_stratified_metrics_filter_args
-    compute_stratified_metrics_filter_args=modify_metric_dict(compute_stratified_metrics_filter_args)
-    threshold_dict=get_threshold_dict(compute_stratified_metrics_filter_args, qc_metrics)
+    # modifying compute_stratified_metrics_filter_args
+    compute_stratified_metrics_filter_args = modify_metric_dict(compute_stratified_metrics_filter_args)
+    threshold_dict = get_threshold_dict(compute_stratified_metrics_filter_args, qc_metrics)
     if "comparison_sample_expr" in compute_stratified_metrics_filter_args.keys():
-        print ("=== Warning! 'comparison_sample_expr' was provided but will be ignored in 'compute_stratified_metrics_filter'=== ")
+        print(
+            "=== Warning! 'comparison_sample_expr' was provided but will be ignored in 'compute_stratified_metrics_filter'=== "
+        )
         compute_stratified_metrics_filter_args.pop("comparison_sample_expr", None)
 
     print("=== Runnig stratified metrics filter ===")
@@ -313,10 +339,10 @@ def stratified_sample_qc_pop(
         strata={"qc_pop": sample_qc_ht.assigned_pop},
         **compute_stratified_metrics_filter_args,
     )
-    #generating table with MADs for plots
+    # generating table with MADs for plots
     metrics_ht = sample_qc_ht.select(**{metric: sample_qc_ht.sample_qc[metric] for metric in qc_metrics})
-    mad_ht=get_mad_ht (metrics_ht, sample_qc_ht, filter_ht, True, "pop", qc_metrics)
-    #annotating sample_qc_ht with qc_metrics_stats and stratified_metrics_filter results
+    mad_ht = get_mad_ht(metrics_ht, sample_qc_ht, filter_ht, True, "pop", qc_metrics)
+    # annotating sample_qc_ht with qc_metrics_stats and stratified_metrics_filter results
     globals = hl.eval(filter_ht.globals.qc_metrics_stats)
     sample_qc_ht = sample_qc_ht.annotate_globals(qc_metrics_stats=globals)
     sample_qc_ht = sample_qc_ht.annotate(**filter_ht[sample_qc_ht.key]).persist()
@@ -326,8 +352,9 @@ def stratified_sample_qc_pop(
     # return the mad_ht for plotting in the next step
     return mt_with_sampleqc, sample_qc_ht, mad_ht, threshold_dict
 
+
 #######################################
-#nn
+# nn
 #######################################
 def stratified_sample_qc_nn(
     raw_mt_file: str,
@@ -340,9 +367,8 @@ def stratified_sample_qc_nn(
     min_vaf: float,
     compute_stratified_metrics_filter_args: dict,
     determine_nearest_neighbors_args: dict,
-
     **kwargs,
-)-> tuple[hl.MatrixTable, hl.Table, hl.Table, hl.Table, hl.Table, bool, dict]:
+) -> tuple[hl.MatrixTable, hl.Table, hl.Table, hl.Table, hl.Table, bool, dict]:
     """
     Run sample QC using nearest neighbors
     param str raw_mt_file: input MT file
@@ -364,37 +390,35 @@ def stratified_sample_qc_nn(
     ### Indirect config fields
     step2.prune_plot_pca.union_pca_scores_file : input path : PCA scores
     """
-    pca_scores=hl.read_table(path_spark(pca_score_file))
-    mt=hl.read_matrix_table(path_spark(raw_mt_file))
-    #filtering variants and running sample QC
-    mt_with_sampleqc=run_filtering_and_sample_qc(mt, control_list, min_depth, min_genotype_quality, min_vaf)
-    sample_qc_ht=mt_with_sampleqc.cols()#sample_qc_ht=mt_with_sampleqc.cols()
+    pca_scores = hl.read_table(path_spark(pca_score_file))
+    mt = hl.read_matrix_table(path_spark(raw_mt_file))
+    # filtering variants and running sample QC
+    mt_with_sampleqc = run_filtering_and_sample_qc(mt, control_list, min_depth, min_genotype_quality, min_vaf)
+    sample_qc_ht = mt_with_sampleqc.cols()  # sample_qc_ht=mt_with_sampleqc.cols()
 
-    #checking if batch column exists when a user wants to use it for stratification
-    if use_batch and 'batch' not in sample_qc_ht.row:
+    # checking if batch column exists when a user wants to use it for stratification
+    if use_batch and "batch" not in sample_qc_ht.row:
         print("=== WARNING! Batch annotation is not found, batch won't be used for stratified qc ===")
-        use_batch=False
-    print(f"=== Determing nearest neighbors ===")
+        use_batch = False
+    print("=== Determing nearest neighbors ===")
     if determine_nearest_neighbors_args is None:
-        determine_nearest_neighbors_args={}
-    determine_nearest_neighbors_args["strata"]={"batch": sample_qc_ht.batch} if use_batch else None
-    determine_nearest_neighbors_args["add_neighbor_distances"]=True
+        determine_nearest_neighbors_args = {}
+    determine_nearest_neighbors_args["strata"] = {"batch": sample_qc_ht.batch} if use_batch else None
+    determine_nearest_neighbors_args["add_neighbor_distances"] = True
     # Using gnomAD function to determine nearest neighbors
     nn_ht = determine_nearest_neighbors(
-        sample_qc_ht,
-        pca_scores[sample_qc_ht.key].scores,
-        **determine_nearest_neighbors_args
+        sample_qc_ht, pca_scores[sample_qc_ht.key].scores, **determine_nearest_neighbors_args
     )
 
-    #annotating sample_qc_ht with nearest neighbors information
-    sample_qc_ht = sample_qc_ht.annotate(
-        nearest_neighbors=nn_ht[sample_qc_ht.key].nearest_neighbors
-    )
-    #modifying compute_stratified_metrics_filter_args
-    compute_stratified_metrics_filter_args=modify_metric_dict(compute_stratified_metrics_filter_args)
-    threshold_dict=get_threshold_dict(compute_stratified_metrics_filter_args, qc_metrics)
+    # annotating sample_qc_ht with nearest neighbors information
+    sample_qc_ht = sample_qc_ht.annotate(nearest_neighbors=nn_ht[sample_qc_ht.key].nearest_neighbors)
+    # modifying compute_stratified_metrics_filter_args
+    compute_stratified_metrics_filter_args = modify_metric_dict(compute_stratified_metrics_filter_args)
+    threshold_dict = get_threshold_dict(compute_stratified_metrics_filter_args, qc_metrics)
     if "comparison_sample_expr" in compute_stratified_metrics_filter_args.keys():
-        print ("=== Warning! 'comparison_sample_expr' was provided but will be ignored in 'compute_stratified_metrics_filter' because this pipeline sets that argument internally to 'sample_qc_ht.nearest_neighbors' === ")
+        print(
+            "=== Warning! 'comparison_sample_expr' was provided but will be ignored in 'compute_stratified_metrics_filter' because this pipeline sets that argument internally to 'sample_qc_ht.nearest_neighbors' === "
+        )
         compute_stratified_metrics_filter_args.pop("comparison_sample_expr", None)
 
     print("=== Runnig stratified metrics filter ===")
@@ -403,14 +427,14 @@ def stratified_sample_qc_nn(
         sample_qc_ht,
         qc_metrics={metric: sample_qc_ht.sample_qc[metric] for metric in qc_metrics},
         comparison_sample_expr=sample_qc_ht.nearest_neighbors,
-        **compute_stratified_metrics_filter_args
+        **compute_stratified_metrics_filter_args,
     )
 
-    #generating table with MADs for plots
+    # generating table with MADs for plots
     metrics_ht = sample_qc_ht.select(**{metric: sample_qc_ht.sample_qc[metric] for metric in qc_metrics})
-    mad_ht=get_mad_ht (metrics_ht, sample_qc_ht, filter_ht, use_batch, "nn", qc_metrics)
-    #annotating sample_qc_ht with stratified_metrics_filter results and extracting qc_metrics_stats 
-    qc_metrics_stats = filter_ht.key_by().select('s', 'qc_metrics_stats').collect()
+    mad_ht = get_mad_ht(metrics_ht, sample_qc_ht, filter_ht, use_batch, "nn", qc_metrics)
+    # annotating sample_qc_ht with stratified_metrics_filter results and extracting qc_metrics_stats
+    qc_metrics_stats = filter_ht.key_by().select("s", "qc_metrics_stats").collect()
     filter_ht = filter_ht.drop("qc_metrics_stats")
     sample_qc_ht = sample_qc_ht.annotate(**filter_ht[sample_qc_ht.key]).persist()
     checkpoint = sample_qc_ht.aggregate(hl.agg.count_where(hl.len(sample_qc_ht.qc_metrics_filters) == 0))
@@ -418,12 +442,13 @@ def stratified_sample_qc_nn(
     # return the mad_ht for plotting in the next step
     return mt_with_sampleqc, sample_qc_ht, qc_metrics_stats, mad_ht, nn_ht, use_batch, threshold_dict
 
+
 #######################################
-#lr
+# lr
 #######################################
 def stratified_sample_qc_lr(
     raw_mt_file: str,
-    pca_score_file: str, # Scored
+    pca_score_file: str,  # Scored
     qc_metrics: list,
     control_list: list,
     use_batch: bool,
@@ -455,42 +480,46 @@ def stratified_sample_qc_lr(
     ### Indirect config fields
     step2.prune_plot_pca.union_pca_scores_file : input path : PCA scores
     """
-    pca_scores=hl.read_table(path_spark(pca_score_file))
-    mt=hl.read_matrix_table(path_spark(raw_mt_file))
-    #filtering variants and running sample QC
-    mt_with_sampleqc=run_filtering_and_sample_qc(mt, control_list, min_depth, min_genotype_quality, min_vaf)
-    sample_qc_ht=mt_with_sampleqc.cols()#sample_qc_ht=mt_with_sampleqc.cols()
+    pca_scores = hl.read_table(path_spark(pca_score_file))
+    mt = hl.read_matrix_table(path_spark(raw_mt_file))
+    # filtering variants and running sample QC
+    mt_with_sampleqc = run_filtering_and_sample_qc(mt, control_list, min_depth, min_genotype_quality, min_vaf)
+    sample_qc_ht = mt_with_sampleqc.cols()  # sample_qc_ht=mt_with_sampleqc.cols()
 
-    #checking if batch column exists when a user wants to use it for stratification
-    if use_batch and 'batch' not in sample_qc_ht.row:
+    # checking if batch column exists when a user wants to use it for stratification
+    if use_batch and "batch" not in sample_qc_ht.row:
         print("=== WARNING! Batch annotation is not found, batch won't be used for stratified qc ===")
-        use_batch=False
-    #annotating sample_qc_ht with PCs
+        use_batch = False
+    # annotating sample_qc_ht with PCs
     sample_qc_ht = sample_qc_ht.annotate(scores=pca_scores[sample_qc_ht.key].scores)
-    #modifying compute_qc_metrics_residuals_args
+    # modifying compute_qc_metrics_residuals_args
     print("=== Running residual calculation ===")
     if compute_qc_metrics_residuals_args is None:
-        compute_qc_metrics_residuals_args={}
-    compute_qc_metrics_residuals_args["strata"]={"batch": sample_qc_ht.batch} if use_batch else None
+        compute_qc_metrics_residuals_args = {}
+    compute_qc_metrics_residuals_args["strata"] = {"batch": sample_qc_ht.batch} if use_batch else None
     if "regression_sample_inclusion_expr" in compute_qc_metrics_residuals_args.keys():
-        print ("=== Warning! 'regression_sample_inclusion_expr' was provided but will be ignored in 'compute_qc_metrics_residuals'=== ")
+        print(
+            "=== Warning! 'regression_sample_inclusion_expr' was provided but will be ignored in 'compute_qc_metrics_residuals'=== "
+        )
         compute_qc_metrics_residuals_args.pop("regression_sample_inclusion_expr", None)
 
     # Using gnomAD function to calculate residuals
-    sample_qc_res_ht=compute_qc_metrics_residuals(
+    sample_qc_res_ht = compute_qc_metrics_residuals(
         sample_qc_ht,
         sample_qc_ht.scores,
         qc_metrics={metric: sample_qc_ht.sample_qc[metric] for metric in qc_metrics},
-        **compute_qc_metrics_residuals_args
+        **compute_qc_metrics_residuals_args,
     )
 
-    #modifying compute_stratified_metrics_filter_args_lr
-    compute_stratified_metrics_filter_args=modify_metric_dict(compute_stratified_metrics_filter_args)
-    threshold_dict=get_threshold_dict(compute_stratified_metrics_filter_args, qc_metrics)
-    compute_stratified_metrics_filter_args_lr=modify_metric_names(compute_stratified_metrics_filter_args)
+    # modifying compute_stratified_metrics_filter_args_lr
+    compute_stratified_metrics_filter_args = modify_metric_dict(compute_stratified_metrics_filter_args)
+    threshold_dict = get_threshold_dict(compute_stratified_metrics_filter_args, qc_metrics)
+    compute_stratified_metrics_filter_args_lr = modify_metric_names(compute_stratified_metrics_filter_args)
 
     if "comparison_sample_expr" in compute_stratified_metrics_filter_args_lr.keys():
-        print ("=== Warning! 'comparison_sample_expr' was provided but will be ignored in 'compute_stratified_metrics_filter'=== ")
+        print(
+            "=== Warning! 'comparison_sample_expr' was provided but will be ignored in 'compute_stratified_metrics_filter'=== "
+        )
         compute_stratified_metrics_filter_args_lr.pop("comparison_sample_expr", None)
 
     print("=== Running stratified metrics filter ===")
@@ -502,10 +531,10 @@ def stratified_sample_qc_lr(
         **compute_stratified_metrics_filter_args_lr,
     )
 
-    #generating table with MADs for plots
+    # generating table with MADs for plots
 
-    mad_ht=get_mad_ht (sample_qc_res_ht, sample_qc_ht, filter_ht, use_batch, 'lr', qc_metrics)
-    #annotating sample_qc_ht with qc_metrics_stats and stratified_metrics_filter results
+    mad_ht = get_mad_ht(sample_qc_res_ht, sample_qc_ht, filter_ht, use_batch, "lr", qc_metrics)
+    # annotating sample_qc_ht with qc_metrics_stats and stratified_metrics_filter results
     globals = hl.eval(filter_ht.globals.qc_metrics_stats)
     sample_qc_ht = sample_qc_ht.annotate_globals(qc_metrics_stats=globals)
     sample_qc_ht = sample_qc_ht.annotate(**filter_ht[sample_qc_ht.key]).persist()
@@ -514,9 +543,11 @@ def stratified_sample_qc_lr(
     # return the mad_ht for plotting in the next step
     return mt_with_sampleqc, sample_qc_ht, mad_ht, sample_qc_res_ht, use_batch, threshold_dict
 
+
 #######################################
-#plots
+# plots
 #######################################
+
 
 def plot_sampleqc_metric(
     df: pd.Series,
@@ -612,6 +643,7 @@ def plot_sampleqc_metric(
     p.xaxis.axis_label = metric
     return p
 
+
 def plot_mad_metrics(
     ht_mad: hl.Table,
     qc_metrics: list,
@@ -629,7 +661,7 @@ def plot_mad_metrics(
 ):
     """
     Plot MAD-normalized metrics from ht_mad table.
-    
+
     Parameters:
         ht_mad: Hail Table with MAD-normalized metrics
         plot_outdir: Output directory for plots
@@ -646,31 +678,31 @@ def plot_mad_metrics(
         default_lower_threshold: Default lower threshold if not specified in metric_thresholds (default -4.0 MADs)
         default_upper_threshold: Default upper threshold if not specified in metric_thresholds (default 4.0 MADs)
     """
-    
+
     os.makedirs(plot_outdir, exist_ok=True)
-    
+
     # Initialize metric_thresholds if not provided
     if metric_thresholds is None:
         metric_thresholds = {}
-    
+
     # Check if strata column exists AND if user wants to use it
-    has_strata = 'strata' in ht_mad.row
+    has_strata = "strata" in ht_mad.row
     use_strata_stratification = has_strata and use_strata
-    
+
     # If use_strata=False and strata exists, remove it before converting to pandas
     if has_strata and not use_strata:
         print("Strata column exists but use_strata=False - ignoring strata stratification")
-        ht_mad = ht_mad.drop('strata')
-    
+        ht_mad = ht_mad.drop("strata")
+
     pd_ht = ht_mad.to_pandas()
-    
+
     # Define metrics
     # Filter to only existing metrics
     metrics = [m for m in qc_metrics if m in pd_ht.columns]
-    
+
     if not metrics:
         raise ValueError("No valid metrics found in table")
-    
+
     # Helper function to get thresholds for a metric
     def get_thresholds(metric):
         """Get lower and upper thresholds for a metric, handling math.inf"""
@@ -683,19 +715,19 @@ def plot_mad_metrics(
         else:
             # Use defaults
             return default_lower_threshold, default_upper_threshold
-    
+
     if use_strata_stratification:
         print(f"Creating strata-stratified plots for {len(pd_ht['strata'].unique())} strata")
-        
+
         # Colors - use 1KG scheme if specified
-        all_strata = sorted(pd_ht['strata'].unique())
-        
+        all_strata = sorted(pd_ht["strata"].unique())
+
         if color_scheme == "1KG":
             # 1000 Genomes population color mapping
             all_pops = ["EUR", "EAS", "AFR", "AMR", "SAS", "oth"]
             colours = ["#F0E442", "#D55E00", "#0072B2", "#009E73", "#E69F00", "#56B4E9"]
             pop_color_map = dict(zip(all_pops, colours))
-            
+
             # Assign colors based on population names
             strata_colors = {}
             for stratum in all_strata:
@@ -704,30 +736,29 @@ def plot_mad_metrics(
                 else:
                     # Fallback for strata not in the predefined list
                     strata_colors[stratum] = "#808080"  # Gray for unknown
-            
+
             print(f"Using 1KG color scheme for populations: {all_pops}")
         else:
             # Default color cycling
             default_colors = ["#F0E442", "#D55E00", "#0072B2", "#009E73", "#E69F00", "#56B4E9"]
-            strata_colors = dict(zip(
-                all_strata,
-                (default_colors * (len(all_strata) // len(default_colors) + 1))[:len(all_strata)]
-            ))
-        
+            strata_colors = dict(
+                zip(all_strata, (default_colors * (len(all_strata) // len(default_colors) + 1))[: len(all_strata)])
+            )
+
         # Create plots for grid (don't save these individually)
         grid_plots = []
         plots_by_metric = defaultdict(list)
-        
+
         for stratum in all_strata:
-            subdf = pd_ht[pd_ht['strata'] == stratum]
-            
+            subdf = pd_ht[pd_ht["strata"] == stratum]
+
             for metric in metrics:
                 data = subdf[metric]
                 color = strata_colors.get(stratum, "#0072B2")
-                
+
                 # Get thresholds for this metric
                 lower_thresh, upper_thresh = get_thresholds(metric)
-                
+
                 # Create plot for grid
                 p_grid = plot_sampleqc_metric(
                     data,
@@ -740,10 +771,10 @@ def plot_mad_metrics(
                     plot_height=plot_height,
                     text_size=text_size,
                 )
-                
+
                 grid_plots.append(p_grid)
                 plots_by_metric[metric].append(p_grid)
-                
+
                 # Create SEPARATE plot for individual save
                 p_individual = plot_sampleqc_metric(
                     data,
@@ -757,12 +788,12 @@ def plot_mad_metrics(
                     plot_title=f"{metric} (MAD-normalized) - {stratum}",
                     text_size=text_size,
                 )
-                
+
                 # Save individual plot
                 plot_name = f"MAD_hist_{metric}_{stratum}.html"
                 bkplot.output_file(os.path.join(plot_outdir, plot_name))
                 bkplot.save(p_individual)
-            
+
             # Add stratum label
             grid_plots.append(
                 Div(
@@ -772,35 +803,35 @@ def plot_mad_metrics(
                     styles={"writing-mode": "vertical-rl", "text-align": "center"},
                 )
             )
-        
+
         # Sync x-ranges across strata for each metric
         for k, p in plots_by_metric.items():
             x_lower = min([pl.x_range.start for pl in p])
             x_upper = max([pl.x_range.end for pl in p])
             for pl in p:
                 pl.x_range = Range1d(start=x_lower, end=x_upper)
-        
+
         # Create grid with column titles
         col_titles = [
-            Div(text=f"<b>{metric}</b>", width=plot_width, height=15, styles={"text-align": "center"}) 
+            Div(text=f"<b>{metric}</b>", width=plot_width, height=15, styles={"text-align": "center"})
             for metric in metrics
         ] + [None]
-        
+
         grid = bklayouts.gridplot(col_titles + grid_plots, ncols=len(metrics) + 1)
         plot_outfile = os.path.join(plot_outdir, "mad_metrics_by_strata.html")
-        
+
     else:
         # Plot all samples together (no strata stratification)
         print(f"Creating global plots for all {len(pd_ht)} samples")
-        
+
         grid_plots = []
-        
+
         for metric in metrics:
             data = pd_ht[metric]
-            
+
             # Get thresholds for this metric
             lower_thresh, upper_thresh = get_thresholds(metric)
-            
+
             # Create plot for grid
             p_grid = plot_sampleqc_metric(
                 data,
@@ -813,9 +844,9 @@ def plot_mad_metrics(
                 plot_height=plot_height,
                 text_size=text_size,
             )
-            
+
             grid_plots.append(p_grid)
-            
+
             # Create SEPARATE plot for individual save
             p_individual = plot_sampleqc_metric(
                 data,
@@ -829,21 +860,22 @@ def plot_mad_metrics(
                 plot_title=f"{metric} (MAD-normalized)",
                 text_size=text_size,
             )
-            
+
             # Save individual plot
             plot_name = f"MAD_hist_{metric}_all.html"
             bkplot.output_file(os.path.join(plot_outdir, plot_name))
             bkplot.save(p_individual)
-        
+
         grid = bklayouts.gridplot(grid_plots, ncols=3)
         plot_outfile = os.path.join(plot_outdir, "mad_metrics_all.html")
-    
+
     # Save combined grid
     bkplot.output_file(plot_outfile)
     bkplot.save(grid)
-    
+
     print(f"Plots saved to {plot_outdir}")
     print(f"Combined plot: {plot_outfile}")
+
 
 def main():
     # = STEP SETUP = #
@@ -851,10 +883,10 @@ def main():
     tmp_dir = config["general"]["tmp_dir"]
 
     # = STEP PARAMETERS = #
-    runmode=config["step2"]["stratified_sample_qc"]["sample_qc_method"]
-    control_list=config["general"]["metadata"]["control_samples"]
+    runmode = config["step2"]["stratified_sample_qc"]["sample_qc_method"]
+    control_list = config["general"]["metadata"]["control_samples"]
     if control_list is None:
-        control_list=[]
+        control_list = []
 
     # = STEP DEPENDENCIES = #
     raw_mt_file = config["step1"]["validate_gtcheck"]["mt_gtcheck_validated"]
@@ -885,12 +917,14 @@ def main():
         "n_deletion",
         "r_het_hom_var",
     ]
-    if runmode=="pop":
+    if runmode == "pop":
         # annotate mt with runid and pop
         mt = annotate_mt(raw_mt_file, pop_ht_file)
         mt.write(path_spark(annotated_mt_file), overwrite=True)
         # run sample QC and stratify by population
-        mt_with_sampleqc, sample_qc_ht, mad_ht, threshold_dict = stratified_sample_qc_pop(mt, qc_metrics, control_list, **config["step2"]["stratified_sample_qc"])
+        mt_with_sampleqc, sample_qc_ht, mad_ht, threshold_dict = stratified_sample_qc_pop(
+            mt, qc_metrics, control_list, **config["step2"]["stratified_sample_qc"]
+        )
         mt_with_sampleqc.cols().write(path_spark(ht_qc_cols_outfile), overwrite=True)
         sample_qc_ht.write(path_spark(qc_filter_file), overwrite=True)
         sample_qc_ht.export(path_spark(output_text_file), delimiter="\t")
@@ -898,36 +932,50 @@ def main():
         mad_ht.write(path_spark(mad_file), overwrite=True)
         # plot metrics
         print("=== Plotting metrics ===")
-        #all_pops = ["EUR", "EAS", "AFR", "AMR", "SAS", "oth"]
-        #colors = ["#F0E442", "#D55E00", "#0072B2", "#009E73", "#E69F00", "#56B4E9"]
-        plot_mad_metrics(mad_ht, qc_metrics, **config["step2"]["plot_sample_qc_metrics"], use_strata=True, metric_thresholds=threshold_dict, color_scheme="1KG")
+        # all_pops = ["EUR", "EAS", "AFR", "AMR", "SAS", "oth"]
+        # colors = ["#F0E442", "#D55E00", "#0072B2", "#009E73", "#E69F00", "#56B4E9"]
+        plot_mad_metrics(
+            mad_ht,
+            qc_metrics,
+            **config["step2"]["plot_sample_qc_metrics"],
+            use_strata=True,
+            metric_thresholds=threshold_dict,
+            color_scheme="1KG",
+        )
 
-    elif runmode=="nn":
+    elif runmode == "nn":
         # run sample QC and stratify by batch if specified
-        mt_with_sampleqc, sample_qc_ht, qc_metrics_stats, mad_ht, nn_ht, use_batch, threshold_dict=stratified_sample_qc_nn(raw_mt_file, pc_scores_file, qc_metrics, control_list, **config["step2"]["stratified_sample_qc"])
+        mt_with_sampleqc, sample_qc_ht, qc_metrics_stats, mad_ht, nn_ht, use_batch, threshold_dict = (
+            stratified_sample_qc_nn(
+                raw_mt_file, pc_scores_file, qc_metrics, control_list, **config["step2"]["stratified_sample_qc"]
+            )
+        )
         mt_with_sampleqc.cols().write(path_spark(ht_qc_cols_outfile), overwrite=True)
         sample_qc_ht.write(path_spark(qc_filter_file), overwrite=True)
         sample_qc_ht.export(path_spark(output_text_file), delimiter="\t")
         nn_ht.export(path_spark(output_nn_file), delimiter="\t")
         metrics_stats_output = {
-            "qc_metrics_stats": [
-                {
-                    "key": [row.s],
-                    "value": row.qc_metrics_stats
-                }
-                for row in qc_metrics_stats
-            ]
+            "qc_metrics_stats": [{"key": [row.s], "value": row.qc_metrics_stats} for row in qc_metrics_stats]
         }
-        with open(output_stratified_metrics_json, 'w') as f:
+        with open(output_stratified_metrics_json, "w") as f:
             json.dump(metrics_stats_output, f, default=str)
         mad_ht.write(path_spark(mad_file), overwrite=True)
         # plot metrics
         print("=== Plotting metrics ===")
-        plot_mad_metrics(mad_ht, qc_metrics, color_scheme=None, **config["step2"]["plot_sample_qc_metrics"], use_strata=use_batch, metric_thresholds=threshold_dict)
+        plot_mad_metrics(
+            mad_ht,
+            qc_metrics,
+            color_scheme=None,
+            **config["step2"]["plot_sample_qc_metrics"],
+            use_strata=use_batch,
+            metric_thresholds=threshold_dict,
+        )
 
-    elif runmode=="lr":
+    elif runmode == "lr":
         # run sample QC and stratify by batch if specified
-        mt_with_sampleqc, qc_metrics_ht, mad_ht, sample_qc_res_ht, use_batch, threshold_dict=stratified_sample_qc_lr(raw_mt_file, pc_scores_file, qc_metrics, control_list, **config["step2"]["stratified_sample_qc"])
+        mt_with_sampleqc, qc_metrics_ht, mad_ht, sample_qc_res_ht, use_batch, threshold_dict = stratified_sample_qc_lr(
+            raw_mt_file, pc_scores_file, qc_metrics, control_list, **config["step2"]["stratified_sample_qc"]
+        )
         mt_with_sampleqc.cols().write(path_spark(ht_qc_cols_outfile), overwrite=True)
         qc_metrics_ht.write(path_spark(qc_filter_file), overwrite=True)
         qc_metrics_ht.export(path_spark(output_text_file), delimiter="\t")
@@ -937,9 +985,16 @@ def main():
         mad_ht.write(path_spark(mad_file), overwrite=True)
         # plot metrics
         print("=== Plotting metrics ===")
-        plot_mad_metrics(mad_ht, qc_metrics, **config["step2"]["plot_sample_qc_metrics"], use_strata=use_batch, metric_thresholds=threshold_dict)
+        plot_mad_metrics(
+            mad_ht,
+            qc_metrics,
+            **config["step2"]["plot_sample_qc_metrics"],
+            use_strata=use_batch,
+            metric_thresholds=threshold_dict,
+        )
     else:
         raise ValueError(f"Unknown sample QC method: {runmode}")
+
 
 if __name__ == "__main__":
     main()

@@ -16,10 +16,10 @@ from typing import Any
 
 import hail as hl  # type: ignore
 
-from wes_qc.hail_utils import path_spark
-from wes_qc.config import get_config
-from wes_qc.compute_relatedness import prune_pc_relate
-from wes_qc import filtering, hail_utils
+from wxs_qc.hail_utils import path_spark
+from wxs_qc.config import get_config
+from wxs_qc.compute_relatedness import prune_pc_relate
+from wxs_qc import filtering, hail_utils
 
 
 def create_1kg_mt(vcf_indir: str, kg_pop_file: str, **kwargs: dict) -> hl.MatrixTable:

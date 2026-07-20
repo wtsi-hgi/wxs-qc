@@ -6,8 +6,8 @@ keeping only data that are required for the VariantQC
 import hail as hl  # type: ignore
 
 from utils.utils import parse_config
-from wes_qc.hail_utils import path_spark
-from wes_qc import hail_utils
+from wxs_qc.hail_utils import path_spark
+from wxs_qc import hail_utils
 
 
 def prepare_gnomad_ht(ht: hl.Table, n_partitions: int = 72) -> hl.Table:

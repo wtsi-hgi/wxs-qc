@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 
 from tests.integration_tests.integration_stub import IntegrationTestsStub
-from wes_qc.config import parse_config_file
+from wxs_qc.config import parse_config_file
 
 PEDIGREE_FILE_PATH_TRIOS = """ '${cvars.metadir}/control_set_small.trios.fam' """
 

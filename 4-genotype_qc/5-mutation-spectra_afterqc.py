@@ -2,7 +2,7 @@ import bokeh.io
 import hail as hl
 
 from utils.utils import parse_config, path_spark
-from wes_qc import hail_utils, visualize
+from wxs_qc import hail_utils, visualize
 
 
 def main():

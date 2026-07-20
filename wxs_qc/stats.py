@@ -23,6 +23,7 @@ def count_vars_per_cq(ht: hl.Table, cqs: list[str]) -> dict[str, int]:
     result_dict = {row.consequence_split: row.n for row in result_ht.collect()}
     return result_dict
 
+
 def print_variant_filter_stats(mt: hl.MatrixTable) -> None:
     """
     Print variant filter statistics in a table format.
@@ -36,18 +37,11 @@ def print_variant_filter_stats(mt: hl.MatrixTable) -> None:
     filter_levels = ["stringent", "medium", "relaxed"]
     filter_statuses = ["pass", "fail"]
 
-    labels = [
-        f"{level}_{status}"
-        for level in filter_levels
-        for status in filter_statuses
-    ]
+    labels = [f"{level}_{status}" for level in filter_levels for status in filter_statuses]
 
     # Count how many variants contain each filter label.
     label_counts = mt.aggregate_rows(
-        hl.dict({
-            label: hl.agg.count_where(mt.filters.contains(label))
-            for label in labels
-        })
+        hl.dict({label: hl.agg.count_where(mt.filters.contains(label)) for label in labels})
     )
 
     print("\nVariant Filter Statistics:")

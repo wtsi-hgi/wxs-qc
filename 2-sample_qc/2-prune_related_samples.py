@@ -8,10 +8,10 @@ import bokeh.layouts as bklayouts
 import hail as hl
 
 from utils.utils import parse_config, path_local, path_spark
-from wes_qc.pca_utils import prune_mt, run_pc_project
-from wes_qc.compute_relatedness import prune_pc_relate
-from wes_qc.filtering import filter_matrix_for_ldprune
-from wes_qc import hail_utils, constants, filtering
+from wxs_qc.pca_utils import prune_mt, run_pc_project
+from wxs_qc.compute_relatedness import prune_pc_relate
+from wxs_qc.filtering import filter_matrix_for_ldprune
+from wxs_qc import hail_utils, constants, filtering
 
 
 def plot_relatedness(

@@ -5,7 +5,7 @@ import bokeh
 import math
 
 import pandas as pd
-from wes_qc import constants
+from wxs_qc import constants
 
 
 def plot_pop_pca(

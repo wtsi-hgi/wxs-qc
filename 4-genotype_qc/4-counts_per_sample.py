@@ -7,7 +7,7 @@ import hail as hl
 import numpy as np
 import pandas as pd
 from utils.utils import parse_config, path_spark, path_local
-from wes_qc import hail_utils, stats, constants
+from wxs_qc import hail_utils, stats, constants
 
 # We need to re-annotate the initial matrixtable, because step 4-2 annotates matrixtable
 # and drops variants passing the relaxed filter

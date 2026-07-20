@@ -1,7 +1,7 @@
 import hail as hl  # type: ignore
 from pytest import mark as m
 import pytest
-from wes_qc import filtering
+from wxs_qc import filtering
 
 
 def test_find_duplicated_variants_no_duplicates():

@@ -5,7 +5,7 @@ from typing import Union
 import hail as hl
 import os.path
 from utils.utils import parse_config, path_spark
-from wes_qc import hail_utils, stats
+from wxs_qc import hail_utils, stats
 
 
 def remove_samples(mt: hl.MatrixTable, exclude_file: str):

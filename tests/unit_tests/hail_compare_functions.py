@@ -12,7 +12,7 @@ import hail as hl
 from typing import Union
 
 # ensure that PYTHONPATH includes the wes-qc directory
-from wes_qc.hail_utils import path_spark
+from wxs_qc.hail_utils import path_spark
 
 
 def compare_structs(struct1, struct2):

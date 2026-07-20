@@ -3,7 +3,7 @@ from typing import Optional
 import hail as hl
 import os.path
 
-from wes_qc import hail_utils
+from wxs_qc import hail_utils
 from utils.utils import parse_config, path_spark
 
 
@@ -48,6 +48,7 @@ def add_cq_annotation(ht: hl.Table, synonymous_file: str) -> hl.Table:
 
     ht_cq = ht.annotate(consequence=synonymous_ht[ht.key].consequence)
     return ht_cq
+
 
 def dnm_and_family_annotation_with_missing(ht_cq: hl.Table) -> hl.Table:
     """
@@ -149,6 +150,7 @@ def dnm_and_family_annotation_with_missing(ht_cq: hl.Table) -> hl.Table:
 
     return ht_cq
 
+
 def dnm_and_family_annotation_with_tables(
     ht_cq: hl.Table, dnm_htfile: str, fam_stats_htfile: str, trio_stats_htfile: str
 ):
@@ -167,6 +169,7 @@ def dnm_and_family_annotation_with_tables(
     ht_cq = ht_cq.annotate(fam=trio_stat_annot)
 
     return ht_cq
+
 
 # TODO: To messy - a good candidate for refactoring
 def count_trans_untransmitted_singletons(mt_trios: Optional[hl.MatrixTable], ht: hl.Table) -> hl.Table:
@@ -237,6 +240,7 @@ def count_trans_untransmitted_singletons(mt_trios: Optional[hl.MatrixTable], ht:
     ht = ht.annotate(variant_untransmitted_singletons=variant_untransmitted_annot)
     return ht
 
+
 def transmitted_singleton_annotation(
     ht: hl.Table,
     trio_mtfile: str,
@@ -302,7 +306,9 @@ def main():
         # ht = hl.read_table(path_spark(family_annot_htfile))
         ht = transmitted_singleton_annotation(ht, trio_mtfile, pedfile)
     else:
-        print("=== No synonymous variant and/or pedigree data found: skipping transmitted/untransmitted singletons statistics calculations ===")
+        print(
+            "=== No synonymous variant and/or pedigree data found: skipping transmitted/untransmitted singletons statistics calculations ==="
+        )
         ht = ht.annotate(consequence=hl.missing(hl.tstr))
         ht = dnm_and_family_annotation_with_missing(ht)
         ht = ht.annotate(variant_transmitted_singletons=0, variant_untransmitted_singletons=0)

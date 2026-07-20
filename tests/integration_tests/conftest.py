@@ -8,7 +8,7 @@ from tests.integration_tests.integration_stub import (
     TEST_FILES_LIST,
     render_config,
 )
-from wes_qc import teszt
+from wxs_qc import teszt
 
 
 @pytest.fixture(scope="session")

@@ -4,7 +4,7 @@ from typing import Union, Optional
 
 import hail as hl
 from utils.utils import parse_config, path_spark
-from wes_qc import hail_utils, vcf_utils, stats
+from wxs_qc import hail_utils, vcf_utils, stats
 
 # TODO move to utils constants
 fail_string = "FAIL"
