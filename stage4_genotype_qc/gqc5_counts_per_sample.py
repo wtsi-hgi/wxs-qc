@@ -1,18 +1,17 @@
 # median counts of variants of each consequence per sample plus transmitted/untransmitted
 # ratio for synonymous singletons
-import importlib
 import os
 
 import hail as hl
 import numpy as np
 import pandas as pd
+from stage4_genotype_qc import gqc2_apply_range_of_hard_filters as step4_2
 from utils.utils import parse_config, path_spark, path_local
 from wxs_qc import hail_utils, stats, constants
 
 # We need to re-annotate the initial matrixtable, because step 4-2 annotates matrixtable
 # and drops variants passing the relaxed filter
 # To do it, we import module 4-2 and use annotation functions from it.
-step4_2 = importlib.import_module("stage4_genotype_qc.2-apply_range_of_hard_filters")
 
 
 def annotate_gnomad(mt_in: hl.MatrixTable, gnomad_htfile: str) -> hl.MatrixTable:
