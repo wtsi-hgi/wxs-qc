@@ -6,8 +6,7 @@ from pathlib import Path
 import hail as hl
 import json
 import logging
-from typing import Optional, Any, Union
-
+from typing import Optional, Any, Union, Callable
 
 from wxs_qc.hail_utils import path_spark
 from wxs_qc.config import get_config
@@ -28,6 +27,13 @@ snv_label = "snv"
 indel_label = "indel"
 
 EvaluationStepResults = dict[str, Union[int, float]]
+
+
+def calculate_f1(precision: float, recall: float) -> float:
+    """Calculate F1 from precision and recall, or return -1.0 when undefined."""
+    if precision < 0 or recall < 0 or precision + recall <= 0:
+        return -1.0
+    return 2 * precision * recall / (precision + recall)
 
 
 def clean_mt(mt: hl.MatrixTable) -> hl.MatrixTable:
@@ -135,7 +141,7 @@ def str_timedelta(delta: datetime.timedelta) -> str:
     return f"{days} days and {hours:4.2f} hr"
 
 
-def cache_filter_results(func):
+def cache_filter_results(func) -> Callable[[str, str, str, dict[str, Any]], dict[str, int | float]]:
     """
     Decorator to handle caching of filter combination results to JSON files.
     If a cached result exists, it will be loaded instead of recomputing.
@@ -234,8 +240,6 @@ def process_filter_combination(
 
         if var_type == "snv":
             prec, recall = count_precision_recall(ht_giab_control, ht_giab_dataset, prec_recall_panel)
-            var_counts["prec"] = prec
-            var_counts["recall"] = recall
         elif var_type == "indel":
             prec, recall, prec_frameshift, recall_frameshift, prec_inframe, recall_inframe = count_prec_recall_indel(
                 ht_giab_control=ht_giab_control,
@@ -244,26 +248,34 @@ def process_filter_combination(
                 prec_recall_panel=prec_recall_panel,
                 csq_anntation_file=csq_anntation_file,
             )
-            var_counts["prec"] = prec
-            var_counts["recall"] = recall
             var_counts["prec_inframe"] = prec_inframe
             var_counts["recall_inframe"] = recall_inframe
             var_counts["prec_frameshift"] = prec_frameshift
             var_counts["recall_frameshift"] = recall_frameshift
+            var_counts["f1_frameshift"] = calculate_f1(var_counts["prec_frameshift"], var_counts["recall_frameshift"])
+            var_counts["f1_inframe"] = calculate_f1(var_counts["prec_inframe"], var_counts["recall_inframe"])
+        else:
+            raise ValueError(f"Unknown variant type: {var_type}")
+        var_counts["prec"] = prec
+        var_counts["recall"] = recall
+        var_counts["f1"] = calculate_f1(var_counts["prec"], var_counts["recall"])
     else:
         var_counts["prec"] = -1
         var_counts["recall"] = -1
+        var_counts["f1"] = -1
         if var_type == "indel":
             var_counts["prec_frameshift"] = -1
             var_counts["prec_inframe"] = -1
             var_counts["recall_inframe"] = -1
             var_counts["prec_frameshift"] = -1
             var_counts["recall_frameshift"] = -1
+            var_counts["f1_frameshift"] = -1
+            var_counts["f1_inframe"] = -1
 
     return var_counts
 
 
-def get_giab_sample_from_dataset(giab_sample_id: str, mt_hard: hl.MatrixTable, checkpoint_path):
+def get_giab_sample_from_dataset(giab_sample_id: str, mt_hard: hl.MatrixTable, checkpoint_path: str) -> hl.Table:
     """
     Extracts the GIAB sample table from the dataset matrixtable
     """
@@ -647,11 +659,21 @@ def write_filter_metrics(results: dict, outfile: str, var_type: str):
         "mendelian_error_std",
         "precision",
         "recall",
+        "f1",
     ]
 
     # Add indel-specific fields if processing indels
     if var_type == "indel":
-        header.extend(["precision_frameshift", "recall_frameshift", "precision_inframe", "recall_inframe"])
+        header.extend(
+            [
+                "precision_frameshift",
+                "recall_frameshift",
+                "f1_frameshift",
+                "precision_inframe",
+                "recall_inframe",
+                "f1_inframe",
+            ]
+        )
     elif var_type == "snv":
         header.append("t_u_ratio")
 
@@ -665,19 +687,36 @@ def write_filter_metrics(results: dict, outfile: str, var_type: str):
             fp = str((results[var_type][var_f]["FP"] / results[f"{var_type}_total_fp"]) * 100)
             p = str(results[var_type][var_f].get("prec", ""))
             r = str(results[var_type][var_f].get("recall", ""))
+            f1 = str(results[var_type][var_f].get("f1", ""))
             mendelian_error_mean = str(results[var_type][var_f].get("mendelian_error_mean", ""))
             mendelian_error_std = str(results[var_type][var_f].get("mendelian_error_std", ""))
 
             # Common fields for both types
-            outline = [var_f, bin_val, dp, gq, ab, call_rate, tp, fp, mendelian_error_mean, mendelian_error_std, p, r]
+            outline = [
+                var_f,
+                bin_val,
+                dp,
+                gq,
+                ab,
+                call_rate,
+                tp,
+                fp,
+                mendelian_error_mean,
+                mendelian_error_std,
+                p,
+                r,
+                f1,
+            ]
 
             # Add type-specific fields
             if var_type == "indel":
                 p_f = str(results[var_type][var_f].get("prec_frameshift", ""))
                 r_f = str(results[var_type][var_f].get("recall_frameshift", ""))
+                f1_f = str(results[var_type][var_f].get("f1_frameshift", ""))
                 p_if = str(results[var_type][var_f].get("prec_inframe", ""))
                 r_if = str(results[var_type][var_f].get("recall_inframe", ""))
-                outline.extend([p_f, r_f, p_if, r_if])
+                f1_if = str(results[var_type][var_f].get("f1_inframe", ""))
+                outline.extend([p_f, r_f, f1_f, p_if, r_if, f1_if])
             elif var_type == "snv":
                 tu = str(results[var_type][var_f]["t_u_ratio"])
                 outline.append(tu)
@@ -686,7 +725,7 @@ def write_filter_metrics(results: dict, outfile: str, var_type: str):
             o.write("\n")
 
 
-def parse_hard_filter_values(filter_string: str) -> tuple:
+def parse_hard_filter_values(filter_string: str) -> tuple[str, str, str, str, str]:
     """
     Get hard filter values from a filter string
     :param str filter_string: Filter string
@@ -996,7 +1035,7 @@ def get_options() -> Any:
     return args
 
 
-def main():
+def main() -> None:
     # = STEP SETUP = #
     config = get_config()
     args = get_options()
