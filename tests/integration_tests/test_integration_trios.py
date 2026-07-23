@@ -185,7 +185,12 @@ class TestIntegration(IntegrationTestsStub):
 
     def test_trios_4_1_genotype_qc(self, WES_CONFIG: str) -> None:
         self.stub_4_1_genotype_qc()
-        assert_step_4_1_outputs_match_expected(WES_CONFIG)
+        # TODO:
+        # results validation is disabled due to non-deterministic results of the random forest generation on the step 3.3
+        # To change step 4.1, make a test run before modifying the code,
+        # store results in the 'tests/integration_tests/validation' folder
+        # and enable validation
+        # assert_step_4_1_outputs_match_expected(WES_CONFIG)
 
     def test_trios_4_2_genotype_qc(self) -> None:
         self.stub_4_2_genotype_qc()
