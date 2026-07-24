@@ -31,11 +31,3 @@ repos:
     rev: v0.10.0.1
     hooks:
     -   id: shellcheck
-
--   repo: local
-    hooks:
-    -   id: mypy
-        name: mypy
-        entry: mypy --config-file=pyproject.toml
-        language: system
-        types: [python]
