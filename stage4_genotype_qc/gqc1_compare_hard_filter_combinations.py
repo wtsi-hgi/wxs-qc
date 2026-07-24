@@ -556,14 +556,14 @@ def count_validated_tp_fp(
     Count sample-level validated TP/FP records surviving after the applied hard filters.
     """
     print("--- Counting validated TP/FP ---")
-    # Removing variants that we don't need for this count
-    mt = mt.filter_rows(hl.is_defined(validated_rows_ht[mt.row_key]))
-    mt = mt.filter_cols(hl.literal(validated_samples).contains(mt.s))
+    # Keeping only data that we need
+    mt = mt.filter_rows(hl.is_defined(validated_rows_ht[mt.row_key]))  # Variants present in the validated table
+    mt = mt.filter_cols(hl.literal(validated_samples).contains(mt.s))  # Samples present in the validated table
     # Attach to each variant the list of samples that validate this variant as TP/FP (can be empty)
     mt = mt.annotate_rows(validated_by_sample=validated_rows_ht[mt.row_key].validated_by_sample)
     # Flag each genotype as validated if it is present in the list of samples that validate it as TP/FP
     mt = mt.annotate_entries(validated_type=mt.validated_by_sample.get(mt.s))
-    # Count genotypes validated as TP/FP
+    # Count genotypes validated as TP/FP in one pass
     survived_counts = mt.aggregate_entries(
         hl.agg.counter(
             hl.or_missing(
@@ -852,7 +852,7 @@ def calculate_validated_percentage(filter_results: EvaluationStepResults, label:
     present = float(filter_results.get(f"{label}_validated_present", 0))
     absent = float(filter_results.get(f"{label}_validated_absent", 0))
     total = present + absent
-    return str((present / total) * 100) if total > 0 else ""
+    return str((present / total) * 100) if total > 0 else "-1"
 
 
 def parse_hard_filter_values(filter_string: str) -> tuple[str, str, str, str, str]:
@@ -1233,7 +1233,7 @@ def main() -> None:
         if validated_variants_tsv is not None:  # Preparation the list of validated variants
             validated_ht = import_validated_variants_ht(validated_variants_tsv)
             validated_ht = validated_ht.checkpoint(
-                path_spark(os.path.join(hardfilter_evaluate_workdir, "validated_variants.ht"))
+                path_spark(os.path.join(hardfilter_evaluate_workdir, "validated_variants.ht")), overwrite=True
             )
         else:
             validated_ht = None
