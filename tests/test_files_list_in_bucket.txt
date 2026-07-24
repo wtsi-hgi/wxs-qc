@@ -13,7 +13,7 @@
 ./metadata/control_set_small.verify_bam_id_result.selfSM.tsv
 ./metadata/control_set_small.csq_header.txt
 ./metadata/HG001_twistedexome_1kg.bed
-control_set_small.validated_variants.tsv
+./metadata/control_set_small.validated_variants.tsv
 # Small control set VCFs
 ./control_set_small/control_set_small_chr1.vcf.bgz
 ./control_set_small/control_set_small_chr2.vcf.bgz
