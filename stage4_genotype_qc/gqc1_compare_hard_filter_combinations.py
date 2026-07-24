@@ -6,7 +6,7 @@ from pathlib import Path
 import hail as hl
 import json
 import logging
-from typing import Optional, Any, Union, Callable
+from typing import Optional, Any, Union, Callable, cast
 
 from wxs_qc.hail_utils import path_spark
 from wxs_qc.config import get_config
@@ -25,6 +25,13 @@ import datetime
 
 snv_label = "snv"
 indel_label = "indel"
+validated_labels = ("TP", "FP")
+# validated_metric_keys = (
+#     "TP_validated_present",
+#     "TP_validated_absent",
+#     "FP_validated_present",
+#     "FP_validated_absent",
+# )
 
 EvaluationStepResults = dict[str, Union[int, float]]
 
@@ -129,6 +136,38 @@ def prepare_giab_ht(giab_vcf: str, giab_cqfile: str, prec_recall_panel: Optional
     return giab_vars
 
 
+def import_validated_variants_ht(validated_variants_tsv: str) -> hl.Table:
+    """
+    Import validated sample-level TP/FP variants for optional hard-filter evaluation metrics.
+    """
+    ht = hl.import_table(path_spark(validated_variants_tsv), types={"pos": "int32"})
+    ht = ht.annotate(
+        validated_type=ht["type"],
+        locus=hl.locus(ht.chr, ht.pos),
+        alleles=[ht.ref, ht.alt],
+        variant_type=hl.case()
+        .when(hl.is_snp(ht.ref, ht.alt), snv_label)
+        .when(hl.is_indel(ht.ref, ht.alt), indel_label)
+        .default("other"),
+    )
+    # Just in case, filtering only to valida recoreds
+    ht = ht.filter(hl.literal(list(validated_labels)).contains(ht.validated_type))  # Containing TP/FP type
+    ht = ht.filter(hl.literal([snv_label, indel_label]).contains(ht.variant_type))  # Marked as SNV/Indel
+    ht = ht.select(ht.validated_type, ht["sample"], ht.variant_type, ht.locus, ht.alleles)
+    return ht.key_by("locus", "alleles", "sample", "validated_type").distinct().key_by("locus", "alleles", "sample")
+
+
+def rows_with_validated_variants_ht(validated_ht: hl.Table) -> hl.Table:
+    """
+    Build a row-keyed table of variants from the sample-level validated variants table,
+    validated_by_sample = { sample_id: validated_type } for each variant row.
+    So for a validated variant, the row carries a dictionary like: {"s1": "TP", "s2": "FP" }
+    """
+    return validated_ht.group_by(validated_ht.locus, validated_ht.alleles).aggregate(
+        validated_by_sample=hl.dict(hl.agg.collect((validated_ht["sample"], validated_ht.validated_type)))
+    )
+
+
 def str_timedelta(delta: datetime.timedelta) -> str:
     """
     Convert a timedelta object to a human-readable string
@@ -141,7 +180,7 @@ def str_timedelta(delta: datetime.timedelta) -> str:
     return f"{days} days and {hours:4.2f} hr"
 
 
-def cache_filter_results(func) -> Callable[[str, str, str, dict[str, Any]], dict[str, int | float]]:
+def cache_filter_results(func: Callable[..., EvaluationStepResults]) -> Callable[..., EvaluationStepResults]:
     """
     Decorator to handle caching of filter combination results to JSON files.
     If a cached result exists, it will be loaded instead of recomputing.
@@ -155,7 +194,7 @@ def cache_filter_results(func) -> Callable[[str, str, str, dict[str, Any]], dict
             with open(json_dump_file, "r") as f:
                 checkpoint = json.load(f)
             print(f"--- Checkpoint data loaded from file {json_dump_file}")
-            return checkpoint[filter_name]
+            return cast(EvaluationStepResults, checkpoint[filter_name])
 
         var_counts = func(var_type=var_type, **kwargs)
 
@@ -182,6 +221,10 @@ def process_filter_combination(
     giab_sample_id: Optional[str] = None,
     prec_recall_panel: Optional[hl.Table] = None,
     csq_anntation_file: Optional[str] = None,
+    validated_ht: Optional[hl.Table] = None,
+    validated_totals: Optional[dict[str, int]] = None,
+    validated_rows_ht: Optional[hl.Table] = None,
+    validated_samples: Optional[list[str]] = None,
 ) -> EvaluationStepResults:
     """
     Process a single filter combination and return the variant counts and metrics.
@@ -209,6 +252,17 @@ def process_filter_combination(
     var_counts: EvaluationStepResults = {"TP": 0.0, "FP": 0.0}
     # Counting TP and FP
     var_counts["TP"], var_counts["FP"] = count_tp_fp(mt_hard_filtered)
+
+    # Counting Validated TP/FP only if we have validated variants table.
+    if (
+        validated_ht is not None
+        and validated_totals is not None
+        and validated_rows_ht is not None
+        and validated_samples is not None
+    ):
+        var_counts.update(
+            count_validated_tp_fp(mt_hard_filtered, validated_totals, validated_rows_ht, validated_samples)
+        )
 
     if pedigree is not None:
         mendelian_error_mean, mendelian_error_std = calculate_normalized_mendel_errors_proband(
@@ -310,6 +364,7 @@ def filter_and_count(
     json_dump_folder: str,
     evaluate_unfiltered: bool = False,
     prec_recall_panel: Optional[hl.Table] = None,
+    validated_ht: Optional[hl.Table] = None,
     **kwargs,
 ) -> dict:
     """
@@ -346,7 +401,7 @@ def filter_and_count(
 
     start_time = datetime.datetime.now()
 
-    results = {var_type: {}}
+    results: dict[str, Any] = {var_type: {}}
 
     if giab_sample_id is not None:
         sample_ids = set(mt.s.collect())
@@ -360,6 +415,14 @@ def filter_and_count(
     print(f"=== Starting evaluation for {var_type} ===")
     mt = mt.filter_rows(mt.type == var_type)
     mt = hail_patches.split_multi_hts(mt)  # Just in case to have same variants as in the GIAB VCF
+    validated_totals = None
+    validated_rows_ht = None
+    validated_samples = None
+    if validated_ht is not None:
+        validated_ht = validated_ht.filter(validated_ht.variant_type == var_type)
+        validated_totals = count_validated_totals(validated_ht)
+        validated_rows_ht = rows_with_validated_variants_ht(validated_ht)
+        validated_samples = list(validated_ht.aggregate(hl.agg.collect_as_set(validated_ht["sample"])))
     n_steps_run = 0
 
     if evaluate_unfiltered:
@@ -381,6 +444,10 @@ def filter_and_count(
             json_dump_folder=json_dump_folder,
             prec_recall_panel=prec_recall_panel,
             csq_anntation_file=cqfile,
+            validated_ht=validated_ht,
+            validated_totals=validated_totals,
+            validated_rows_ht=validated_rows_ht,
+            validated_samples=validated_samples,
         )
         results[var_type][filter_name] = var_counts
 
@@ -426,6 +493,10 @@ def filter_and_count(
                             json_dump_folder=json_dump_folder,
                             prec_recall_panel=prec_recall_panel,
                             csq_anntation_file=cqfile,
+                            validated_ht=validated_ht,
+                            validated_totals=validated_totals,
+                            validated_rows_ht=validated_rows_ht,
+                            validated_samples=validated_samples,
                         )
 
                         results[var_type][filter_name] = var_counts
@@ -467,6 +538,50 @@ def count_tp_fp(mt: hl.MatrixTable) -> tuple[int, int]:
     return value_counts.tp, value_counts.fp
 
 
+def count_validated_totals(validated_ht: hl.Table) -> dict[str, int]:
+    """
+    Count total validated TP/FP records for one variant type.
+    """
+    counts = validated_ht.aggregate(hl.agg.counter(validated_ht.validated_type))
+    return {label: counts.get(label, 0) for label in validated_labels}
+
+
+def count_validated_tp_fp(
+    mt: hl.MatrixTable,
+    validated_totals: dict[str, int],
+    validated_rows_ht: hl.Table,
+    validated_samples: list[str],
+) -> EvaluationStepResults:
+    """
+    Count sample-level validated TP/FP records surviving after the applied hard filters.
+    """
+    print("--- Counting validated TP/FP ---")
+    # Removing variants that we don't need for this count
+    mt = mt.filter_rows(hl.is_defined(validated_rows_ht[mt.row_key]))
+    mt = mt.filter_cols(hl.literal(validated_samples).contains(mt.s))
+    # Attach to each variant the list of samples that validate this variant as TP/FP (can be empty)
+    mt = mt.annotate_rows(validated_by_sample=validated_rows_ht[mt.row_key].validated_by_sample)
+    # Flag each genotype as validated if it is present in the list of samples that validate it as TP/FP
+    mt = mt.annotate_entries(validated_type=mt.validated_by_sample.get(mt.s))
+    # Count genotypes validated as TP/FP
+    survived_counts = mt.aggregate_entries(
+        hl.agg.counter(
+            hl.or_missing(
+                hl.is_defined(mt.validated_type) & hl.is_defined(mt.GT) & mt.GT.is_non_ref(), mt.validated_type
+            )
+        )
+    )
+
+    results: EvaluationStepResults = {}
+    for label in validated_labels:
+        present = survived_counts.get(label, 0)
+        absent = validated_totals.get(label, 0) - present
+        results[f"{label}_validated_present"] = present
+        results[f"{label}_validated_absent"] = absent
+    print(results)
+    return results
+
+
 def apply_hard_filters(
     mt: hl.MatrixTable, dp: int, gq: int, ab: float, call_rate: float, checkpoint_path: str
 ) -> hl.MatrixTable:
@@ -480,7 +595,7 @@ def apply_hard_filters(
     call_rate : float. Minimum call rate threshold for filtering variants.
 
     Returns
-    hl.MatrixTable. Filtered Hail MatrixTable after applying hard filters and call rate filtering.
+    hl.MatrixTable. Materialized filtered Hail MatrixTable after applying hard filters and call rate filtering.
     """
     # Filtering out entries by the hardfilter combination
     filter_condition = (mt.GT.is_het() & (mt.HetAB < ab)) | (mt.DP < dp) | (mt.GQ < gq)
@@ -637,7 +752,9 @@ def calculate_normalized_mendel_errors_proband(mt: hl.MatrixTable, ped: hl.Pedig
     return stats.mean, stats.std_dev
 
 
-def write_filter_metrics(results: dict, outfile: str, var_type: str):
+def write_filter_metrics(
+    results: dict[str, Any], outfile: str, var_type: str, include_validated_metrics: bool = False
+) -> None:
     """
     Write filtering metrics to a tab-delimited file for either SNVs or indels.
 
@@ -661,6 +778,8 @@ def write_filter_metrics(results: dict, outfile: str, var_type: str):
         "recall",
         "f1",
     ]
+    if include_validated_metrics:
+        header.extend(["TP_validated", "FP_validated"])
 
     # Add indel-specific fields if processing indels
     if var_type == "indel":
@@ -690,6 +809,8 @@ def write_filter_metrics(results: dict, outfile: str, var_type: str):
             f1 = str(results[var_type][var_f].get("f1", ""))
             mendelian_error_mean = str(results[var_type][var_f].get("mendelian_error_mean", ""))
             mendelian_error_std = str(results[var_type][var_f].get("mendelian_error_std", ""))
+            tp_validated = calculate_validated_percentage(results[var_type][var_f], "TP")
+            fp_validated = calculate_validated_percentage(results[var_type][var_f], "FP")
 
             # Common fields for both types
             outline = [
@@ -707,6 +828,8 @@ def write_filter_metrics(results: dict, outfile: str, var_type: str):
                 r,
                 f1,
             ]
+            if include_validated_metrics:
+                outline.extend([tp_validated, fp_validated])
 
             # Add type-specific fields
             if var_type == "indel":
@@ -723,6 +846,13 @@ def write_filter_metrics(results: dict, outfile: str, var_type: str):
 
             o.write("\t".join(outline))
             o.write("\n")
+
+
+def calculate_validated_percentage(filter_results: EvaluationStepResults, label: str) -> str:
+    present = float(filter_results.get(f"{label}_validated_present", 0))
+    absent = float(filter_results.get(f"{label}_validated_absent", 0))
+    total = present + absent
+    return str((present / total) * 100) if total > 0 else ""
 
 
 def parse_hard_filter_values(filter_string: str) -> tuple[str, str, str, str, str]:
@@ -1064,6 +1194,7 @@ def main() -> None:
     if not giab_evaluation_enabled:
         giab_sample_id = None
     prec_recall_panel_bed = config["stage4"]["evaluation"]["prec_recall_panel_bed"]
+    validated_variants_tsv: Optional[str] = config["stage4"]["evaluation"].get("validated_variants_tsv")
 
     # Files from VariantQC
     mtfile: str = config["stage3"]["split_multi_and_var_qc"]["varqc_mtoutfile_split"]
@@ -1099,13 +1230,24 @@ def main() -> None:
         if cqfile is not None:
             mt_annot = annotate_cq(mt_annot, cqfile)
 
-        # Remove all variants that we don't use for metrics calculation
-        print("=== Removing variants not used for the metrics calculation ===")
+        if validated_variants_tsv is not None:  # Preparation the list of validated variants
+            validated_ht = import_validated_variants_ht(validated_variants_tsv)
+            validated_ht = validated_ht.checkpoint(
+                path_spark(os.path.join(hardfilter_evaluate_workdir, "validated_variants.ht"))
+            )
+        else:
+            validated_ht = None
+
+        # Keep only variants that we use for metrics calculation
+        print("=== Filtering to variants used for the metrics calculation ===")
         keep_row = hl.or_else(mt_annot.TP, False) | hl.or_else(mt_annot.FP, False)  # For TP/FP
         if giab_sample_id is not None and prec_recall_panel is not None:  # For Prec-recall
             keep_row = keep_row | hl.is_defined(prec_recall_panel[mt_annot.locus])
         if pedigree is not None and cqfile is not None:  # For transmitted/untransmitted singleton variants
             keep_row = keep_row | hl.or_else(mt_annot.consequence == "synonymous_variant", False)
+        if validated_ht is not None:  # For validated variants
+            validated_rows_ht = rows_with_validated_variants_ht(validated_ht)
+            keep_row = keep_row | hl.is_defined(validated_rows_ht[mt_annot.row_key])
 
         mt_annot = mt_annot.filter_rows(keep_row)
         mt_annot = mt_annot.repartition(n_partitions, shuffle=False)
@@ -1124,6 +1266,12 @@ def main() -> None:
         start_time = time.time()
 
         mt = hl.read_matrix_table(path_spark(mt_annot_path))
+        validated_ht = (
+            hl.read_table(path_spark(os.path.join(hardfilter_evaluate_workdir, "validated_variants.ht")))
+            if validated_variants_tsv is not None
+            else None
+        )
+
         results = filter_and_count(
             mt,
             ht_giab_control,
@@ -1132,11 +1280,12 @@ def main() -> None:
             mtdir=path_spark(hardfilter_evaluate_workdir),
             var_type="snv",
             prec_recall_panel=prec_recall_panel,
+            validated_ht=validated_ht,
             **evaluation_config,
         )
 
         os.makedirs(os.path.dirname(outfile_snv), exist_ok=True)
-        write_filter_metrics(results, outfile_snv, "snv")
+        write_filter_metrics(results, outfile_snv, "snv", include_validated_metrics=validated_ht is not None)
         end_time = time.time()
         print(f"=== SNV evaluation competed successfully.\nExecution time: {end_time - start_time:.2f} seconds ===")
 
@@ -1145,6 +1294,12 @@ def main() -> None:
         start_time = time.time()
 
         mt = hl.read_matrix_table(path_spark(mt_annot_path))
+        validated_ht = (
+            hl.read_table(path_spark(os.path.join(hardfilter_evaluate_workdir, "validated_variants.ht")))
+            if validated_variants_tsv is not None
+            else None
+        )
+
         results = filter_and_count(
             mt,
             ht_giab_control,
@@ -1153,11 +1308,12 @@ def main() -> None:
             mtdir=path_spark(hardfilter_evaluate_workdir),
             var_type="indel",
             prec_recall_panel=prec_recall_panel,
+            validated_ht=validated_ht,
             **evaluation_config,
         )
 
         os.makedirs(os.path.dirname(outfile_indel), exist_ok=True)
-        write_filter_metrics(results, outfile_indel, "indel")
+        write_filter_metrics(results, outfile_indel, "indel", include_validated_metrics=validated_ht is not None)
         end_time = time.time()
         print(f"=== INDEL evaluation competed successfully.\nExecution time: {end_time - start_time:.2f} seconds ===")
 

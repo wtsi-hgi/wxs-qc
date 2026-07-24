@@ -454,6 +454,7 @@ stage4:
     # If you don't have it, use null value instead
     # (the precision/recall calculations will be skipped in this case)
     giab_sample_id: ${general.metadata.giab_sample_id}
+    validated_variants_tsv: '${cvars.metadir}/control_set_small.validated_variants.tsv'
     evaluate_unfiltered: false # Calculate stats for initial matrixtable without filtering
     hardfilter_combinations:
       snp_bins: [70, 90]

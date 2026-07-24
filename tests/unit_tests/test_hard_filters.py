@@ -1,10 +1,12 @@
 import os
 import json
+from pathlib import Path
+from typing import Any
 from unittest.mock import patch
 import importlib
 import hail as hl
 
-qc_step_4_1 = importlib.import_module("stage4_genotype_qc.1-compare_hard_filter_combinations")
+qc_step_4_1 = importlib.import_module("stage4_genotype_qc.gqc1_compare_hard_filter_combinations")
 
 
 def test_hard_filters_cache_filter_results(tmp_path):
@@ -65,6 +67,72 @@ def test_hard_filters_cache_filter_results_different_params(tmp_path):
         with open(cache_file) as f:
             cached_data = json.load(f)
         assert cached_data == {filter_name: {"metric1": 100, "metric2": 200}}
+
+
+def test_hard_filters_cache_recomputes_stale_validated_metrics(tmp_path: Path) -> None:
+    """Test cached hard-filter results are recomputed when validated metrics are missing"""
+    calls = 0
+
+    @qc_step_4_1.cache_filter_results
+    def mock_process_filters(var_type: str, **kwargs: Any) -> dict[str, int]:
+        nonlocal calls
+        calls += 1
+        return {
+            "metric1": 100,
+            "TP_validated_present": 1,
+            "TP_validated_absent": 2,
+            "FP_validated_present": 3,
+            "FP_validated_absent": 4,
+        }
+
+    filter_name = "test_filter"
+    cache_file = os.path.join(tmp_path, f"snv_hardfilters_{filter_name}.json")
+    with open(cache_file, "w") as f:
+        json.dump({filter_name: {"metric1": 50}}, f)
+
+    result = mock_process_filters(
+        filter_name=filter_name,
+        json_dump_folder=str(tmp_path),
+        var_type="snv",
+        validated_ht=object(),
+    )
+
+    assert calls == 1
+    assert result["TP_validated_present"] == 1
+    with open(cache_file) as f:
+        cached_data = json.load(f)
+    assert cached_data == {filter_name: result}
+
+
+def test_hard_filters_write_validated_metrics_columns(tmp_path: Path) -> None:
+    """Test optional validated TP/FP percentage columns in hard-filter TSV output"""
+    results = {
+        "snv": {
+            "bin_001_DP_02_GQ_03_AB_0.40_missing_0.50": {
+                "TP": 5,
+                "FP": 2,
+                "mendelian_error_mean": -1,
+                "mendelian_error_std": -1,
+                "prec": -1,
+                "recall": -1,
+                "f1": -1,
+                "t_u_ratio": -2,
+                "TP_validated_present": 3,
+                "TP_validated_absent": 1,
+                "FP_validated_present": 1,
+                "FP_validated_absent": 3,
+            }
+        },
+        "snv_total_tp": 10,
+        "snv_total_fp": 4,
+    }
+    outfile = tmp_path / "hard_filter_evaluation.snv.tsv"
+
+    qc_step_4_1.write_filter_metrics(results, str(outfile), "snv", include_validated_metrics=True)
+
+    lines = outfile.read_text().splitlines()
+    assert lines[0].split("\t")[-3:] == ["TP_validated", "FP_validated", "t_u_ratio"]
+    assert lines[1].split("\t")[-3:] == ["75.0", "25.0", "-2"]
 
 
 def test_hard_filters_calculate_normalized_mendel_errors_proband():

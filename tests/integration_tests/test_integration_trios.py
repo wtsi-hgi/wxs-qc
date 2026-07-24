@@ -190,7 +190,7 @@ class TestIntegration(IntegrationTestsStub):
         # To change step 4.1, make a test run before modifying the code,
         # store results in the 'tests/integration_tests/validation' folder
         # and enable validation
-        # assert_step_4_1_outputs_match_expected(WES_CONFIG)
+        assert_step_4_1_outputs_match_expected(WES_CONFIG)
 
     def test_trios_4_2_genotype_qc(self) -> None:
         self.stub_4_2_genotype_qc()

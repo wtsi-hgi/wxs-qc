@@ -111,8 +111,6 @@ Available commands include:
 ```bash
 make check
 make typecheck
-make integration-test-trios
-make integration-test-non-trios
 make test-it-one-step test=test_trios_<step-name-or-prefix>
 ```
 
@@ -121,10 +119,6 @@ Notes:
 - Run `make typecheck` to run type checking.
 - Run `make test-it-one-step test=test_trios_...` to individually test and debug
   a specific trio pipeline step.
-- Run `make integration-test-trios` to test the pipeline end-to-end through the
-  trio integration smoke-test path. Only do it after individual tests pass.
-- Use `make integration-test-non-trios` only when the approved change
-  specifically affects the non-trio path.
 - Integration tests may require Hail/Spark setup and generated intermediate files.
 - `PYSPARK_PYTHON` and `PYSPARK_DRIVER_PYTHON` are set by the Makefile.
 - Prefer running the smallest relevant test target first.
