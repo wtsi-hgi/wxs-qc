@@ -5,11 +5,11 @@ import hail as hl
 import bokeh
 from utils.utils import parse_config, path_spark
 
-from wxs_qc import hail_utils, hail_patches, constants
+from wxs_qc import hail_utils, constants
 
 
 def apply_hard_filters(
-    mt: hl.MatrixTable, n_alt_alleles_threshold, defined_gt_frac_threshold, **kwargs
+    mt: hl.MatrixTable, n_alt_alleles_threshold: float, defined_gt_frac_threshold: float, **kwargs
 ) -> hl.MatrixTable:
     """
     Applies hard filters and annotates samples in the filtered set with call rate
@@ -25,13 +25,19 @@ def apply_hard_filters(
     return mt
 
 
-def impute_sex(mt: hl.MatrixTable, hail_impute_sex_params: dict[str, Any], **kwargs) -> (hl.MatrixTable, hl.Table):
+def impute_sex(mt: hl.MatrixTable, hail_impute_sex_params: dict[str, Any], **kwargs) -> tuple[hl.MatrixTable, hl.Table]:
     """
-    Imputes sex, exports data, and annotates mt with this data
+    Imputes sex, exports data, and annotates mt with this data.
+
+    Output contract:
+        Materialized sex Table.
+        The returned MatrixTable remains lazy.
     """
     print("===Imputing sex ===")
-    mt1 = hail_patches.split_multi_hts(mt, recalculate_gq=False)
-    mtx_unphased = mt1.select_entries(GT=hl.unphased_diploid_gt_index_call(mt1.GT.n_alt_alleles()))
+    mtx_impute = mt.select_entries(GT=mt.GT)
+
+    mtx_unphased = mtx_impute.select_entries(GT=hl.unphased_diploid_gt_index_call(mtx_impute.GT.n_alt_alleles()))
+    mtx_unphased = mtx_unphased.checkpoint(hl.utils.new_temp_file("mtx_impute_sex_unphased", "mt"), overwrite=True)
 
     # Impute sex on the unphased diploid GTs
     sex_ht = hl.impute_sex(mtx_unphased.GT, **hail_impute_sex_params)
@@ -39,9 +45,7 @@ def impute_sex(mt: hl.MatrixTable, hail_impute_sex_params: dict[str, Any], **kwa
     # convert is_female boolean to sex
     sex_expr = hl.if_else(hl.is_defined(sex_ht.is_female), hl.if_else(sex_ht.is_female, "female", "male"), "undefined")
     sex_ht = sex_ht.annotate(imputed_sex=sex_expr)
-
-    # export
-    #
+    sex_ht = sex_ht.checkpoint(hl.utils.new_temp_file("sqc1_sex_annotation", "ht"), overwrite=True)
 
     # annotate input (all chroms) mt with imputed sex and write to file
     sex_colnames = ["f_stat", "is_female", "imputed_sex"]
@@ -94,7 +98,7 @@ def plot_f_stat_histogram(
     Plot a histogram of F-statistic values from a Hail Table and annotate it with thresholds
     and the count of outliers.
     """
-    n_outliers = sex_ht.filter((sex_ht.f_stat > fstat_low) & (sex_ht.f_stat < fstat_high)).count()
+    n_outliers = select_fstat_outliers(sex_ht, fstat_low, fstat_high).count()
     plot = hl.plot.histogram(sex_ht.f_stat, legend="Fstat", title="F-stat distribution")
     hline_lower = bokeh.models.Span(location=fstat_low, dimension="height", line_color="red", line_width=2)
     hline_higher = bokeh.models.Span(location=fstat_high, dimension="height", line_color="red", line_width=2)
@@ -136,6 +140,8 @@ def main():
 
     # impute sex
     mt_sex, sex_ht = impute_sex(mt_filtered, **config["stage2"]["impute_sex"])
+    print("--- Writing to " + sex_mt_file)
+    mt_sex.write(path_spark(sex_mt_file), overwrite=True)
     sex_ht.export(path_spark(sex_ht_outfile))
 
     # Save f-stat outliers in the separate file
@@ -146,9 +152,6 @@ def main():
     fstat_hist = plot_f_stat_histogram(sex_ht, **config["stage2"]["f_stat_outliers"])
     bokeh.io.output_file(fstat_hist_path)
     bokeh.io.save(fstat_hist)
-
-    print("--- Writing to " + sex_mt_file)
-    mt_sex.write(path_spark(sex_mt_file), overwrite=True)
 
     # identify and report inconsistencies
     conflicting_sex_ht = identify_inconsistencies(mt_sex)
