@@ -63,6 +63,15 @@ def _assert_pca_matrix_matches_expected(actual_path: str, expected: dict[str, An
     assert _collect_table_score_lengths(actual_cols) == set(expected["score_lengths"])
 
 
+def assert_step_2_1_outputs_match_expected(config_path: str) -> None:
+    impute_sex_config = parse_config_file(config_path)["stage2"]["impute_sex"]
+    validation_dir = Path(__file__).with_name("validation")
+    assert_saved_tables_match(
+        validation_dir,
+        {"sex_annotated.sex_check.tsv": impute_sex_config["sex_ht_outfile"]},
+    )
+
+
 def assert_step_2_2_outputs_match_expected(config_path: str) -> None:
     config = parse_config_file(config_path)
     expected = _load_expected_results("trios", "step_2_2_sample_qc")
@@ -140,8 +149,9 @@ class TestIntegration(IntegrationTestsStub):
     def test_trios_1_4_import_data(self) -> None:
         self.stub_1_4_import_data()
 
-    def test_trios_2_1_sample_qc(self) -> None:
+    def test_trios_2_1_sample_qc(self, WES_CONFIG: str) -> None:
         self.stub_2_1_sample_qc()
+        assert_step_2_1_outputs_match_expected(WES_CONFIG)
 
     def test_trios_2_2_sample_qc(self, WES_CONFIG: str) -> None:
         self.stub_2_2_sample_qc()

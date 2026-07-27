@@ -33,7 +33,13 @@ def _detect_table_delimiter(path: str | Path) -> str:
 def _table_column_kind(
     column: pd.Series[Any],
     path: str | Path,
-) -> Literal["float", "integer", "string"]:
+) -> Literal["boolean", "float", "integer", "string"]:
+    if pd.api.types.is_bool_dtype(column) or (
+        pd.api.types.is_object_dtype(column)
+        and not column.dropna().empty
+        and all(isinstance(value, bool) for value in column.dropna())
+    ):
+        return "boolean"
     if pd.api.types.is_float_dtype(column):
         return "float"
     if pd.api.types.is_integer_dtype(column):
@@ -52,9 +58,9 @@ def tables_are_identical(
     rel_tol: float = 1e-4,
     abs_tol: float = 1e-6,
 ) -> bool:
-    """Compare ordered CSV or TSV tables containing floats, integers, and strings.
+    """Compare ordered CSV or TSV tables containing booleans, floats, integers, and strings.
 
-    Floats compare with tolerance, while integers and strings compare exactly.
+    Floats compare with tolerance, while booleans, integers, and strings compare exactly.
     Table dimensions, column names and order, and row order must also match.
     Corresponding missing values are considered equal. Other inferred column
     types raise ``TypeError``;
