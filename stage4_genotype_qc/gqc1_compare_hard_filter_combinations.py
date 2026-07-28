@@ -1155,6 +1155,104 @@ def plot_hard_filter_combinations(
     bokeh.io.save(layout)
 
 
+def check_validated_variants_presence(
+    mt: hl.MatrixTable,
+    validated_variants_ht: hl.Table,
+) -> tuple[hl.Table, hl.Struct]:
+    """
+    Analyzes and summarizes the presence of validated variants and samples in the dataset MatrixTable.
+
+    This function processes a Hail MatrixTable and a Hail Table containing validated variants
+    to determine the presence of specific variants and samples within the MatrixTable. It further
+    provides a detailed summary of discrepancies and outcomes, grouping results based on specific
+    criteria or reasons for presence or absence.
+
+    Parameters:
+    mt: hl.MatrixTable
+        The MatrixTable to be analyzed for the presence of validated variants and samples.
+    validated_variants_ht: hl.Table
+        The Table containing validated variants with locus, alleles, and sample information.
+
+    Returns:
+    hl.Table: The annotated validated variants table with details for each variant and sample.
+
+    Raises:
+    RuntimeError
+        Raised if any issue arises during analysis, such as unanticipated format discrepancies
+        in the input tables or processing errors.
+    """
+    print("--- Filtering datasets ---")
+    v = validated_variants_ht
+
+    validated_samples = v.aggregate(hl.agg.collect_as_set(v.s))
+
+    # Restrict mt exactly like the counter does.
+    validated_variant_keys = v.key_by("locus", "alleles").select().distinct()
+    mt = mt.filter_rows(hl.is_defined(validated_variant_keys[mt.row_key]))
+    mt = mt.filter_cols(hl.literal(validated_samples).contains(mt.s))
+
+    # Validated samples that actually exist as columns in mt (constant per row,
+    # so compute it once instead of per-variant).
+    cols_in_mt = mt.aggregate_cols(hl.agg.collect_as_set(mt.s))
+
+    print("--- Validated variants present in MatrixTable ---")
+    # ONE parallel pass over mt. Per validated variant: samples with a defined
+    # GT and samples with a non-ref GT. Result is keyed by (locus, alleles) ==
+    # mt.row_key, so no entries flattening and no re-key shuffle.
+    per_variant = (
+        mt.annotate_rows(
+            present_samples=hl.agg.filter(hl.is_defined(mt.GT), hl.agg.collect_as_set(mt.s)),
+            nonref_samples=hl.agg.filter(hl.is_defined(mt.GT) & mt.GT.is_non_ref(), hl.agg.collect_as_set(mt.s)),
+        )
+        .rows()
+        .select("present_samples", "nonref_samples")
+    )
+
+    # Persist just this small table to break the lineage back to mt. Everything
+    # after this is small-table-only work.
+    per_variant = per_variant.checkpoint(hl.utils.new_temp_file("per_variant", "ht"), overwrite=True)
+
+    print("--- Annotations validated samples ---")
+    # Annotate each validated (variant, sample) record from small tables only.
+    cols_lit = hl.literal(cols_in_mt)
+    pv = per_variant[v.locus, v.alleles]
+
+    v = v.annotate(
+        variant_in_mt=hl.is_defined(pv.nonref_samples),
+        sample_in_cols=cols_lit.contains(v.s),
+        gt_defined=hl.or_else(pv.present_samples.contains(v.s), False),
+        gt_non_ref=hl.or_else(pv.nonref_samples.contains(v.s), False),
+    )
+
+    v = v.annotate(
+        entry_in_mt=v.variant_in_mt & v.sample_in_cols,
+        counted=v.gt_non_ref,
+    )
+    v = v.annotate(
+        reason=(
+            hl.case()
+            .when(v.gt_non_ref, "counted")
+            .when(~v.variant_in_mt, "variant_not_in_mt")
+            .when(~v.entry_in_mt, "sample_not_in_mt")  # variant present, sample not a column
+            .when(~v.gt_defined, "gt_missing")  # entry present, GT missing
+            .default("gt_hom_ref")  # entry present, GT is reference
+        ),
+    )
+    v = v.cache()  # now cheap: just a small-small join, no entries, no shuffle
+    print("--- Counting summaries ---")
+    # --- Summaries ---------------------------------------------------------
+    summary = v.aggregate(
+        hl.struct(
+            total=hl.agg.count(),
+            present=hl.agg.count_where(v.counted),
+            by_reason=hl.agg.counter(v.reason),
+            present_by_label=hl.agg.filter(v.counted, hl.agg.counter(v.validated_type)),
+            absent_by_label=hl.agg.filter(~v.counted, hl.agg.counter(v.validated_type)),
+        )
+    )
+    return v, summary
+
+
 def get_options() -> Any:
     """
     Get options from the command line
@@ -1208,6 +1306,7 @@ def main() -> None:
 
     # = STEP OUTPUTS = #
     mt_annot_path: str = os.path.join(hardfilter_evaluate_workdir, "tmp.hard_filters_combs.mt")
+    validated_variants_check_tsv: str = config["stage4"]["evaluation"]["validated_variants_check_tsv"]
     outfile_snv: str = config["stage4"]["evaluation"]["snp_tsv"]
     outfile_indel: str = config["stage4"]["evaluation"]["indel_tsv"]
     giab_ht_file: str = config["stage4"]["evaluation"]["giab_ht_file"]
@@ -1242,6 +1341,16 @@ def main() -> None:
             print(f"=== Loading validated TP/FP variants: {validated_ht.count()} ===")
             print(f"--- Validated True Positives:  {validated_ht.filter(validated_ht.validated_type == 'TP').count()}")
             print(f"--- Validated False Positives: {validated_ht.filter(validated_ht.validated_type == 'FP').count()}")
+            validated_variants_check, summary = check_validated_variants_presence(mt, validated_ht)
+            validated_variants_check.export(path_spark(validated_variants_check_tsv))
+
+            print("--- Validated (variant, sample) records vs mt ---")
+            print(f"Total validated records : {summary.total}")
+            print(f"Counted as present      : {summary.present}")
+            print(f"Absent                  : {summary.total - summary.present}")
+            print(f"Breakdown by reason     : {dict(summary.by_reason)}")
+            print(f"Present per label       : {dict(summary.present_by_label)}")
+            print(f"Absent  per label       : {dict(summary.absent_by_label)}")
 
         else:
             validated_ht = None
