@@ -420,6 +420,7 @@ def filter_and_count(
     validated_samples = None
     if validated_ht is not None:
         validated_ht = validated_ht.filter(validated_ht.variant_type == var_type)
+        validated_ht = validated_ht.drop("variant_type")  # We don't need this column after we selected the type we need
         validated_totals = count_validated_totals(validated_ht)
         validated_rows_ht = rows_with_validated_variants_ht(validated_ht)
         validated_samples = list(validated_ht.aggregate(hl.agg.collect_as_set(validated_ht["sample"])))
@@ -691,6 +692,9 @@ def count_trans_untrans(mt_syn: hl.MatrixTable, pedigree: hl.Pedigree) -> float:
     mt2 = mt_syn.filter_cols(hl.set(sample_list).contains(mt_syn.s))
 
     founders = select_founders(pedigree)
+    if len(founders) == 0:
+        print("=== WARNING: can't choose founders for trans/utrans calculation")
+        return -2
     mt_founders = mt2.filter_cols(hl.set(founders).contains(mt2.s))
     mt_founders = hl.variant_qc(mt_founders, name="varqc_founders")
 
@@ -1235,6 +1239,10 @@ def main() -> None:
             validated_ht = validated_ht.checkpoint(
                 path_spark(os.path.join(hardfilter_evaluate_workdir, "validated_variants.ht")), overwrite=True
             )
+            print(f"=== Loading validated TP/FP variants: {validated_ht.count()} ===")
+            print(f"--- Validated True Positives:  {validated_ht.filter(validated_ht.validated_type == 'TP').count()}")
+            print(f"--- Validated False Positives: {validated_ht.filter(validated_ht.validated_type == 'FP').count()}")
+
         else:
             validated_ht = None
 
