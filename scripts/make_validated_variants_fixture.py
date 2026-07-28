@@ -77,15 +77,14 @@ def collect_label_entries(mt: hl.MatrixTable, label: str, limit: int) -> hl.Tabl
     ht = ht.filter(hl.is_defined(ht.GT) & ht.GT.is_non_ref())
     ht = ht.select(
         type=label,
-        sample=ht.s,
         chr=ht.locus.contig,
         pos=ht.locus.position,
         ref=ht.alleles[0],
         alt=ht.alleles[1],
     )
-    ht = ht.key_by("locus", "alleles", "sample")
-    ht = ht.order_by(ht.locus.contig, ht.locus.position, ht.alleles[0], ht.alleles[1], ht["sample"])
-    return ht.key_by().select("type", "sample", "chr", "pos", "ref", "alt").head(limit)
+    ht = ht.key_by("locus", "alleles", "s")
+    ht = ht.order_by(ht.locus.contig, ht.locus.position, ht.alleles[0], ht.alleles[1], ht.s)
+    return ht.key_by().select("type", "s", "chr", "pos", "ref", "alt").head(limit)
 
 
 def export_single_tsv(ht: hl.Table, output_tsv: str) -> None:

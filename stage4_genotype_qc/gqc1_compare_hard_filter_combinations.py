@@ -153,8 +153,8 @@ def import_validated_variants_ht(validated_variants_tsv: str) -> hl.Table:
     # Just in case, filtering only to valida recoreds
     ht = ht.filter(hl.literal(list(validated_labels)).contains(ht.validated_type))  # Containing TP/FP type
     ht = ht.filter(hl.literal([snv_label, indel_label]).contains(ht.variant_type))  # Marked as SNV/Indel
-    ht = ht.select(ht.validated_type, ht["sample"], ht.variant_type, ht.locus, ht.alleles)
-    return ht.key_by("locus", "alleles", "sample", "validated_type").distinct().key_by("locus", "alleles", "sample")
+    ht = ht.select(ht.validated_type, ht.s, ht.variant_type, ht.locus, ht.alleles)
+    return ht.key_by("locus", "alleles", "s", "validated_type").distinct().key_by("locus", "alleles", "s")
 
 
 def rows_with_validated_variants_ht(validated_ht: hl.Table) -> hl.Table:
@@ -164,7 +164,7 @@ def rows_with_validated_variants_ht(validated_ht: hl.Table) -> hl.Table:
     So for a validated variant, the row carries a dictionary like: {"s1": "TP", "s2": "FP" }
     """
     return validated_ht.group_by(validated_ht.locus, validated_ht.alleles).aggregate(
-        validated_by_sample=hl.dict(hl.agg.collect((validated_ht["sample"], validated_ht.validated_type)))
+        validated_by_sample=hl.dict(hl.agg.collect((validated_ht.s, validated_ht.validated_type)))
     )
 
 
@@ -423,7 +423,7 @@ def filter_and_count(
         validated_ht = validated_ht.drop("variant_type")  # We don't need this column after we selected the type we need
         validated_totals = count_validated_totals(validated_ht)
         validated_rows_ht = rows_with_validated_variants_ht(validated_ht)
-        validated_samples = list(validated_ht.aggregate(hl.agg.collect_as_set(validated_ht["sample"])))
+        validated_samples = list(validated_ht.aggregate(hl.agg.collect_as_set(validated_ht.s)))
     n_steps_run = 0
 
     if evaluate_unfiltered:
