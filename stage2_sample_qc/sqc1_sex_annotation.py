@@ -25,7 +25,9 @@ def apply_hard_filters(
     return mt
 
 
-def impute_sex(mt: hl.MatrixTable, hail_impute_sex_params: dict[str, Any], **kwargs) -> tuple[hl.MatrixTable, hl.Table]:
+def impute_sex(
+    mt: hl.MatrixTable, n_partitions: int, hail_impute_sex_params: dict[str, Any], **kwargs
+) -> tuple[hl.MatrixTable, hl.Table]:
     """
     Imputes sex, exports data, and annotates mt with this data.
 
@@ -33,13 +35,16 @@ def impute_sex(mt: hl.MatrixTable, hail_impute_sex_params: dict[str, Any], **kwa
         Materialized sex Table.
         The returned MatrixTable remains lazy.
     """
-    print("===Imputing sex ===")
+    print("--- Filtering matrixtable for sex imputation ---")
     mtx_impute = mt.select_entries(GT=mt.GT)
 
     mtx_unphased = mtx_impute.select_entries(GT=hl.unphased_diploid_gt_index_call(mtx_impute.GT.n_alt_alleles()))
+    # Coalesce to a smaller partition number after a heavy filtering
+    mtx_unphased = mtx_unphased.repartition(n_partitions, shuffle=False)
     mtx_unphased = mtx_unphased.checkpoint(hl.utils.new_temp_file("mtx_impute_sex_unphased", "mt"), overwrite=True)
 
     # Impute sex on the unphased diploid GTs
+    print("--- Imputing sex ---")
     sex_ht = hl.impute_sex(mtx_unphased.GT, **hail_impute_sex_params)
 
     # convert is_female boolean to sex
@@ -119,6 +124,9 @@ def main():
     config = parse_config()
     tmp_dir = config["general"]["tmp_dir"]
 
+    # = STEP PARAMETERS = #
+    n_partitions = config["general"]["n_partitions"]
+
     # = STEP DEPENDENCIES = #
     mt_infile = config["stage1"]["validate_gtcheck"]["mt_gtcheck_validated"]  # input from 1.3
 
@@ -139,7 +147,7 @@ def main():
     mt_filtered = apply_hard_filters(mt_unfiltered, **config["stage2"]["sex_annotation_hard_filters"])
 
     # impute sex
-    mt_sex, sex_ht = impute_sex(mt_filtered, **config["stage2"]["impute_sex"])
+    mt_sex, sex_ht = impute_sex(mt_filtered, n_partitions, **config["stage2"]["impute_sex"])
     print("--- Writing to " + sex_mt_file)
     mt_sex.write(path_spark(sex_mt_file), overwrite=True)
     sex_ht.export(path_spark(sex_ht_outfile))
