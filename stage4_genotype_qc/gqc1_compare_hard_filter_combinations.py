@@ -424,6 +424,12 @@ def filter_and_count(
         validated_totals = count_validated_totals(validated_ht)
         validated_rows_ht = rows_with_validated_variants_ht(validated_ht)
         validated_samples = list(validated_ht.aggregate(hl.agg.collect_as_set(validated_ht.s)))
+        if len(validated_samples) == 0:
+            print(f"=== No validated variants found for {var_type}. Skipping validation variants")
+            validated_totals = None
+            validated_rows_ht = None
+            validated_samples = None
+
     n_steps_run = 0
 
     if evaluate_unfiltered:
@@ -559,6 +565,8 @@ def count_validated_tp_fp(
     print("--- Counting validated TP/FP ---")
     # Keeping only data that we need
     mt = mt.filter_rows(hl.is_defined(validated_rows_ht[mt.row_key]))  # Variants present in the validated table
+    print(f"Validated samples: {len(validated_samples)}")
+    print(f"MT size: {mt.count()}")
     mt = mt.filter_cols(hl.literal(validated_samples).contains(mt.s))  # Samples present in the validated table
     # Attach to each variant the list of samples that validate this variant as TP/FP (can be empty)
     mt = mt.annotate_rows(validated_by_sample=validated_rows_ht[mt.row_key].validated_by_sample)
@@ -1442,7 +1450,7 @@ def main() -> None:
         for k, v in config["stage4"]["plot"].items():
             type_, x, y = k.split("-")
             df = df_snv if type_ == "snv" else df_indel
-            match_aspect = (x, y) in [("TP", "FP"), ("precision", "recall")]
+            match_aspect = (x, y) in [("TP", "FP"), ("precision", "recall"), ("TP_validated", "FP_validated")]
             plot_hard_filter_combinations(df, x, y, v, match_aspect=match_aspect)
         print("=== Plotting hard filter combinations completed successfully ===")
 

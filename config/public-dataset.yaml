@@ -481,6 +481,8 @@ stage4:
     indel-TP-FP: '${cvars.pltdir}/hard_filter_evaluation.indel.tp_fp.html'
     indel-TP-mendelian_error_mean: '${cvars.pltdir}/hard_filter_evaluation.indel.tp_mendel.html'
     indel-precision-recall: '${cvars.pltdir}/hard_filter_evaluation.indel.precision_recall.html'
+    snv-TP_validated-FP_validated: '${cvars.pltdir}/hard_filter_evaluation.snv.tp_fp_validated.html'
+    indel-TP_validated-FP_validated: '${cvars.pltdir}/hard_filter_evaluation.indel.tp_fp_validated.html'
 
 
   # --- Step 4.2 --- #
