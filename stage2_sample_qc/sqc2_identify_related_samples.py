@@ -155,7 +155,6 @@ def main():
             config["stage2"]["prune_params"],
             config["stage2"]["king_params"],
             config["stage2"]["pc_relate_params"],
-            "study",
         )
 
         related_samples_to_remove_ht = related_samples_to_remove_ht.checkpoint(

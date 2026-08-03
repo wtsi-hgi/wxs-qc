@@ -36,7 +36,7 @@ def run_king(mt: hl.MatrixTable, king_args: dict, prune_args: dict) -> (hl.Matri
 
 
 def prune_pc_relate(
-    mt: hl.MatrixTable, prune_params: dict, king_params: dict, pc_relate_params: dict, dataset: str, **kwargs
+    mt: hl.MatrixTable, prune_params: dict, king_params: dict, pc_relate_params: dict, **kwargs
 ) -> (hl.Table, hl.Table):
     """
     Complete PC-Relate workflow for identifying and removing related samples.
@@ -55,13 +55,12 @@ def prune_pc_relate(
         unrelated_mt, related_mt, pc_relate_params["pca_components"]
     )
     union_pca_scores = union_pca_scores.checkpoint(path_spark(pc_relate_params["scores_file"]), overwrite=True)
-    pca_scores = pca_scores.checkpoint(path_spark(pc_relate_params["unrelated_samples_scores_file"]), overwrite=True)
-    pca_loadings = pca_loadings.checkpoint(path_spark(pc_relate_params["pca_loadings_file_pc_relate"]), overwrite=True)
-    if dataset == "study":
-        # For study dataset gnomAD relatedness functions generate additional entries,
-        # that ew need to remove prior to merging
-        entries_to_drop = ["AD", "DP", "GQ", "MIN_DP", "PGT", "PID", "PL", "PS", "SB", "RGQ"]
-        related_mt = related_mt.drop(*[entry for entry in entries_to_drop if entry in related_mt.entry])
+    _ = pca_scores.checkpoint(path_spark(pc_relate_params["unrelated_samples_scores_file"]), overwrite=True)
+    _ = pca_loadings.checkpoint(path_spark(pc_relate_params["pca_loadings_file_pc_relate"]), overwrite=True)
+    # Keep only entry fields present in both MatrixTables to ensure compatible schemas
+    common_entries = set(related_mt.entry) & set(unrelated_mt.entry)
+    related_mt = related_mt.drop(*[e for e in related_mt.entry if e not in common_entries])
+    unrelated_mt = unrelated_mt.drop(*[e for e in unrelated_mt.entry if e not in common_entries])
     pruned_mt = related_mt.union_cols(unrelated_mt)
     print("=== Calculating relatedness")
     # calculate relatedness using PC relate

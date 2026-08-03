@@ -118,7 +118,7 @@ def main() -> None:
         filtered_kg_mt = hl.read_matrix_table(filtered_kg_file)
         filtered_kg_mt = filtering.filter_mt_autosome_biallelic_snvs(filtered_kg_mt)
         related_samples_to_remove, _ = prune_pc_relate(
-            filtered_kg_mt, conf["prune_params"], conf["king_params"], conf["pc_relate_params"], "ref"
+            filtered_kg_mt, conf["prune_params"], conf["king_params"], conf["pc_relate_params"]
         )
 
         related_samples_to_remove.write(samples_to_remove_file, overwrite=True)
