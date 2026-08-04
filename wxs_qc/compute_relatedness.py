@@ -1,7 +1,7 @@
 from typing import Any
 
 import hail as hl
-from utils.utils import path_spark
+from wxs_qc.hail_utils import path_spark
 from wxs_qc.pca_utils import prune_mt, run_pc_project
 
 

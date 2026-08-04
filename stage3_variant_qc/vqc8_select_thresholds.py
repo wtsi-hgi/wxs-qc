@@ -3,7 +3,8 @@
 import hail as hl
 import argparse
 import os.path
-from utils.utils import parse_config, path_spark
+from wxs_qc.config import get_config
+from wxs_qc.hail_utils import path_spark
 from wxs_qc import hail_utils
 
 
@@ -110,7 +111,7 @@ def get_threshold_range(threshold: int):
 def main():
     # = STEP SETUP =
     args = get_options()
-    config = parse_config()
+    config = get_config()
     tmp_dir = config["general"]["tmp_dir"]
 
     # = STEP PARAMETERS = #

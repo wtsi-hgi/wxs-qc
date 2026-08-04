@@ -5,7 +5,7 @@ keeping only data that are required for the VariantQC
 
 import hail as hl  # type: ignore
 
-from utils.utils import parse_config
+from wxs_qc.config import get_config
 from wxs_qc.hail_utils import path_spark
 from wxs_qc import hail_utils
 
@@ -26,7 +26,7 @@ def prepare_gnomad_ht(ht: hl.Table, n_partitions: int = 72) -> hl.Table:
 
 def main() -> None:
     # = STEP SETUP = #
-    config = parse_config()
+    config = get_config()
 
     tmp_dir = config["general"]["tmp_dir"]
 

@@ -7,7 +7,8 @@ import bokeh.plotting as bkplt
 import bokeh.layouts as bklayouts
 import hail as hl
 
-from utils.utils import parse_config, path_local, path_spark
+from wxs_qc.config import get_config
+from wxs_qc.hail_utils import path_local, path_spark
 from wxs_qc.pca_utils import prune_mt, run_pc_project
 from wxs_qc.compute_relatedness import prune_pc_relate
 from wxs_qc.filtering import filter_matrix_for_ldprune
@@ -101,7 +102,7 @@ def get_options() -> argparse.Namespace:
 
 def main():
     # = STEP SETUP = #
-    config = parse_config()
+    config = get_config()
     args = get_options()
     if args.all:
         args.filter_mt = True

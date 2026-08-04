@@ -1,11 +1,11 @@
 import os
 
-from utils.utils import parse_config
+from wxs_qc.config import get_config
 
 
 def main() -> None:
     # = STEP SETUP = #
-    config = parse_config()
+    config = get_config()
     conf = config["general"]
 
     # = STEP PARAMETERS = #

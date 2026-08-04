@@ -1,7 +1,8 @@
 # Filter out samples which have failed sample QC
 # Filter to remove samples sequenced at Broad
 import hail as hl
-from utils.utils import parse_config, path_spark
+from wxs_qc.config import get_config
+from wxs_qc.hail_utils import path_spark
 from wxs_qc import hail_utils
 
 
@@ -62,7 +63,7 @@ def remove_samples_explicit(mt: hl.MatrixTable, samples_to_remove: hl.Table) -> 
 
 def main():
     ## = STEP SETUP = #
-    config = parse_config()
+    config = get_config()
     tmp_dir = config["general"]["tmp_dir"]
 
     # = STEP DEPENDENCIES = #

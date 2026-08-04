@@ -3,7 +3,7 @@ All functions used to filter samples/variants
 """
 
 import hail as hl
-from utils.utils import path_spark
+from wxs_qc.hail_utils import path_spark
 
 
 def find_duplicated_variants(mt: hl.MatrixTable) -> hl.Table:

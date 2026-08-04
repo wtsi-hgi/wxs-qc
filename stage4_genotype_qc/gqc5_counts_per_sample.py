@@ -6,7 +6,8 @@ import hail as hl
 import numpy as np
 import pandas as pd
 from stage4_genotype_qc import gqc2_apply_range_of_hard_filters as step4_2
-from utils.utils import parse_config, path_spark, path_local
+from wxs_qc.config import get_config
+from wxs_qc.hail_utils import path_spark, path_local
 from wxs_qc import hail_utils, stats, constants
 
 # We need to re-annotate the initial matrixtable, because step 4-2 annotates matrixtable
@@ -220,7 +221,7 @@ def counts_per_cq(mt_in: hl.MatrixTable, cqs: list) -> tuple:
 
 def main():
     # set up
-    config = parse_config()
+    config = get_config()
     tmp_dir = config["general"]["tmp_dir"]
 
     # = STEP PARAMETERS = #

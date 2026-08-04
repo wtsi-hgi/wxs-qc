@@ -7,7 +7,7 @@ from gnomad.sample_qc.ancestry import assign_population_pcs
 
 from wxs_qc.pca_utils import prune_mt, run_pc_project
 from wxs_qc.hail_utils import path_local, path_spark
-from utils.utils import parse_config
+from wxs_qc.config import get_config
 from wxs_qc import hail_utils, visualize
 
 
@@ -136,7 +136,7 @@ def get_options() -> argparse.Namespace:
 
 def main():
     # = STEP SETUP = #
-    config = parse_config()
+    config = get_config()
     args = get_options()
     if args.all:
         args.merge_and_ldprune = True

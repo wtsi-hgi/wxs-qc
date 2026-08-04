@@ -6,7 +6,8 @@ import pandas as pd
 from typing import Optional
 
 from wxs_qc import hail_utils, constants, filtering
-from utils.utils import parse_config, path_spark
+from wxs_qc.config import get_config
+from wxs_qc.hail_utils import path_spark
 from gnomad.sample_qc.filtering import (
     determine_nearest_neighbors,
     compute_qc_metrics_residuals,
@@ -879,7 +880,7 @@ def plot_mad_metrics(
 
 def main():
     # = STEP SETUP = #
-    config = parse_config()
+    config = get_config()
     tmp_dir = config["general"]["tmp_dir"]
 
     # = STEP PARAMETERS = #

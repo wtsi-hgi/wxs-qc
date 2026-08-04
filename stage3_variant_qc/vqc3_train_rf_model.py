@@ -7,7 +7,9 @@ import json
 import os.path
 from typing import Dict, List, Tuple
 import utils.constants as constants
-from utils.utils import parse_config, get_rf, path_spark
+from utils.utils import get_rf
+from wxs_qc.config import get_config
+from wxs_qc.hail_utils import path_spark
 from gnomad.variant_qc.pipeline import train_rf_model
 from gnomad.variant_qc.random_forest import pretty_print_runs, save_model
 from wxs_qc import hail_utils
@@ -164,7 +166,7 @@ def main():
     # set up
     print(spark_local_message)
     args = get_options()
-    config = parse_config()
+    config = get_config()
     tmp_dir = config["general"]["tmp_dir"]
 
     # = STEP PARAMETERS = #

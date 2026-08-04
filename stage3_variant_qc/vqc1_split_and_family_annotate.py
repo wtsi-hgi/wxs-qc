@@ -2,7 +2,9 @@
 import hail as hl
 import argparse
 from typing import Tuple, Optional
-from utils.utils import parse_config, rm_mt, path_spark
+from utils.utils import rm_mt
+from wxs_qc.config import get_config
+from wxs_qc.hail_utils import path_spark
 from gnomad.utils.filtering import filter_to_adj
 from gnomad.utils.annotations import (
     unphase_call_expr,
@@ -317,7 +319,7 @@ def main():
         args.trios_stats = True
         args.inbreeding = True
 
-    config = parse_config()
+    config = get_config()
     tmp_dir = config["general"]["tmp_dir"]
 
     # = STEP PARAMETERS = #

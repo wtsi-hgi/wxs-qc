@@ -1,13 +1,14 @@
 import bokeh.io
 import hail as hl
 
-from utils.utils import parse_config, path_spark
+from wxs_qc.config import get_config
+from wxs_qc.hail_utils import path_spark
 from wxs_qc import hail_utils, visualize
 
 
 def main():
     # set up
-    config = parse_config()
+    config = get_config()
     tmp_dir = config["general"]["tmp_dir"]
 
     # = STEP DEPENDENCIES = #

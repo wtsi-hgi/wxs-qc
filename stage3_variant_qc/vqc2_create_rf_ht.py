@@ -4,7 +4,8 @@ from typing import Optional
 import hail as hl
 import bokeh
 import utils.constants as constants
-from utils.utils import parse_config, path_spark
+from wxs_qc.config import get_config
+from wxs_qc.hail_utils import path_spark
 from gnomad.variant_qc.random_forest import median_impute_features
 
 from wxs_qc import hail_utils, visualize
@@ -152,7 +153,7 @@ def count_tp_fp_stats(ht: hl.Table, **kwargs):
 
 def main():
     # set up
-    config = parse_config()
+    config = get_config()
     tmp_dir = config["general"]["tmp_dir"]
 
     # = STEP PARAMETERS = #

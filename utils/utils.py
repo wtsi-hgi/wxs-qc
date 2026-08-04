@@ -7,27 +7,23 @@ import pandas as pd
 from shutil import rmtree
 from typing import Optional, Union, Set
 
-"""
-Config
-"""
-# ruff: noqa: E402
-# TODO: cleanup these imports
+from wxs_qc.hail_utils import path_local
 
-from wxs_qc.config import (  # noqa
-    get_config as parse_config,  # noqa
-)
-from wxs_qc.hail_utils import (
-    path_local,  # noqa
-    path_spark,  # noqa
-)  # noqa
-
-"""
-Other
-"""
+__all__ = [
+    "get_rf",
+    "rm_mt",
+    "select_founders",
+    "collect_pedigree_samples",
+    "expand_pd_array_col",
+]
 
 
 def expand_pd_array_col(
-    df: pd.DataFrame, array_col: str, num_out_cols: int = 0, out_cols_prefix=None, out_1based_indexing: bool = True
+    df: pd.DataFrame,
+    array_col: str,
+    num_out_cols: int = 0,
+    out_cols_prefix: Optional[str] = None,
+    out_1based_indexing: bool = True,
 ) -> pd.DataFrame:
     """
     Expands a Dataframe column containing an array into multiple columns.
@@ -68,6 +64,7 @@ def get_rf(
     :param str model_id: RF model id
     :return: Path to desired RF data
     """
+    assert model_id is not None, "get_rf() requires model_id"
     hashdir = os.path.join(rf_dir, model_id)
     model_file = os.path.join(hashdir, "rf.model")
     data_file = os.path.join(hashdir, data + ".ht")
@@ -77,7 +74,7 @@ def get_rf(
         return TableResource(data_file)
 
 
-def rm_mt(path: str):
+def rm_mt(path: str) -> None:
     rmtree(path_local(path))
 
 

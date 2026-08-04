@@ -1,6 +1,7 @@
 # generate truth set table for variant QC random forest
 import hail as hl
-from utils.utils import parse_config, path_spark
+from wxs_qc.config import get_config
+from wxs_qc.hail_utils import path_spark
 from wxs_qc import hail_utils
 
 
@@ -30,7 +31,7 @@ def get_truth_ht(omni: str, mills: str, thousand_genomes: str, hapmap: str, **kw
 
 def main() -> None:
     # set up
-    config = parse_config()
+    config = get_config()
     tmp_dir = config["general"]["tmp_dir"]
 
     # = STEP PARAMETERS = #

@@ -3,7 +3,8 @@ from typing import Any, Optional
 
 import hail as hl
 import bokeh
-from utils.utils import parse_config, path_spark
+from wxs_qc.config import get_config
+from wxs_qc.hail_utils import path_spark
 
 from wxs_qc import hail_utils, constants
 
@@ -121,7 +122,7 @@ def plot_f_stat_histogram(
 
 def main():
     ## = STEP SETUP = #
-    config = parse_config()
+    config = get_config()
     tmp_dir = config["general"]["tmp_dir"]
 
     # = STEP PARAMETERS = #

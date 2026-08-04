@@ -3,7 +3,8 @@ import hail as hl
 import os.path
 from typing import Optional, Dict
 from pprint import pformat
-from utils.utils import parse_config, path_spark
+from wxs_qc.config import get_config
+from wxs_qc.hail_utils import path_spark
 from wxs_qc import hail_utils
 
 
@@ -324,7 +325,7 @@ def make_subrank_expression(ht: hl.Table, add_trios_dependent_subranks: bool) ->
 
 def main():
     # = STEP SETUP =
-    config = parse_config()
+    config = get_config()
     tmp_dir = config["general"]["tmp_dir"]
 
     # = STEP PARAMETERS = #

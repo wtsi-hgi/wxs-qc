@@ -35,7 +35,7 @@ from pathlib import Path
 import hail as hl
 import numpy as np
 from wxs_qc.hail_utils import path_spark
-from utils.utils import parse_config
+from wxs_qc.config import get_config
 from wxs_qc import hail_utils
 
 Id = str
@@ -426,7 +426,7 @@ def read_mapping_file(path: str) -> pd.DataFrame:
 
 def main() -> None:
     # = STEP SETUP = #
-    config = parse_config()
+    config = get_config()
 
     tmp_dir: str = config["general"]["tmp_dir"]
 
