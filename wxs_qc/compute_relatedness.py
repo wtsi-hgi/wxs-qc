@@ -1,9 +1,13 @@
+from typing import Any
+
 import hail as hl
 from utils.utils import path_spark
 from wxs_qc.pca_utils import prune_mt, run_pc_project
 
 
-def run_king(mt: hl.MatrixTable, king_args: dict, prune_args: dict) -> (hl.MatrixTable, hl.MatrixTable):
+def run_king(
+    mt: hl.MatrixTable, king_args: dict[str, Any], prune_args: dict[str, Any]
+) -> tuple[hl.MatrixTable, hl.MatrixTable]:
     """
     Separate related and unrelated samples using the KING kinship estimator.
 
@@ -36,8 +40,12 @@ def run_king(mt: hl.MatrixTable, king_args: dict, prune_args: dict) -> (hl.Matri
 
 
 def prune_pc_relate(
-    mt: hl.MatrixTable, prune_params: dict, king_params: dict, pc_relate_params: dict, **kwargs
-) -> (hl.Table, hl.Table):
+    mt: hl.MatrixTable,
+    prune_params: dict[str, Any],
+    king_params: dict[str, Any],
+    pc_relate_params: dict[str, Any],
+    **kwargs: Any,
+) -> tuple[hl.Table, hl.Table]:
     """
     Complete PC-Relate workflow for identifying and removing related samples.
 

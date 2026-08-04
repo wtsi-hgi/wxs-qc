@@ -1,8 +1,10 @@
+from typing import Any
+
 import hail as hl
 from gnomad.sample_qc.ancestry import pc_project
 
 
-def prune_mt(mt: hl.MatrixTable, ld_prune_args, **kwargs) -> hl.MatrixTable:
+def prune_mt(mt: hl.MatrixTable, ld_prune_args: dict[str, Any], **kwargs: Any) -> hl.MatrixTable:
     """
     Prune variants in linkage disequilibrium (LD) on autosomes.
     Required filtered matrixtable - containing only autosomal biallelic SNVs.
@@ -21,7 +23,9 @@ def prune_mt(mt: hl.MatrixTable, ld_prune_args, **kwargs) -> hl.MatrixTable:
     return pruned_mt
 
 
-def run_pc_project(mt_ref, mt_study, pca_components):
+def run_pc_project(
+    mt_ref: hl.MatrixTable, mt_study: hl.MatrixTable, pca_components: int
+) -> tuple[hl.Table, hl.Table, hl.Table, list[float]]:
     """
     Run PCA on reference data and project study samples onto the PC space.
 

@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow":[
+      "Bash",
+      "Edit",
+      "Write"
+    ],
+    "deny": [
+      "Bash(docker *)",
+      "Bash(rm -rf *)",
+      "Bash(git push*)",
+      "Bash(git reset --hard*)",
+      "Bash(git commit*)",
+      "Bash(sudo *)",
+      "Bash(git config*)",
+      "Bash(git branch -D*)",
+      "Bash(dd if=*)",
+      "Bash(curl * | sh*)",
+      "Bash(curl * | bash*)",
+      "Bash(wget * | sh*)",
+      "Bash(wget * | bash*)",
+      "Edit(.git/**)",
+      "Edit(.github/workflows/**)",
+      "Edit(**/.env)"
+    ]
+  }
+}
