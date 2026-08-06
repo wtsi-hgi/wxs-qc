@@ -99,6 +99,51 @@ def get_options() -> argparse.Namespace:
     args = parser.parse_args()
     return args
 
+def filter_trios (ped_ht, relatedness_ht):
+    ped_ht = ped_ht.annotate(
+        s=hl.if_else(ped_ht.s <= ped_ht.p_id, ped_ht.s, ped_ht.p_id),
+        p_id=hl.if_else(ped_ht.s <= ped_ht.p_id, ped_ht.p_id, ped_ht.s),
+    )
+    ped_ht = ped_ht.annotate(
+        kin=relatedness_ht[ped_ht.s, ped_ht.p_id].kin,
+        ibd0=relatedness_ht[ped_ht.s, ped_ht.p_id].ibd0,
+        ibd1=relatedness_ht[ped_ht.s, ped_ht.p_id].ibd1,
+        ibd2=relatedness_ht[ped_ht.s, ped_ht.p_id].ibd2,
+    )
+    pc_expr = (
+        (ped_ht.kin<0.4) &
+        (ped_ht.kin>0.19) &
+        (ped_ht.ibd2 <0.125) &
+        (ped_ht.ibd0 <0.025) &
+        (ped_ht.ibd1 >0.75)
+    )
+    ped_ht = ped_ht.annotate(
+        true_pc=pc_expr,
+    )
+    ped_ht=ped_ht.filter(ped_ht.true_pc)
+    return ped_ht
+
+def modify_trios (relatedness_ht, ped_ht):
+    ht_pat = ped_ht.select(
+        ped_ht.fam_id,
+        ped_ht.s,
+        ped_ht.pat_id,
+    )
+    ht_mat = ped_ht.select(
+        ped_ht.fam_id,
+        ped_ht.s,
+        ped_ht.mat_id,
+    )
+    ht_mat = ht_mat.rename({"mat_id": "p_id"})
+    ht_pat = ht_pat.rename({"pat_id": "p_id"})
+    ht_mat=filter_trios(ht_mat, relatedness_ht)
+    ht_pat=filter_trios(ht_pat, relatedness_ht)
+    ht_pat=ht_pat.key_by("fam_id")
+    ht_mat=ht_mat.key_by("fam_id")
+    ped_ht=ped_ht.key_by("fam_id")
+    common_cp = ht_mat.semi_join(ht_pat.key_by("fam_id"))
+    ped_ht=ped_ht.semi_join(common_cp.key_by("fam_id"))
+    return ped_ht
 
 def main():
     # = STEP SETUP = #
@@ -108,6 +153,7 @@ def main():
         args.filter_mt = True
         args.pc_relate = True
         args.plot_pca = True
+        args.correct_trios = True
 
     tmp_dir = config["general"]["tmp_dir"]
 
@@ -163,6 +209,7 @@ def main():
         )
         related_samples_to_remove_ht.export(path_spark(config["stage2"]["relatedness_output"]["samples_to_remove_tsv"]))
         relatedness_ht.export(path_spark(config["stage2"]["relatedness_output"]["relatedness_outfile"]))
+        relatedness_ht=relatedness_ht.checkpoint(path_spark(config["stage2"]["relatedness_ht"]), overwrite=True)
     # -----------------------------------------------------------------------------
 
     if args.plot_pca:
@@ -193,6 +240,18 @@ def main():
             path_spark(config["stage2"]["prune_plot_pca"]["pca_loadings_file"]), overwrite=True
         )  # output
 
-
+    if args.correct_trios and config["stage2"]["relatedness_output"]["revised_pedigree"] is not None:
+        if relatedness_ht is None:
+            relatedness_ht = hl.read_table(
+                path_spark(config["stage2"]["relatedness_output"]["relatedness_ht"]), impute=True, force=True
+            )
+        ped_ht = hl.import_table(path_spark(config["general"]["metadata"]["pedigree"]), no_header=True, delimiter="\t")
+        ped_ht = ped_ht.rename({"f0": "fam_id", "f1": "s", "f2": "pat_id", "f3": "mat_id", "f4": "is_female", "f5": "phenotype"})
+        relatedness_ht = relatedness_ht.key_by(
+            i=relatedness_ht.i.s,
+            j=relatedness_ht.j.s
+        )
+        ped_ht=modify_trios(relatedness_ht, ped_ht)
+        ped_ht.export(path_spark(config["stage2"]["relatedness_output"]["revised_pedigree"]), header=False)
 if __name__ == "__main__":
     main()

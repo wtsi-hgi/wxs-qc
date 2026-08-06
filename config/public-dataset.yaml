@@ -231,10 +231,12 @@ stage2:
     relatedness_threshold: 0.125
 
   relatedness_output:
+    relatedness_ht: '${cvars.mtdir}/relatedness.ht'
     relatedness_outfile: '${cvars.anndir}/relatedness.tsv.gz'
     relatedness_plotfile: '${cvars.pltdir}/relatedness_plot.html'
     samples_to_remove_file: '${cvars.mtdir}/mt_related_samples_to_remove.ht' # output
     samples_to_remove_tsv: '${cvars.anndir}/related_samples_to_remove.tsv' # output in the TSV table
+    revised_pedigree: '${cvars.anndir}/revised_pedigree.fam' # set to null if you don't want to correct trios
 
   prune_plot_pca:
     #plink_outfile: '${cvars.anndir}/mt_unrelated.plink'
@@ -338,7 +340,7 @@ stage2:
 
 stage3:
   # To skip all trios-related computations, put here the `null` value
-  pedfile: ${general.metadata.pedigree}
+  pedfile: ${general.metadata.pedigree} # or ${stage2.relatedness_output.revised_pedigree} if you want to use the revised pedigree after relatedness correction
 
   # --- Step 3.1 --- #
   split_multi_and_var_qc:
