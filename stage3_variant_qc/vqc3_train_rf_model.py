@@ -84,9 +84,17 @@ def train_rf(ht: hl.Table, test_intervals: str, config: dict) -> Tuple[hl.Table,
     print("test_intervals")
     print(test_intervals)
 
-    fp_expr = ht.fail_hard_filters
-    tp_expr = ht.omni | ht.mills | ht.kgp_phase1_hc | ht.hapmap
-    ht = ht.annotate(tp=tp_expr, fp=fp_expr)
+    fp_expr = hl.or_else(ht.fail_hard_filters, False)
+    tp_expr = (
+        hl.or_else(ht.omni, False) |
+        hl.or_else(ht.mills, False) |
+        hl.or_else(ht.kgp_phase1_hc, False) |
+        hl.or_else(ht.hapmap, False)
+    )
+    ht = ht.annotate(
+        tp=tp_expr & ~fp_expr,
+        fp=fp_expr & ~tp_expr,
+    )
 
     if isinstance(test_intervals, str):
         test_intervals = [test_intervals]
