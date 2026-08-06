@@ -72,17 +72,17 @@ def get_rf_runs(rf_json_fp: str) -> Dict:
         return {}
 
 
-def train_rf(ht: hl.Table, test_intervals: str, config: dict) -> Tuple[hl.Table, pyspark.ml.PipelineModel]:
+def train_rf(ht: hl.Table, test_fraction: float, , seed, config: dict) -> Tuple[hl.Table, pyspark.ml.PipelineModel]:
     """
     Train RF model
     :param hl.Table ht: Hail table containing input data
-    :param str test_intervals: Test intervals
+    :param float test_fraction: fraction of random variants to be withheld for testing
     :return: Hail table and RF model
     """
     conf = config["stage3"]["train_rf"]
     features = constants.FEATURES
-    print("test_intervals")
-    print(test_intervals)
+    print("test_percentage")
+    print(test_fraction*100)
 
     fp_expr = hl.or_else(ht.fail_hard_filters, False)
     tp_expr = (
@@ -96,11 +96,36 @@ def train_rf(ht: hl.Table, test_intervals: str, config: dict) -> Tuple[hl.Table,
         fp=fp_expr & ~tp_expr,
     )
 
-    if isinstance(test_intervals, str):
-        test_intervals = [test_intervals]
-        test_intervals = [hl.parse_locus_interval(x, reference_genome="GRCh38") for x in test_intervals]
-        print("Resulting intervals")
-        print(hl.eval(test_intervals))
+    #mark variants for testing
+    ht_tp=ht.filter(ht.tp)
+    ht_fp=ht.filter(ht.fp)
+
+    if seed is not None:
+        ht_tp = ht_tp.annotate(
+            rand=hl.rand_unif(0, 1, seed=seed)
+        )
+        ht_fp = ht_fp.annotate(
+            rand=hl.rand_unif(0, 1, seed=seed)
+        )
+    else:
+        ht_tp = ht_tp.annotate(
+            rand=hl.rand_unif(0, 1)
+        )
+        ht_fp = ht_fp.annotate(
+            rand=hl.rand_unif(0, 1)
+        )
+
+    ht_tp = ht_tp.annotate(
+        test=ht_tp.rand < test_fraction
+    )
+    ht_fp = ht_fp.annotate(
+        test=ht_fp.rand < test_fraction
+    )
+
+    ht_tp_fp = ht_tp.union(ht_fp)
+    ht = ht.annotate(
+        test=hl.or_else(ht_tp_fp[ht.key].test, False)
+    )
 
     ht = ht.persist()
 
@@ -113,7 +138,7 @@ def train_rf(ht: hl.Table, test_intervals: str, config: dict) -> Tuple[hl.Table,
         fp_to_tp=conf["gnomad_train_rf_fp_to_tp"],
         num_trees=conf["gnomad_train_rf_num_trees"],
         max_depth=conf["gnomad_train_rf_max_depth"],
-        test_expr=hl.literal(test_intervals).any(lambda interval: interval.contains(ht.locus)),
+        test_expr=ht.test
     )
     # fp to tp = Ratio of FPs to TPs for training the RF model
     # num trees is number of trees in the model
@@ -128,7 +153,7 @@ def get_run_data(
     transmitted_singletons: bool,
     adj: bool,
     vqsr_training: bool,
-    test_intervals: List[str],
+    test_percentage: float,
     features_importance: Dict[str, float],
     test_results: List[hl.tstruct],
 ) -> Dict:
@@ -137,7 +162,7 @@ def get_run_data(
     :param bool transmitted_singletons: True if transmitted singletons were used in training
     :param bool adj: True if training variants were filtered by adj
     :param bool vqsr_training: True if VQSR training examples were used for RF training
-    :param List of str test_intervals: Intervals withheld from training to be used in testing
+    :param float test_percentage: Percentage of variants withheld from training to be used in testing
     :param Dict of float keyed by str features_importance: Feature importance returned by the RF
     :param List of struct test_results: Accuracy results from applying RF model to the test intervals
     :return: Dict of RF information
@@ -152,7 +177,7 @@ def get_run_data(
             "vqsr_training": vqsr_training,
         },
         "features_importance": features_importance,
-        "test_intervals": test_intervals,
+        "test_percentage": test_percentage+"%",
     }
 
     if test_results is not None:
@@ -178,9 +203,9 @@ def main():
     tmp_dir = config["general"]["tmp_dir"]
 
     # = STEP PARAMETERS = #
-    test_interval = config["stage3"]["rf_test_interval"]  # used in multiple functions
+    test_percentage = config["stage3"]["rf_test_percentage"]  # used in multiple functions
     runs_json = config["stage3"]["runs_json"]
-
+    seed = config["stage3"]["train_rf"]["seed"]
     # = STEP DEPENDENCIES = #
     input_ht_file = config["stage3"]["train_rf"]["input_ht_file"]
 
@@ -208,7 +233,8 @@ def main():
     # train RF
     input_ht = hl.read_table(path_spark(input_ht_file))
 
-    ht_result, rf_model = train_rf(input_ht, test_interval, config)
+    test_fraction=test_percentage/100
+    ht_result, rf_model = train_rf(input_ht, test_fraction, seed, config)
     print("Writing out ht_training data")
     ht_result = ht_result.checkpoint(
         get_rf(path_spark(rf_dir), data="training", model_id=model_id).path, overwrite=True
@@ -217,7 +243,7 @@ def main():
     rf_runs[model_id] = get_run_data(
         vqsr_training=False,
         transmitted_singletons=True,
-        test_intervals=test_interval,
+        test_percentage=test_percentage,
         adj=True,
         features_importance=hl.eval(ht_result.features_importance),
         test_results=hl.eval(ht_result.test_results),
