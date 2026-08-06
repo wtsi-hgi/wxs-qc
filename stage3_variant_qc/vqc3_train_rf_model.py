@@ -72,7 +72,7 @@ def get_rf_runs(rf_json_fp: str) -> Dict:
         return {}
 
 
-def train_rf(ht: hl.Table, test_fraction: float, , seed, config: dict) -> Tuple[hl.Table, pyspark.ml.PipelineModel]:
+def train_rf(ht: hl.Table, test_fraction: float, config: dict) -> Tuple[hl.Table, pyspark.ml.PipelineModel]:
     """
     Train RF model
     :param hl.Table ht: Hail table containing input data
@@ -100,12 +100,13 @@ def train_rf(ht: hl.Table, test_fraction: float, , seed, config: dict) -> Tuple[
     ht_tp=ht.filter(ht.tp)
     ht_fp=ht.filter(ht.fp)
 
-    if seed is not None:
+    test_seed = config["stage3"]["train_rf"]["seed"]
+    if test_seed is not None:
         ht_tp = ht_tp.annotate(
-            rand=hl.rand_unif(0, 1, seed=seed)
+            rand=hl.rand_unif(0, 1, seed=test_seed)
         )
         ht_fp = ht_fp.annotate(
-            rand=hl.rand_unif(0, 1, seed=seed)
+            rand=hl.rand_unif(0, 1, seed=test_seed)
         )
     else:
         ht_tp = ht_tp.annotate(
@@ -205,7 +206,6 @@ def main():
     # = STEP PARAMETERS = #
     test_percentage = config["stage3"]["rf_test_percentage"]  # used in multiple functions
     runs_json = config["stage3"]["runs_json"]
-    seed = config["stage3"]["train_rf"]["seed"]
     # = STEP DEPENDENCIES = #
     input_ht_file = config["stage3"]["train_rf"]["input_ht_file"]
 
@@ -216,6 +216,10 @@ def main():
 
     # initialise hail
     _ = hail_utils.init_hl(tmp_dir)
+
+    #check test percentage is valid
+    if not (test_percentage > 0 and test_percentage <= 100):
+        raise ValueError(f"test_percentage must be in (0, 100], got {test_percentage}")
 
     # use manual hash value if provided to control the output folder name
 
@@ -234,7 +238,7 @@ def main():
     input_ht = hl.read_table(path_spark(input_ht_file))
 
     test_fraction=test_percentage/100
-    ht_result, rf_model = train_rf(input_ht, test_fraction, seed, config)
+    ht_result, rf_model = train_rf(input_ht, test_fraction, config)
     print("Writing out ht_training data")
     ht_result = ht_result.checkpoint(
         get_rf(path_spark(rf_dir), data="training", model_id=model_id).path, overwrite=True
