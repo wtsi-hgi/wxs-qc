@@ -224,7 +224,7 @@ stage2:
       min_individual_maf: 0.05
       block_size: 4096
       min_kinship: 0.05
-      statistics: 'kin2'
+      statistics: 'all'
       # k:
       # include_self_kinship:
     relatedness_column: 'kin'
