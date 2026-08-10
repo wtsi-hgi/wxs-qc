@@ -81,56 +81,37 @@ def train_rf(ht: hl.Table, test_fraction: float, config: dict) -> Tuple[hl.Table
     """
     conf = config["stage3"]["train_rf"]
     features = constants.FEATURES
-    print("test_percentage")
-    print(test_fraction*100)
+    print(f"=== Chosen test_percentage {test_fraction*100}")
 
     fp_expr = hl.or_else(ht.fail_hard_filters, False)
     tp_expr = (
-        hl.or_else(ht.omni, False) |
-        hl.or_else(ht.mills, False) |
-        hl.or_else(ht.kgp_phase1_hc, False) |
-        hl.or_else(ht.hapmap, False)
+        hl.or_else(ht.omni, False)
+        | hl.or_else(ht.mills, False)
+        | hl.or_else(ht.kgp_phase1_hc, False)
+        | hl.or_else(ht.hapmap, False)
     )
     ht = ht.annotate(
         tp=tp_expr & ~fp_expr,
         fp=fp_expr & ~tp_expr,
     )
 
-    #mark variants for testing
-    ht_tp=ht.filter(ht.tp)
-    ht_fp=ht.filter(ht.fp)
+    # mark variants for testing
+    ht_tp = ht.filter(ht.tp)
+    ht_fp = ht.filter(ht.fp)
 
-    test_seed = config["stage3"]["train_rf"]["seed"]
-    if test_seed is not None:
-        ht_tp = ht_tp.annotate(
-            rand=hl.rand_unif(0, 1, seed=test_seed)
-        )
-        ht_fp = ht_fp.annotate(
-            rand=hl.rand_unif(0, 1, seed=test_seed)
-        )
-    else:
-        ht_tp = ht_tp.annotate(
-            rand=hl.rand_unif(0, 1)
-        )
-        ht_fp = ht_fp.annotate(
-            rand=hl.rand_unif(0, 1)
-        )
+    test_seed = conf["seed"]
+    ht_tp = ht_tp.annotate(rand=hl.rand_unif(0, 1, seed=test_seed))
+    ht_fp = ht_fp.annotate(rand=hl.rand_unif(0, 1, seed=test_seed))
 
-    ht_tp = ht_tp.annotate(
-        test=ht_tp.rand < test_fraction
-    )
-    ht_fp = ht_fp.annotate(
-        test=ht_fp.rand < test_fraction
-    )
+    ht_tp = ht_tp.annotate(test=ht_tp.rand < test_fraction)
+    ht_fp = ht_fp.annotate(test=ht_fp.rand < test_fraction)
 
     ht_tp_fp = ht_tp.union(ht_fp)
-    ht = ht.annotate(
-        test=hl.or_else(ht_tp_fp[ht.key].test, False)
-    )
+    ht = ht.annotate(test=hl.or_else(ht_tp_fp[ht.key].test, False))
 
     ht = ht.persist()
 
-    # TODO: use kwargs expantions from the config as this is a gnomad package function
+    # TODO: use kwargs expansions from the config as this is a gnomad package function
     rf_ht, rf_model = train_rf_model(
         ht,
         rf_features=features,
@@ -139,7 +120,7 @@ def train_rf(ht: hl.Table, test_fraction: float, config: dict) -> Tuple[hl.Table
         fp_to_tp=conf["gnomad_train_rf_fp_to_tp"],
         num_trees=conf["gnomad_train_rf_num_trees"],
         max_depth=conf["gnomad_train_rf_max_depth"],
-        test_expr=ht.test
+        test_expr=ht.test,
     )
     # fp to tp = Ratio of FPs to TPs for training the RF model
     # num trees is number of trees in the model
@@ -178,7 +159,7 @@ def get_run_data(
             "vqsr_training": vqsr_training,
         },
         "features_importance": features_importance,
-        "test_percentage": test_percentage+"%",
+        "test_percentage": str(test_percentage) + "%",
     }
 
     if test_results is not None:
@@ -217,9 +198,9 @@ def main():
     # initialise hail
     _ = hail_utils.init_hl(tmp_dir)
 
-    #check test percentage is valid
+    # check test percentage is valid
     if not (test_percentage > 0 and test_percentage <= 100):
-        raise ValueError(f"test_percentage must be in (0, 100], got {test_percentage}")
+        raise ValueError(f"Test_percentage must be in (0, 100], got {test_percentage}")
 
     # use manual hash value if provided to control the output folder name
 
@@ -237,7 +218,7 @@ def main():
     # train RF
     input_ht = hl.read_table(path_spark(input_ht_file))
 
-    test_fraction=test_percentage/100
+    test_fraction = test_percentage / 100
     ht_result, rf_model = train_rf(input_ht, test_fraction, config)
     print("Writing out ht_training data")
     ht_result = ht_result.checkpoint(

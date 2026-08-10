@@ -380,11 +380,11 @@ stage3:
 
   # --- Step 3.3 --- #
   rf_test_percentage: 20 # Percent of variants randomly chosen to be a test for RF model
-  seed: null #if null a set of variants for test will be selected randomly each time, otherwise a fixed seed will be used to select the same set of variants for test each time
   runs_json: '${cvars.rfdir}/rf_runs.json'
 
   train_rf:
     input_ht_file: '${cvars.mtdir}/ht_for_RF_by_variant_type_all_cols.ht'
+    seed: null #if null a set of variants for test will be selected randomly each time, otherwise a fixed seed will be used to select the same set of variants for test each time
     gnomad_train_rf_fp_to_tp: 1.0
     gnomad_train_rf_num_trees: 500
     gnomad_train_rf_max_depth: 5

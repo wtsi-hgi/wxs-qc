@@ -224,17 +224,19 @@ stage2:
       min_individual_maf: 0.05
       block_size: 4096
       min_kinship: 0.05
-      statistics: 'kin2'
+      statistics: 'all'
       # k:
       # include_self_kinship:
     relatedness_column: 'kin'
     relatedness_threshold: 0.125
 
   relatedness_output:
+    relatedness_ht: '${cvars.mtdir}/relatedness.ht'
     relatedness_outfile: '${cvars.anndir}/relatedness.tsv.gz'
     relatedness_plotfile: '${cvars.pltdir}/relatedness_plot.html'
     samples_to_remove_file: '${cvars.mtdir}/mt_related_samples_to_remove.ht' # output
     samples_to_remove_tsv: '${cvars.anndir}/related_samples_to_remove.tsv' # output in the TSV table
+    revised_pedigree: '${cvars.anndir}/revised_pedigree.fam' # set to null if you don't want to correct trios
 
   prune_plot_pca:
     #plink_outfile: '${cvars.anndir}/mt_unrelated.plink'
@@ -338,7 +340,7 @@ stage2:
 
 stage3:
   # To skip all trios-related computations, put here the `null` value
-  pedfile: ${general.metadata.pedigree}
+  pedfile: ${general.metadata.pedigree} # or ${stage2.relatedness_output.revised_pedigree} if you want to use the revised pedigree after relatedness correction
 
   # --- Step 3.1 --- #
   split_multi_and_var_qc:
@@ -377,11 +379,12 @@ stage3:
     variant_stats_plot_file : '${cvars.pltdir}/variant_stats_preqc.html'
 
   # --- Step 3.3 --- #
-  rf_test_interval: chr20 # used in multiple functions
+  rf_test_percentage: 20 # Percentage of variants randomly chosen to be a test for the RF model
   runs_json: '${cvars.rfdir}/rf_runs.json'
 
   train_rf:
     input_ht_file: '${cvars.mtdir}/ht_for_RF_by_variant_type_all_cols.ht'
+    seed: 42 # If null a set of variants for test will be selected randomly each time, otherwise a fixed seed will be used to select the same set of variants for test each time
     gnomad_train_rf_fp_to_tp: 1.0
     gnomad_train_rf_num_trees: 500
     gnomad_train_rf_max_depth: 5
