@@ -2,6 +2,8 @@
 Set of literals and constants used to filter and annotate variants
 """
 
+from dataclasses import dataclass
+
 VEP_CONSEQUENCE_ALL = """
 3_prime_utr_variant
 5_prime_utr_variant
@@ -51,6 +53,22 @@ intergenic_variant
 intron_variant
 upstream_gene_variant
 """.split()
+
+
+# Default threshold used in PC-Relate by gnomAD
+# To define parent-child relationship
+# They are highly conservative, so there is no sense in putting it in the config file.
+@dataclass(frozen=True)
+class PedigreeThresholds:
+    kin_max: float = 0.4
+    kin_min: float = 0.19
+    ibd0_max: float = 0.025
+    ibd1_min: float = 0.75
+    ibd2_max: float = 0.125
+
+
+PEDIGREE_THRESHOLDS = PedigreeThresholds()
+
 
 ##################
 # Visualizations #
