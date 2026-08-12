@@ -1,6 +1,6 @@
 [project]
 name = "wxs-qc"
-version = "0.2.0"
+version = "0.9.4"
 description = "Quality control pipeline for human exome/genome cohorts"
 readme = "README.md"
 requires-python = ">=3.12"

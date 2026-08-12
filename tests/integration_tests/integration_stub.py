@@ -191,7 +191,7 @@ class IntegrationTestsStub:
 
     @patch(
         "argparse.ArgumentParser.parse_args",
-        return_value=argparse.Namespace(filter_mt=True, pc_relate=True, plot_pca=True, correct_trios=True, all=False),
+        return_value=argparse.Namespace(filter_mt=True, pc_relate=True, plot_pca=True, validate_trios=True, all=False),
     )
     def stub_2_2_sample_qc(self, mock_args: Any) -> None:
         try:
