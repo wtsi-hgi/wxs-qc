@@ -399,6 +399,7 @@ The script is split into resumable substeps. Run the substeps in order:
 python stage2_sample_qc/sqc2_identify_related_samples.py --filter-mt
 python stage2_sample_qc/sqc2_identify_related_samples.py --pc-relate
 python stage2_sample_qc/sqc2_identify_related_samples.py --plot-pca
+python stage2_sample_qc/sqc2_identify_related_samples.py --validate-trios
 ```
 
 The same substeps can also be run in a single invocation:
@@ -417,6 +418,19 @@ and writes the PCA matrix, scores, and loadings used by later sample-QC steps.
 The step outputs the list of related samples and PCA scores.
 The relatedness information can be used to validate pedigree data and detect sample mislabeling.
 It also plots the Koch's relatedness plots (Kinship vs. IBD2) and PC1/PC2 sample scatterplot.
+
+The `--validate-trios` substep cross-checks the pedigree supplied in
+`general -> metadata -> pedigree` against the PC-Relate relatedness table,
+and writes a revised pedigree containing only the trios it can confirm.
+For each parent-child pair declared in the pedigree, it looks up the corresponding
+kinship and IBD statistics in the relatedness table and keeps the pair only if it
+satisfies conservative parent-child thresholds
+(`kin` between 0.19 and 0.4, `ibd0` < 0.025, `ibd1` > 0.75, `ibd2` < 0.125, see
+`PEDIGREE_THRESHOLDS` in `wxs_qc/constants.py`). A trio is retained in the revised
+pedigree only if both the maternal and paternal pairs are confirmed this way.
+This substep is skipped if `stage2 -> relatedness_output -> revised_pedigree` is set
+to `null` in the config. The revised pedigree file can then be used in place of the
+original pedigree in later stages (e.g. `stage3 -> pedfile`).
 
 ### Predict super-populations using PCA
 
