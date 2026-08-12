@@ -621,6 +621,15 @@ python stage3_variant_qc/vqc2_create_rf_ht.py
 ### Train the random forest model
 
 Then, we train the RF model on the constructed dataset.
+A random subset of the true-positive and false-positive training variants is withheld for testing the trained model;
+the rest is used for training.
+
+The size of this subset is controlled by the `stage3 -> rf_test_percentage` config parameter,
+which specifies the percentage (0-100] of variants to withhold for testing,
+chosen at random independently from each of the true-positive and false-positive sets.
+By default (`stage3 -> train_rf -> seed: null`), a different random test subset is selected on every run;
+set this to a fixed integer to select the same test subset across runs.
+
 Here we use `--manual-model-id` parameter to
 manually set the random forest model ID
 (called _runhash_ previously, so you can find this term in the code)
