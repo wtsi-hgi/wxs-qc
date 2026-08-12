@@ -88,32 +88,6 @@ def run_population_pca(
     return pca_mt, union_pca_scores, pca_scores, pca_loadings
 
 
-def order_samples(ht: hl.Table) -> hl.Table:
-    """
-    Alphabelicatty reorders sample names in a Hail Table based on specified conditions.
-
-    The function updates the `i` and `j` fields in the input Hail Table (`ht`)
-    by reordering their values based on their relative size. Specifically,
-    it assigns the smaller value to `i` and the larger value to `j` for each row.
-
-    Parameters
-    ----------
-    ht : hl.Table
-        A Hail Table containing fields `i` and `j` that define the sample indices
-        to be reordered.
-
-    Returns
-    -------
-    hl.Table
-        A new Hail Table where the `i` and `j` fields are reordered such that
-        `i` always contains the smaller value and `j` always contains the larger value.
-    """
-    return ht.transmute(
-        i=hl.if_else(ht.i < ht.j, ht.i, ht.j),
-        j=hl.if_else(ht.i > ht.j, ht.i, ht.j),
-    )
-
-
 def filter_trios(ped_ht, relatedness_ht):
     """
     Filters parent-child trios based on relatedness criteria.
@@ -142,6 +116,15 @@ def filter_trios(ped_ht, relatedness_ht):
         ibd0=relatedness_ht[ped_ht.i, ped_ht.j].ibd0,
         ibd1=relatedness_ht[ped_ht.i, ped_ht.j].ibd1,
         ibd2=relatedness_ht[ped_ht.i, ped_ht.j].ibd2,
+    )
+
+    # Because we don't know the order of i and j in relatedness_ht,
+    # we make a second annotation with swapped i and j, keeping already annotated data
+    ped_ht = ped_ht.annotate(
+        kin=hl.if_else(hl.is_defined(ped_ht.kin), ped_ht.kin, relatedness_ht[ped_ht.j, ped_ht.i].kin),
+        ibd0=hl.if_else(hl.is_defined(ped_ht.ibd0), ped_ht.ibd0, relatedness_ht[ped_ht.j, ped_ht.i].ibd0),
+        ibd1=hl.if_else(hl.is_defined(ped_ht.ibd1), ped_ht.ibd1, relatedness_ht[ped_ht.j, ped_ht.i].ibd1),
+        ibd2=hl.if_else(hl.is_defined(ped_ht.ibd2), ped_ht.ibd2, relatedness_ht[ped_ht.j, ped_ht.i].ibd2),
     )
 
     pc_expr = (
@@ -186,17 +169,10 @@ def validate_trios(relatedness_ht, ped_ht):
         ped_ht.s,
         ped_ht.mat_id,
     )
-    # The relatedness table codex sample names as `i` and `j`
-    # To match it with samples in pedigree we ensure that i and j goes in the alphabetic order
-    relatedness_ht = order_samples(relatedness_ht)
-    relatedness_ht = relatedness_ht.key_by("i", "j")
 
     # Extracting 'maternal' and 'paternal' parts of pedigree
     ht_mat = ht_mat.rename({"s": "i", "mat_id": "j"})
     ht_pat = ht_pat.rename({"s": "i", "pat_id": "j"})
-    # Applying sorting to match relatedness_ht
-    ht_mat = order_samples(ht_mat)
-    ht_pat = order_samples(ht_pat)
 
     ht_mat = filter_trios(ht_mat, relatedness_ht)
     ht_pat = filter_trios(ht_pat, relatedness_ht)
@@ -334,8 +310,11 @@ def main():
         ped_ht = ped_ht.rename(
             {"f0": "fam_id", "f1": "s", "f2": "pat_id", "f3": "mat_id", "f4": "is_female", "f5": "phenotype"}
         )
+        # Keying relatedness table by sample names 'i' and 'j' instead of 'i.s' and 'j.s'
         relatedness_ht = relatedness_ht.key_by()
         relatedness_ht = relatedness_ht.transmute(i=relatedness_ht.i.s, j=relatedness_ht.j.s)
+        relatedness_ht = relatedness_ht.key_by("i", "j")
+        relatedness_ht = relatedness_ht.persist()
         ped_ht = validate_trios(relatedness_ht, ped_ht)
         ped_ht.export(path_spark(config["stage2"]["relatedness_output"]["revised_pedigree"]), header=False)
 
