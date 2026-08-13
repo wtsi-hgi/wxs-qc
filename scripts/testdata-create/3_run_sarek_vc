@@ -1,0 +1,60 @@
+#!/bin/bash
+set -e
+
+# Runs variant-calling via Sarek for the fixed testdata.consts sample set.
+# Requires Nextflow and Docker to be accessible.
+#
+# sarek-vc.config uses paths relative to this script's directory (matching
+# WORKDIR = <script_dir>/workdir in testdata.consts), so run from here.
+cd "$(dirname "$0")"
+
+source ./testdata.consts
+
+profile="docker"  # For standalone run
+
+mkdir -p "$WORKDIR"
+
+# GATK VariantRecalibrator (VQSR) runs unconditionally later in Sarek's joint-calling
+# subworkflow, and GATK's own docs recommend >=30 WES samples for a stable VQSR model.
+# With only our 10 fixed samples, VQSR may legitimately fail even though the earlier,
+# pre-VQSR joint_germline.vcf.gz (produced by GenotypeGVCFs/merge) has already been
+# published successfully - that pre-VQSR VCF is what the QC pipeline actually consumes
+# (see docs/wxs-qc_example-dataset.md), so we tolerate a nonzero Nextflow exit here and
+# treat the presence of $JOINT_GERMLINE_VCF as the real success condition, instead of
+# aborting immediately via `set -e`.
+set +e
+nextflow \
+     -log "$DATASET_NAME.log" \
+     -config "$(dirname "$0")/sarek-vc.config" \
+     run nf-core/sarek -r 3.10.0 \
+     -profile "$profile" \
+     -resume \
+     -with-trace "$DATASET_NAME.trace" \
+     -with-timeline "$DATASET_NAME.timeline.html" \
+     -with-report "$DATASET_NAME.report.html" \
+     -work-dir "$SAREK_WORKDIR"
+nextflow_exit=$?
+set -e
+
+if [ ! -f "$JOINT_GERMLINE_VCF" ]; then
+  echo "ERROR: expected joint VCF not found at $JOINT_GERMLINE_VCF (nextflow exit code: $nextflow_exit)." >&2
+  echo "This is likely caused by GATK VQSR failing on a 10-sample cohort (see comment above)," >&2
+  echo "which would normally still leave the pre-VQSR joint_germline.vcf.gz published earlier" >&2
+  echo "in the Sarek DAG. Since it is missing here, the run did not get that far - inspect the" >&2
+  echo "Nextflow log/trace for the real failure." >&2
+  exit 1
+fi
+
+if [ "$nextflow_exit" -ne 0 ]; then
+  echo "WARNING: nextflow exited with code $nextflow_exit, but the pre-VQSR joint VCF was" >&2
+  echo "published successfully at $JOINT_GERMLINE_VCF. Proceeding - this is expected if the" >&2
+  echo "failure was in the downstream VQSR step (see comment above)." >&2
+fi
+
+mkdir -p "$VCF_PREQC_DIR"
+cp "$JOINT_GERMLINE_VCF" "$VCF_PREQC_DIR/$DATASET_NAME.joint_germline.vcf.gz"
+if [ -f "$JOINT_GERMLINE_VCF.tbi" ]; then
+  cp "$JOINT_GERMLINE_VCF.tbi" "$VCF_PREQC_DIR/$DATASET_NAME.joint_germline.vcf.gz.tbi"
+fi
+
+echo "Joint VCF copied to $VCF_PREQC_DIR/$DATASET_NAME.joint_germline.vcf.gz"

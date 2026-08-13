@@ -1,0 +1,43 @@
+# testdata.consts
+#
+# Shared constants for the scripts/testdata-create/ pipeline.
+#
+# This file is:
+#  - `source`d directly by the bash scripts in this folder (e.g. `3_run_sarek_vc`), and
+#  - parsed by the Python scripts via `consts_loader.py` (which sources it in a real
+#    shell subprocess to resolve the `$(...)` command substitutions below).
+#
+# Keep this file restricted to plain `KEY="value"` lines (bash-sourceable as-is, and
+# simple enough for consts_loader.py to parse). Only `$(cd ... && pwd)`-style command
+# substitution is used, to derive absolute paths relative to this file's own location.
+#
+# The dataset described here (fixed 10-sample 1000 Genomes exome cohort, 2 trios) is
+# intentionally fixed and not meant to be parametrized further - see AGENTS.md and
+# artifacts/1_plan.md. Do not add CLI flags or extra parametrization to the scripts that
+# read this file; edit this file directly if the fixed dataset ever needs to change.
+
+DATASET_NAME="testdata_1000genomes_v2"
+
+# Single hardcoded work directory; all other paths below are derived from it.
+WORKDIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)/workdir"
+
+CRAMS_DIR="$WORKDIR/crams"
+SAREK_SAMPLESHEET="$WORKDIR/$DATASET_NAME.sarek-samplesheet.csv"
+SAREK_WORKDIR="$WORKDIR/sarek.workdir"
+SAREK_OUTDIR="$WORKDIR/sarek.outdir"
+JOINT_GERMLINE_VCF="$SAREK_OUTDIR/variant_calling/haplotypecaller/joint_variant_calling/joint_germline.vcf.gz"
+VCF_PREQC_DIR="$WORKDIR/vcfs_pre-qc"
+METADATA_DIR="$WORKDIR/metadata"
+
+# Reused static resources (read-only), shared with artifacts/public-dataset-build/.
+PUBLIC_DATASET_BUILD_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")/../../artifacts/public-dataset-build" && pwd)"
+IGSR_SAMPLES_TSV="$PUBLIC_DATASET_BUILD_DIR/igsr_samples.tsv"
+EXOME_TARGETS_BED="$PUBLIC_DATASET_BUILD_DIR/hg38_exome_v2.0.2_targets_sorted_validated.re_annotated.padded50.bed.gz"
+
+# Fixed sample set: 10 samples, "SAMPLE_ID:POPULATION:SEX" tokens, space-separated.
+# Includes trio CEU1 (NA12878/NA12891/NA12892) and trio YRI1 (NA19240/NA19239/NA19238),
+# plus 4 unrelated samples spanning other populations.
+SAMPLES="NA12878:CEU:female NA12891:CEU:male NA12892:CEU:female NA19238:YRI:female NA19239:YRI:male NA19240:YRI:female HG00584:CHS:female NA19798:MXL:male NA20778:TSI:male NA20903:GIH:male"
+
+# Fixed trio definitions: "FAMILY_ID:CHILD:FATHER:MOTHER" tokens, space-separated.
+TRIOS="CEU1:NA12878:NA12891:NA12892 YRI1:NA19240:NA19239:NA19238"
