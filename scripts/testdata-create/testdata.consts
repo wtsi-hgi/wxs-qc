@@ -16,7 +16,7 @@
 # artifacts/1_plan.md. Do not add CLI flags or extra parametrization to the scripts that
 # read this file; edit this file directly if the fixed dataset ever needs to change.
 
-DATASET_NAME="testdata_1000genomes_v2"
+DATASET_NAME="control_set_small_v2"
 
 # Single hardcoded work directory; all other paths below are derived from it.
 WORKDIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)/workdir"
@@ -30,9 +30,8 @@ VCF_PREQC_DIR="$WORKDIR/vcfs_pre-qc"
 METADATA_DIR="$WORKDIR/metadata"
 
 # Reused static resources (read-only), shared with artifacts/public-dataset-build/.
-PUBLIC_DATASET_BUILD_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")/../../artifacts/public-dataset-build" && pwd)"
-IGSR_SAMPLES_TSV="$PUBLIC_DATASET_BUILD_DIR/igsr_samples.tsv"
-EXOME_TARGETS_BED="$PUBLIC_DATASET_BUILD_DIR/hg38_exome_v2.0.2_targets_sorted_validated.re_annotated.padded50.bed.gz"
+IGSR_SAMPLES_TSV="igsr_samples.tsv"
+EXOME_TARGETS_BED="hg38_exome_v2.0.2_targets_sorted_validated.re_annotated.padded50.bed"
 
 # Fixed sample set: 10 samples, "SAMPLE_ID:POPULATION:SEX" tokens, space-separated.
 # Includes trio CEU1 (NA12878/NA12891/NA12892) and trio YRI1 (NA19240/NA19239/NA19238),

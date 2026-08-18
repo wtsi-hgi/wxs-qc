@@ -26,10 +26,9 @@ def main() -> None:
     trios_path = metadata_dir / f"{consts['DATASET_NAME']}.trios.fam"
     withparents_path = metadata_dir / f"{consts['DATASET_NAME']}.trios-withparents.fam"
 
-    with (
-        open(trios_path, mode="w", newline="") as trios_file,
-        open(withparents_path, mode="w", newline="") as withparents_file,
-    ):
+    with open(trios_path, mode="w", newline="") as trios_file, open(
+        withparents_path, mode="w", newline=""
+    ) as withparents_file:
         for trio in trios:
             family_id = trio["family_id"]
             child, father, mother = trio["child"], trio["father"], trio["mother"]

@@ -22,6 +22,11 @@ mkdir -p "$WORKDIR"
 # (see docs/wxs-qc_example-dataset.md), so we tolerate a nonzero Nextflow exit here and
 # treat the presence of $JOINT_GERMLINE_VCF as the real success condition, instead of
 # aborting immediately via `set -e`.
+
+if [ ! -f "$WORKDIR/$EXOME_TARGETS_BED" ]; then
+    gunzip -c "$EXOME_TARGETS_BED.gz" > "$WORKDIR/$EXOME_TARGETS_BED"
+fi
+
 set +e
 nextflow \
      -log "$DATASET_NAME.log" \
