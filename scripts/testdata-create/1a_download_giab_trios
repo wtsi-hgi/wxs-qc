@@ -1,0 +1,61 @@
+#!/bin/bash
+set -e
+
+# Slices exome-target-region reads for the fixed GIAB AshkenazimTrio/ChineseTrio sample set
+# (testdata.consts' GIAB_SAMPLES) out of each sample's public, remote, GRCh38-aligned
+# whole-genome BAM on the GIAB FTP, writing one <sample_id>.exome.bam(.bai) per sample into
+# $GIAB_BAMS_DIR.
+#
+# Why slicing instead of a plain download (contrast with 1_download_crams.py): none of these
+# 6 samples has usable Illumina *exome* data - the one real exome BAM that exists per sample
+# (HG002-HG005 only) is aligned to GRCh37, incompatible with sarek-vc.config's
+# `genome = 'GATK.GRCh38'`, and HG006/HG007 have no exome data at all. See
+# artifacts/4_plan_giab_trios.md for the full investigation. Each whole-genome source BAM is
+# 110-623 GB, so this relies on samtools/htslib's indexed remote-read support (HTTPS + the
+# BAM's own .bai) to fetch only the padded exome-target regions, rather than downloading the
+# whole file. This requires htslib built with HTTPS (libcurl) support - if that's missing,
+# `samtools view` below will fail immediately with "Protocol not supported"; do not work
+# around this locally, fix the samtools/htslib install instead.
+#
+# Like 3_run_sarek_vc, this only sources testdata.consts (GIAB_BAMS_DIR/GIAB_SAMPLES are not
+# read by consts_loader.py) and run from this directory.
+cd "$(dirname "$0")"
+source ./testdata.consts
+
+mkdir -p "$WORKDIR" "$GIAB_BAMS_DIR"
+
+# Same idempotent decompress-if-missing step as 3_run_sarek_vc, duplicated here since this
+# script may run before (or independently of) 3_run_sarek_vc.
+if [ ! -f "$WORKDIR/$EXOME_TARGETS_BED" ]; then
+    gunzip -c "$EXOME_TARGETS_BED.gz" > "$WORKDIR/$EXOME_TARGETS_BED"
+fi
+
+for token in $GIAB_SAMPLES; do
+    # GIAB_SAMPLES tokens are "SAMPLE_ID:POPULATION:SEX:BAM_URL" - cut instead of
+    # `IFS=':' read` so the URL's own "://" doesn't get split apart. POPULATION/SEX (fields
+    # 2-3) aren't needed here; only sample_id and bam_url are.
+    sample_id=$(cut -d: -f1 <<< "$token")
+    bam_url=$(cut -d: -f4- <<< "$token")
+
+    dest_bam="$GIAB_BAMS_DIR/$sample_id.exome.bam"
+    dest_bai="$dest_bam.bai"
+
+    if [ -f "$dest_bam" ] && [ -f "$dest_bai" ]; then
+        echo "Skipping $sample_id: $dest_bam already exists"
+        continue
+    fi
+
+    echo "Slicing exome-target reads for $sample_id from $bam_url"
+    if ! samtools view -b -L "$WORKDIR/$EXOME_TARGETS_BED" "$bam_url" -o "$dest_bam"; then
+        echo "ERROR: failed to slice exome regions for $sample_id from $bam_url" >&2
+        echo "This requires samtools/htslib built with HTTPS support for indexed remote reads - check your samtools build if this is unexpected." >&2
+        exit 1
+    fi
+
+    if ! samtools index "$dest_bam"; then
+        echo "ERROR: failed to index $dest_bam" >&2
+        exit 1
+    fi
+
+    echo "Wrote $dest_bam and $dest_bai"
+done

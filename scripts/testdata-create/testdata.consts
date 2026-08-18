@@ -40,3 +40,36 @@ SAMPLES="NA12878:CEU:female NA12891:CEU:male NA12892:CEU:female NA19238:YRI:fema
 
 # Fixed trio definitions: "FAMILY_ID:CHILD:FATHER:MOTHER" tokens, space-separated.
 TRIOS="CEU1:NA12878:NA12891:NA12892 YRI1:NA19240:NA19239:NA19238"
+
+# GIAB AshkenazimTrio + ChineseTrio addition (scripts/testdata-create/1a_download_giab_trios).
+#
+# Unlike SAMPLES/TRIOS above, these two constants are consumed only by the bash script
+# 1a_download_giab_trios (which `source`s this file directly, like 3_run_sarek_vc does) -
+# NOT by consts_loader.py/get_samples()/get_trios(), so they are not added to SAMPLES/TRIOS
+# and 1_download_crams.py, 2_make_sarek_manifest.py, 4_make_sex_info.py, and
+# 5_make_trios_fam.py are unaffected by them.
+#
+# Each GIAB FTP sample has its own ad hoc directory/file naming (unlike 1000 Genomes' uniform
+# layout), so the source URL is recorded per sample here rather than constructed by a formula.
+# Kept on one physical line each (like SAMPLES/TRIOS) so consts_loader.py's line-based
+# `_discover_keys()` (which validates every KEY="value" line's quoting, even for keys it
+# doesn't otherwise use) still sees one balanced-quote assignment per key.
+#
+# All 6 samples only have real Illumina exome data aligned to GRCh37 (or no exome data at
+# all for HG006/HG007) - see artifacts/4_plan_giab_trios.md - so these instead point at each
+# sample's whole-genome GRCh38 BAM; 1a_download_giab_trios slices out just the padded exome
+# target regions.
+#
+# GIAB_BAMS_DIR: destination for the sliced per-sample exome BAM/BAI produced by
+# 1a_download_giab_trios.
+GIAB_BAMS_DIR="$WORKDIR/giab_bams"
+
+# GIAB_SAMPLES: "SAMPLE_ID:POPULATION:SEX:BAM_URL" tokens, space-separated. POPULATION is a
+# documentation label (AJ = Ashkenazi Jewish, CHN = Han Chinese), not a real 1000G population
+# code, and (unlike SAMPLES) is not used to construct the URL.
+GIAB_SAMPLES="HG002:AJ:male:https://ftp.ncbi.nlm.nih.gov/ReferenceSamples/giab/data/AshkenazimTrio/HG002_NA24385_son/NIST_Illumina_2x250bps/novoalign_bams/HG002.GRCh38.2x250.bam HG003:AJ:male:https://ftp.ncbi.nlm.nih.gov/ReferenceSamples/giab/data/AshkenazimTrio/HG003_NA24149_father/NIST_Illumina_2x250bps/novoalign_bams/HG003.GRCh38.2x250.bam HG004:AJ:female:https://ftp.ncbi.nlm.nih.gov/ReferenceSamples/giab/data/AshkenazimTrio/HG004_NA24143_mother/NIST_Illumina_2x250bps/novoalign_bams/HG004.GRCh38.2x250.bam HG005:CHN:male:https://ftp.ncbi.nlm.nih.gov/ReferenceSamples/giab/data/ChineseTrio/HG005_NA24631_son/HG005_NA24631_son_HiSeq_300x/NHGRI_Illumina300X_Chinesetrio_novoalign_bams/HG005.GRCh38_full_plus_hs38d1_analysis_set_minus_alts.300x.bam HG006:CHN:male:https://ftp.ncbi.nlm.nih.gov/ReferenceSamples/giab/data/ChineseTrio/HG006_NA24694-huCA017E_father/NA24694_Father_HiSeq100x/NHGRI_Illumina100X_Chinesetrio_novoalign_bams/HG006.GRCh38_full_plus_hs38d1_analysis_set_minus_alts.100x.bam HG007:CHN:female:https://ftp.ncbi.nlm.nih.gov/ReferenceSamples/giab/data/ChineseTrio/HG007_NA24695-hu38168_mother/NA24695_Mother_HiSeq100x/NHGRI_Illumina100X_Chinesetrio_novoalign_bams/HG007.GRCh38_full_plus_hs38d1_analysis_set_minus_alts.100x.bam"
+
+# GIAB_TRIOS: "FAMILY_ID:CHILD:FATHER:MOTHER" tokens, space-separated - same shape as TRIOS.
+# Not read by 1a_download_giab_trios itself (which only needs GIAB_SAMPLES); recorded here as
+# the declarative definition of the fixed trio structure, for a later script to consume.
+GIAB_TRIOS="AshkenazimTrio:HG002:HG003:HG004 ChineseTrio:HG005:HG006:HG007"
