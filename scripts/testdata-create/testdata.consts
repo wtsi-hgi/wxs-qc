@@ -43,11 +43,12 @@ TRIOS="CEU1:NA12878:NA12891:NA12892 YRI1:NA19240:NA19239:NA19238"
 
 # GIAB AshkenazimTrio + ChineseTrio addition (scripts/testdata-create/1a_download_giab_trios).
 #
-# Unlike SAMPLES/TRIOS above, these two constants are consumed only by the bash script
-# 1a_download_giab_trios (which `source`s this file directly, like 3_run_sarek_vc does) -
-# NOT by consts_loader.py/get_samples()/get_trios(), so they are not added to SAMPLES/TRIOS
-# and 1_download_crams.py, 2_make_sarek_manifest.py, 4_make_sex_info.py, and
-# 5_make_trios_fam.py are unaffected by them.
+# Kept as separate constants rather than merged into SAMPLES/TRIOS, since GIAB_SAMPLES tokens
+# carry a 4th field (BAM_URL) that SAMPLES tokens don't, and 1_download_crams.py's formulaic
+# 1000-Genomes URL construction doesn't apply to GIAB samples. Read both by the bash script
+# 1a_download_giab_trios (which `source`s this file directly, like 3_run_sarek_vc does) and,
+# via consts_loader.py's get_giab_samples()/get_giab_trios(), by 2_make_sarek_manifest.py,
+# 4_make_sex_info.py, and 5_make_trios_fam.py, which merge them alongside SAMPLES/TRIOS.
 #
 # Each GIAB FTP sample has its own ad hoc directory/file naming (unlike 1000 Genomes' uniform
 # layout), so the source URL is recorded per sample here rather than constructed by a formula.

@@ -6,19 +6,22 @@ set, in the PLINK-fam convention already used by
 tests/data/test_source_data/metadata/control_set_small.trios*.fam
 (family_id, individual_id, father_id, mother_id, sex[1=male,2=female], phenotype;
 tab-delimited).
+
+Trios come from both TRIOS (CEU1, YRI1; 1000 Genomes) and GIAB_TRIOS (AshkenazimTrio,
+ChineseTrio; GIAB) - sex lookups likewise merge SAMPLES and GIAB_SAMPLES.
 """
 
 from pathlib import Path
 
-from consts_loader import get_consts, get_samples, get_trios
+from consts_loader import get_consts, get_giab_samples, get_giab_trios, get_samples, get_trios
 
 _SEX_CODE = {"male": "1", "female": "2"}
 
 
 def main() -> None:
     consts = get_consts()
-    trios = get_trios()
-    sex_by_sample = {sample["sample_id"]: sample["sex"] for sample in get_samples()}
+    trios = get_trios() + get_giab_trios()
+    sex_by_sample = {sample["sample_id"]: sample["sex"] for sample in get_samples() + get_giab_samples()}
 
     metadata_dir = Path(consts["METADATA_DIR"])
     metadata_dir.mkdir(parents=True, exist_ok=True)
@@ -26,9 +29,10 @@ def main() -> None:
     trios_path = metadata_dir / f"{consts['DATASET_NAME']}.trios.fam"
     withparents_path = metadata_dir / f"{consts['DATASET_NAME']}.trios-withparents.fam"
 
-    with open(trios_path, mode="w", newline="") as trios_file, open(
-        withparents_path, mode="w", newline=""
-    ) as withparents_file:
+    with (
+        open(trios_path, mode="w", newline="") as trios_file,
+        open(withparents_path, mode="w", newline="") as withparents_file,
+    ):
         for trio in trios:
             family_id = trio["family_id"]
             child, father, mother = trio["child"], trio["father"], trio["mother"]

@@ -20,8 +20,9 @@ from pathlib import Path
 CONSTS_PATH = Path(__file__).with_name("testdata.consts")
 
 # Keys that hold single-line, colon/space-delimited lists rather than plain
-# scalar values; excluded from get_consts() and exposed via get_samples()/get_trios().
-_LIST_KEYS = {"SAMPLES", "TRIOS"}
+# scalar values; excluded from get_consts() and exposed via get_samples()/get_trios()/
+# get_giab_samples()/get_giab_trios().
+_LIST_KEYS = {"SAMPLES", "TRIOS", "GIAB_SAMPLES", "GIAB_TRIOS"}
 
 
 def _discover_keys(consts_path: Path) -> list[str]:
@@ -94,6 +95,36 @@ def get_trios() -> list[dict[str, str]]:
     the order they appear in testdata.consts.
     """
     raw = _load_all()["TRIOS"]
+    trios = []
+    for token in raw.split():
+        family_id, child, father, mother = token.split(":")
+        trios.append({"family_id": family_id, "child": child, "father": father, "mother": mother})
+    return trios
+
+
+def get_giab_samples() -> list[dict[str, str]]:
+    """Return the fixed GIAB trio sample list, parsed from the GIAB_SAMPLES constant.
+
+    Each entry is a dict with keys `sample_id`, `population`, `sex`, `bam_url`. Uses
+    `split(":", 3)` rather than a plain `split(":")` because `bam_url` itself contains `:`
+    (it's a URL); the first three fields are fixed-format, and the remainder is kept intact
+    as the URL.
+    """
+    raw = _load_all()["GIAB_SAMPLES"]
+    samples = []
+    for token in raw.split():
+        sample_id, population, sex, bam_url = token.split(":", 3)
+        samples.append({"sample_id": sample_id, "population": population, "sex": sex, "bam_url": bam_url})
+    return samples
+
+
+def get_giab_trios() -> list[dict[str, str]]:
+    """Return the fixed GIAB trio definitions, parsed from the GIAB_TRIOS constant.
+
+    Each entry is a dict with keys `family_id`, `child`, `father`, `mother`, in the order they
+    appear in testdata.consts - same shape as get_trios().
+    """
+    raw = _load_all()["GIAB_TRIOS"]
     trios = []
     for token in raw.split():
         family_id, child, father, mother = token.split(":")

@@ -5,19 +5,25 @@ Builds self_reported_sex.tsv for the fixed testdata.consts sample set.
 
 Adapted from artifacts/public-dataset-build/4_make_sex_info (a `cut`+`sed`
 one-liner) but converted to Python: filters igsr_samples.tsv down to just the
-10 fixed samples using structured csv parsing instead of `sed`, since the
+10 fixed 1000 Genomes samples using structured csv parsing instead of `sed`, since the
 generic version had no need to filter by sample.
+
+The 6 fixed GIAB samples aren't in igsr_samples.tsv at all (they aren't part of 1000
+Genomes), so their sex comes directly from testdata.consts' GIAB_SAMPLES constant instead
+(see consts_loader.get_giab_samples()) - both sources already use the same "male"/"female"
+string convention, so no format conversion is needed.
 """
 
 import csv
 from pathlib import Path
 
-from consts_loader import get_consts, get_samples
+from consts_loader import get_consts, get_giab_samples, get_samples
 
 
 def main() -> None:
     consts = get_consts()
     samples = get_samples()
+    giab_samples = get_giab_samples()
     sample_ids = [sample["sample_id"] for sample in samples]
 
     with open(consts["IGSR_SAMPLES_TSV"], newline="") as tsvfile:
@@ -33,6 +39,8 @@ def main() -> None:
         writer.writerow(["sample_id", "self_reported_sex"])
         for sample_id in sample_ids:
             writer.writerow([sample_id, sex_by_sample[sample_id]])
+        for sample in giab_samples:
+            writer.writerow([sample["sample_id"], sample["sex"]])
 
     print(f"Sex info written to {output_path}")
 
