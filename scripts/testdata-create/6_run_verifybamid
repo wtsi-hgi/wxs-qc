@@ -1,0 +1,96 @@
+#!/bin/bash
+set -e
+
+# Runs VerifyBamID2 (pinned at release 2.0.1, matching
+# artifacts/public-dataset-build/5_verifybamid) over every CRAM/BAM in the fixed
+# testdata.consts sample set, and merges the per-sample .selfSM outputs into the single
+# TSV that config/public-dataset.yaml / config/inputs.yaml already expect.
+#
+# Like 3_run_sarek_vc / 1a_download_giab_trios, this only sources testdata.consts and
+# runs from this directory.
+cd "$(dirname "$0")"
+source ./testdata.consts
+
+VERIFYBAMID_TOOL_DIR="$WORKDIR/verifybamid_tool"
+VERIFYBAMID_BIN="VerifyBamID.Linux.x86-64"
+VERIFYBAMID_HUMAN_REF="hs38DH.fa"
+VERIFYBAMID_HUMAN_REF_URL="https://ftp-trace.ncbi.nih.gov/1000genomes/ftp/technical/reference/GRCh38_reference_genome/GRCh38_full_analysis_set_plus_decoy_hla.fa"
+VERIFYBAMID_RESULTS_DIR="$WORKDIR/verifybamid_results"
+
+mkdir -p "$WORKDIR" "$VERIFYBAMID_TOOL_DIR" "$VERIFYBAMID_RESULTS_DIR" "$METADATA_DIR"
+
+# === Prepare VerifyBamID installation (idempotent) ===
+if [ ! -d "$VERIFYBAMID_TOOL_DIR/VerifyBamID" ]; then
+    echo "Cloning VerifyBamID tool"
+    git clone https://github.com/Griffan/VerifyBamID.git "$VERIFYBAMID_TOOL_DIR/VerifyBamID"
+fi
+
+if [ ! -f "$VERIFYBAMID_TOOL_DIR/VerifyBamID/bin/$VERIFYBAMID_BIN" ]; then
+    mkdir -p "$VERIFYBAMID_TOOL_DIR/VerifyBamID/bin"
+    (
+        cd "$VERIFYBAMID_TOOL_DIR/VerifyBamID/bin"
+        wget "https://github.com/Griffan/VerifyBamID/releases/download/2.0.1/${VERIFYBAMID_BIN}.gz"
+        gunzip "${VERIFYBAMID_BIN}.gz"
+        chmod +x "$VERIFYBAMID_BIN"
+    )
+fi
+
+if [ ! -f "$VERIFYBAMID_TOOL_DIR/$VERIFYBAMID_HUMAN_REF" ]; then
+    wget -O "$VERIFYBAMID_TOOL_DIR/$VERIFYBAMID_HUMAN_REF" "$VERIFYBAMID_HUMAN_REF_URL"
+fi
+
+svd="$VERIFYBAMID_TOOL_DIR/VerifyBamID/resource/1000g.phase3.100k.b38.vcf.gz.dat"
+ref="$VERIFYBAMID_TOOL_DIR/$VERIFYBAMID_HUMAN_REF"
+verifybamid_bin="$VERIFYBAMID_TOOL_DIR/VerifyBamID/bin/$VERIFYBAMID_BIN"
+
+# === Run VerifyBamID per sample (sequential; only 16 samples total) ===
+run_verifybamid () {
+    local sample_id="$1"
+    local input_file="$2"
+
+    if [ -f "$VERIFYBAMID_RESULTS_DIR/$sample_id.selfSM" ]; then
+        echo "Skipping $sample_id: $VERIFYBAMID_RESULTS_DIR/$sample_id.selfSM already exists"
+        return
+    fi
+
+    echo "Running VerifyBamID for $sample_id ($input_file)"
+    if ! "$verifybamid_bin" \
+        --SVDPrefix "$svd" \
+        --Reference "$ref" \
+        --NumThread 1 \
+        --DisableSanityCheck \
+        --BamFile "$input_file" \
+        --Output "$VERIFYBAMID_RESULTS_DIR/$sample_id"; then
+        # VerifyBamID 2.0.1 is known to segfault on exit after already writing its
+        # output successfully - only treat this as a real failure if the expected
+        # .selfSM is actually missing.
+        if [ ! -f "$VERIFYBAMID_RESULTS_DIR/$sample_id.selfSM" ]; then
+            echo "ERROR: VerifyBamID failed for $sample_id and no $VERIFYBAMID_RESULTS_DIR/$sample_id.selfSM was produced" >&2
+            return 1
+        fi
+        echo "VerifyBamID exited non-zero for $sample_id (likely its known post-completion segfault) but $VERIFYBAMID_RESULTS_DIR/$sample_id.selfSM was produced - continuing"
+    fi
+}
+
+for cram in "$CRAMS_DIR"/*.cram; do
+    # 1000G CRAMs are named "${sample_id}.alt_bwamem_GRCh38DH.20150826.${population}.exome.cram"
+    # (see 2_make_sarek_manifest.py) - sample_id is the first dot-token.
+    sample_id="$(basename "$cram" | cut -d. -f1)"
+    run_verifybamid "$sample_id" "$cram"
+done
+
+for bam in "$GIAB_BAMS_DIR"/*.exome.bam; do
+    # GIAB BAMs are named "${sample_id}.exome.bam" (see 1a_download_giab_trios).
+    sample_id="$(basename "$bam" .exome.bam)"
+    run_verifybamid "$sample_id" "$bam"
+done
+
+# === Merge results ===
+# Regenerated every run (cheap, unlike the per-sample VerifyBamID calls above) so it
+# always reflects whatever .selfSM files currently exist.
+(
+    cd "$VERIFYBAMID_RESULTS_DIR"
+    cat $(ls *.selfSM) | awk '(NR==1) || (! /^#/)' > "$METADATA_DIR/$DATASET_NAME.verify_bam_id_result.selfSM.tsv"
+)
+
+echo "Merged VerifyBamID results written to $METADATA_DIR/$DATASET_NAME.verify_bam_id_result.selfSM.tsv"
