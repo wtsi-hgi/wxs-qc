@@ -1,5 +1,6 @@
 #!/bin/bash
 set -e
+set -o pipefail
 
 # Slices exome-target-region reads for the fixed GIAB AshkenazimTrio/ChineseTrio sample set
 # (testdata.consts' GIAB_SAMPLES) out of each sample's public, remote, GRCh38-aligned
@@ -39,16 +40,26 @@ for token in $GIAB_SAMPLES; do
 
     dest_bam="$GIAB_BAMS_DIR/$sample_id.exome.bam"
     dest_bai="$dest_bam.bai"
+    raw_bam="$GIAB_BAMS_DIR/$sample_id.exome.noreadgroup.bam"
 
     if [ -f "$dest_bam" ] && [ -f "$dest_bai" ]; then
         echo "Skipping $sample_id: $dest_bam already exists"
         continue
     fi
 
-    echo "Slicing exome-target reads for $sample_id from $bam_url"
-    if ! samtools view -b -L "$WORKDIR/$EXOME_TARGETS_BED" "$bam_url" -o "$dest_bam"; then
-        echo "ERROR: failed to slice exome regions for $sample_id from $bam_url" >&2
-        echo "This requires samtools/htslib built with HTTPS support for indexed remote reads - check your samtools build if this is unexpected." >&2
+    if [ -f "$raw_bam" ]; then
+        echo "Reusing already-sliced $raw_bam for $sample_id (no network access)"
+    else
+        echo "Slicing exome-target reads for $sample_id from $bam_url"
+        if ! samtools view -b -L "$WORKDIR/$EXOME_TARGETS_BED" "$bam_url" -o "$raw_bam"; then
+            echo "ERROR: failed to slice exome regions for $sample_id from $bam_url" >&2
+            echo "This requires samtools/htslib built with HTTPS support for indexed remote reads - check your samtools build if this is unexpected." >&2
+            exit 1
+        fi
+    fi
+
+    if ! samtools addreplacerg -r "@RG\tID:$sample_id\tSM:$sample_id\tPL:ILLUMINA\tLB:$sample_id" -m overwrite_all -o "$dest_bam" "$raw_bam"; then
+        echo "ERROR: failed to add read group to $raw_bam for $sample_id" >&2
         exit 1
     fi
 
