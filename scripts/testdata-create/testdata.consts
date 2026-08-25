@@ -29,6 +29,15 @@ JOINT_GERMLINE_VCF="$SAREK_OUTDIR/variant_calling/haplotypecaller/joint_variant_
 VCF_PREQC_DIR="$WORKDIR/vcfs_pre-qc"
 METADATA_DIR="$WORKDIR/metadata"
 
+# VEP annotation via wtsi-hgi/nf_vep_annotation (scripts/testdata-create/7_run_vep_annotation).
+# VEP_ANNOTATION_REVISION is the one place to bump once split_test is merged to main.
+VEP_ANNOTATION_REVISION="split_test"
+
+VEP_DATA_DIR="$WORKDIR/vep_data"
+VEP_ANNOTATION_WORKDIR="$WORKDIR/vep_annotation.workdir"
+VEP_ANNOTATION_RESULTS_DIR="$WORKDIR/vep_annotation_results"
+
+
 # Reused static resources (read-only), shared with artifacts/public-dataset-build/.
 IGSR_SAMPLES_TSV="igsr_samples.tsv"
 EXOME_TARGETS_BED="hg38_exome_v2.0.2_targets_sorted_validated.re_annotated.padded50.bed"

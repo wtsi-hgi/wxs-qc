@@ -1,0 +1,100 @@
+#!/bin/bash
+set -e
+
+# Runs VEP annotation via wtsi-hgi/nf_vep_annotation over the joint-called VCF produced
+# by 3_run_sarek_vc, producing the single WxS-QC consequences TSV that
+# config/public-dataset.yaml's `vep_consequences`/`cqfile` expect:
+# $METADATA_DIR/$DATASET_NAME.all_consequences_with_gene_and_csq.tsv.bgz.
+#
+# Replaces the older manual VEP install+run
+# (artifacts/public-dataset-build/6_vep_install + 7_annotate_vcf_vep).
+#
+# Depends on 3_run_sarek_vc (for $VCF_PREQC_DIR/$DATASET_NAME.joint_germline.vcf.gz) and
+# 6_run_verifybamid (for $WORKDIR/verifybamid_tool/hs38DH.fa, reused here as the
+# left-alignment reference FASTA) having already been run.
+#
+# Like 3_run_sarek_vc / 6_run_verifybamid, this only sources testdata.consts and runs
+# from this directory. vep-annotation.config is passed as a relative path accordingly.
+cd "$(dirname "$0")"
+source ./testdata.consts
+
+mkdir -p "$WORKDIR" "$VEP_DATA_DIR" "$VEP_DATA_DIR/plugins" "$VEP_ANNOTATION_RESULTS_DIR" "$METADATA_DIR"
+
+# $WORKDIR is a symlink (see testdata.consts) - here it chains to a separate mounted
+# volume outside $HOME entirely. Nextflow's default singularity autoMounts already binds
+# $HOME as a whole, so binding $WORKDIR's symlinked path itself mounts *inside* that
+# already-bound tree, at a path whose last component is the same dangling symlink - an
+# ambiguous, shadowed bind that VEP couldn't see through. Resolving to the real path here
+# and using that consistently for the Singularity bind and for RUN_VEP's plain-string
+# --dir_cache/--fasta/--dir_plugins args (which aren't proper Nextflow `path` inputs, so
+# Nextflow never stages/binds them itself) sidesteps that entirely. $WORKDIR itself is left
+# untouched for everything else - --input/--ref_fasta are genuine `path` inputs that
+# Nextflow already stages and binds correctly on its own regardless of the symlink.
+workdir_real="$(readlink -f "$WORKDIR")"
+export WORKDIR_REAL="$workdir_real"
+vep_data_dir_real="$workdir_real/vep_data"
+
+# === Install VEP cache + matching FASTA (idempotent) ===
+if [ ! -d "$VEP_DATA_DIR/homo_sapiens" ]; then
+    echo "Installing VEP cache and FASTA into $VEP_DATA_DIR"
+    docker run --rm -u "$(id -u):$(id -g)" \
+        -v "$VEP_DATA_DIR:/opt/vep/.vep" \
+        ensemblorg/ensembl-vep:release_115.2 \
+        INSTALL.pl -a cf -s homo_sapiens -y GRCh38 --NO_HTSLIB -c /opt/vep/.vep
+fi
+
+# Discover the installed toplevel FASTA path - the version subfolder name isn't
+# hardcoded, since it depends on install time. Globbed against the resolved real path
+# (see above) so it matches what's actually bound into RUN_VEP's container.
+vep_fasta_matches=("$vep_data_dir_real"/homo_sapiens/*_GRCh38/*.dna.toplevel.fa.gz)
+if [ ${#vep_fasta_matches[@]} -ne 1 ] || [ ! -f "${vep_fasta_matches[0]}" ]; then
+    echo "ERROR: expected exactly one VEP toplevel FASTA matching" >&2
+    echo "$vep_data_dir_real/homo_sapiens/*_GRCh38/*.dna.toplevel.fa.gz, found ${#vep_fasta_matches[@]}." >&2
+    exit 1
+fi
+vep_fasta="${vep_fasta_matches[0]}"
+
+# === Check for the reference FASTA downloaded by 6_run_verifybamid ===
+ref_fasta="$WORKDIR/verifybamid_tool/hs38DH.fa"
+if [ ! -f "$ref_fasta" ]; then
+    echo "ERROR: $ref_fasta not found. Run 6_run_verifybamid first (it downloads this" >&2
+    echo "reference FASTA); this script does not duplicate that download." >&2
+    exit 1
+fi
+
+# === Run VEP annotation ===
+# nf_vep_annotation's own nextflow.config defines a `def check_max(obj, type) { ... }`
+# helper (a common nf-core-style pattern) - Nextflow >=26.04.0 enables a new "strict"
+# config parser by default that rejects function definitions in config files, so we
+# fall back to the legacy (v1) parser here rather than forking the pipeline's config.
+export NXF_SYNTAX_PARSER=v1
+
+nextflow -log "$DATASET_NAME.vep.log" \
+    run wtsi-hgi/nf_vep_annotation -r "$VEP_ANNOTATION_REVISION" \
+    -c vep-annotation.config \
+    -resume \
+    -w "$VEP_ANNOTATION_WORKDIR" \
+    --input "$VCF_PREQC_DIR/$DATASET_NAME.joint_germline.vcf.gz" \
+    --ref_fasta "$ref_fasta" \
+    --vep_data_dir "$vep_data_dir_real" \
+    --vep_plugins_dir "$vep_data_dir_real/plugins" \
+    --vep_fasta "$vep_fasta" \
+    --left_align true --wxs_tsv true --annotate_vcf false --csq_tsv false \
+    --split_input true --number_of_chunks 8 \
+    --publishdir "$VEP_ANNOTATION_RESULTS_DIR"
+
+vep_csq_tsv="$VEP_ANNOTATION_RESULTS_DIR/WxS_QC_CSQ.tsv.gz"
+if [ ! -f "$vep_csq_tsv" ]; then
+    echo "ERROR: expected VEP consequences TSV not found at $vep_csq_tsv after the" >&2
+    echo "nextflow run completed. Inspect the Nextflow log/trace for the real failure." >&2
+    exit 1
+fi
+
+mkdir -p "$METADATA_DIR"
+output_tsv="$METADATA_DIR/$DATASET_NAME.all_consequences_with_gene_and_csq.tsv.bgz"
+cp "$vep_csq_tsv" "$output_tsv"
+if [ -f "$vep_csq_tsv.tbi" ]; then
+    cp "$vep_csq_tsv.tbi" "$output_tsv.tbi"
+fi
+
+echo "VEP consequences TSV copied to $output_tsv"
