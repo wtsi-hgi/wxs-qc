@@ -16,9 +16,10 @@ mkdir -p "$WORKDIR"
 
 # GATK VariantRecalibrator (VQSR) runs unconditionally later in Sarek's joint-calling
 # subworkflow, and GATK's own docs recommend >=30 WES samples for a stable VQSR model.
-# With only our 10 fixed samples, VQSR may legitimately fail even though the earlier,
-# pre-VQSR joint_germline.vcf.gz (produced by GenotypeGVCFs/merge) has already been
-# published successfully - that pre-VQSR VCF is what the QC pipeline actually consumes
+# With this dataset, VQSR may
+# legitimately fail even though the earlier, pre-VQSR joint_germline.vcf.gz (produced by
+# GenotypeGVCFs/merge) has already been published successfully - that pre-VQSR VCF is
+# what the QC pipeline actually consumes
 # (see docs/wxs-qc_example-dataset.md), so we tolerate a nonzero Nextflow exit here and
 # treat the presence of $JOINT_GERMLINE_VCF as the real success condition, instead of
 # aborting immediately via `set -e`.
@@ -43,7 +44,7 @@ set -e
 
 if [ ! -f "$JOINT_GERMLINE_VCF" ]; then
   echo "ERROR: expected joint VCF not found at $JOINT_GERMLINE_VCF (nextflow exit code: $nextflow_exit)." >&2
-  echo "This is likely caused by GATK VQSR failing on a 10-sample cohort (see comment above)," >&2
+  echo "This is likely caused by GATK VQSR failing on a small cohort (see comment above)," >&2
   echo "which would normally still leave the pre-VQSR joint_germline.vcf.gz published earlier" >&2
   echo "in the Sarek DAG. Since it is missing here, the run did not get that far - inspect the" >&2
   echo "Nextflow log/trace for the real failure." >&2
