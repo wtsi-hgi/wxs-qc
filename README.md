@@ -48,6 +48,15 @@ Detailed howto for the QC process is here:
 For this howto we used an open example dataset, described
 [here](docs/wxs-qc_example-dataset.md)
 
+A detailed analysis of the example dataset is available
+in the
+[supplementary materials](https://oup.silverchair-cdn.com/oup/backfile/Content_public/Journal/bioinformatics/42/7/10.1093_bioinformatics_btag527/1/btag527_supplementary_data.pdf?Expires=1789507674&Signature=we321EmyWS835QgkRdx28diL4-KhDnC4P1NH7t-saNvgXdN7tmdxC2lBz3hR0CF8b-AIffycJfZ-439T6SdHozvWOKe8k2jJ1Xxn6xZalU8nmIBrvCq54UW3fF4tH-UJjg2oRW3EH06AHbLWW5vMOvsMXA8kKoK1UWeLZxd7jup35U32kFVDtHGC3d~yTH7hQ1OVMdIfe1kxzYi2WEKLrJhhgE9Dgs6Jtd4dp9-zqPsZ7ExHICgDxMUv7I~UE3HzHTaAztoMddyOxrkDL9v4RFwXm-w1rQktTE81UNgjQeb1nx0xixoRhQPl2W5b7vKI36TYQPlk0zlAWqMsj3eudQ__&Key-Pair-Id=APKAIE5G5CRDK6RD3PGA)
+to our
+[WxS-QC paper](https://doi.org/10.1093/bioinformatics/btag527).
+However, the pipeline improves continuously, so this analysis does not cover the recent changes.
+For actual information, please refer to the [latest WcS-QC howto](docs/wxs-qc_howto.md).
+
+
 ### How to get the latest changes from the `main` branch
 
 When working on an analysis branch, you can retrieve the latest changes from the `main` branch by running:
@@ -66,6 +75,12 @@ The code is written by members of **Wellcome Sanger HGI group**
 based on the **gnomAD QC v3** and **gnomAD QC v4** pipeline by **Broad institute**
 (https://github.com/broadinstitute/gnomad_qc/tree/main/gnomad_qc/v3,
 https://github.com/broadinstitute/gnomad_qc/tree/main/gnomad_qc/v4).
+
+## Citing
+To cite the pipeline, use the following reference:
+
+> G. Zakharov et al. WxS-QC—a quality control pipeline for human germline short-variant Whole-Genome and Whole-Exome cohorts for population-scale analyses.
+Bioinformatics, Volume 42, Issue 7, July 2026, btag527, https://doi.org/10.1093/bioinformatics/btag527
 
 
 ## Developer's howto
