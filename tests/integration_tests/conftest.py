@@ -46,12 +46,16 @@ def rendered_config(
     pedigree_file_path = getattr(test_class, "pedigree_file_path", None)
     sample_qc_method = getattr(test_class, "sample_qc_method", "lr")
 
+    # control_set_small_v2 keeps its VCFs and metadata in one self-contained folder,
+    # unlike the flat control_set_small/ + metadata/ layout of the previous dataset.
+    dataset_dir = test_data_dir / "control_set_small_v2"
+
     render_config(
         str(integration_tests_dir / INTEGRATION_TESTS_CONFIG_TEMPLATE),
         str(integration_tests_data_dir),
-        str(test_data_dir / "control_set_small"),
+        str(dataset_dir / "vcfs_pre-qc"),
         str(test_data_dir / "resources"),
-        str(test_data_dir / "metadata"),
+        str(dataset_dir / "metadata"),
         str(test_data_dir / "training_sets"),
         str(test_data_dir / "variant_qc_random_forest"),
         pedigree_file_name=pedigree_file_path,

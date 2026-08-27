@@ -19,7 +19,7 @@
 general:
   # Dataset name - the root folder for all analysis files
   # Also used for the naming of tables, plots, etc
-  dataset_name: 'control_set_small'
+  dataset_name: 'control_set_small_v2'
   # Dataset root directory - to use in folder paths
   data_root: '{INTEGRATION_TESTS_DATA_DIR}/${general.dataset_name}_results'
   tmp_dir: 'file://${general.data_root}/tmp' # output
@@ -48,11 +48,14 @@ general:
     vep_consequences:    '${general.metadata_dir}/${general.dataset_name}.all_consequences_with_gene_and_csq.tsv.bgz'
     # Set pedigree to null, if you don't want to run transmitted/untransmitted singletons statistics calculations
     pedigree:            {PEDIGREE_FILE_NAME} # Set to null if you don't have trios
-    giab_sample_id: 'EGAN00003332049'
+    # NA12878 is GIAB HG001, the sample the benchmark VCF in stage4.evaluation holds
+    giab_sample_id: 'NA12878'
     # control samples are excluded from sample QC to remain in variant QC
-    control_samples: ['EGAN00003332049']
+    control_samples: ['NA12878']
     # Optional sample-level validated TP/FP variants TSV with columns: type, sample, chr, pos, ref, alt
-    validated_variants_tsv: '${general.metadata_dir}/${general.dataset_name}.validated_variants.tsv'
+    # No such fixture exists for control_set_small_v2 yet. When one is added, restore the
+    # two '*_validated' entries in stage4.plot as well - see stage4.plot below.
+    validated_variants_tsv: null
 
   # Sample QC method (see the details in docs/wxs-qc_howto.md ):
   # * pop - Stratified QC with PCA-assigned superpopulations (from gnomAD v3 + de novo PCA projection)
@@ -154,9 +157,11 @@ stage1:
 
   # --- Step 1.3 --- #
   validate_gtcheck:
-    wes_microarray_mapping: '${cvars.metadir}/control_set_small.microarray_mapping.tsv' # Set to null if you don't have microarray data
-    microarray_ids: '${cvars.metadir}/control_set_small.microarray_samples.txt'
-    gtcheck_report: '${cvars.metadir}/control_set_small.combined.gtcheck.txt'
+    # control_set_small_v2 has no microarray/gtcheck data, so the step writes the
+    # matrixtable through unchanged. Set all three to real paths to enable validation.
+    wes_microarray_mapping: null # Set to null if you don't have microarray data
+    microarray_ids: null
+    gtcheck_report: null
     gtcheck_results_folder: '${cvars.anndir}/gtcheck'
     mt_gtcheck_validated: '${cvars.mtdir}/mt_gtcheck_validated.mt'
 
@@ -335,7 +340,7 @@ stage2:
 
   sample_qc_combine_results:
     # Put here `null`, if you don't want to remove any samples
-    samples_to_remove_file: '${cvars.metadir}/control_set_small.samples_to_remove_after_sampleqc.tsv' # Put here none, if you don't want to remove any samples
+    samples_to_remove_file: null # Put here none, if you don't want to remove any samples
 
 
 stage3:
@@ -454,6 +459,8 @@ stage4:
     giab_vcf: '${cvars.resdir}/HG001_GRCh38_benchmark.interval.illumina.vcf.gz'
     giab_cqfile: '${cvars.resdir}/HG001_GRCh38_benchmark.all.interval.illumina.vep.info.txt'
     # The list of overlaps between the high-confidence regions from giab_vcf and panel used for the dataset
+    # Not produced by scripts/testdata-create - shipped alongside the dataset metadata
+    # (see tests/test_files_list_in_bucket.txt)
     prec_recall_panel_bed: '${cvars.metadir}/HG001_twistedexome_1kg.bed'
     giab_ht_file: '${cvars.mtdir}/HG001_GRCh38_benchmark.interval.illumina.ht'
     # The ID of GIAB HG001 (NA12878) sample, if it presents in your sequencing data
@@ -484,8 +491,11 @@ stage4:
     indel-TP-FP: '${cvars.pltdir}/hard_filter_evaluation.indel.tp_fp.html'
     indel-TP-mendelian_error_mean: '${cvars.pltdir}/hard_filter_evaluation.indel.tp_mendel.html'
     indel-precision-recall: '${cvars.pltdir}/hard_filter_evaluation.indel.precision_recall.html'
-    snv-TP_validated-FP_validated: '${cvars.pltdir}/hard_filter_evaluation.snv.tp_fp_validated.html'
-    indel-TP_validated-FP_validated: '${cvars.pltdir}/hard_filter_evaluation.indel.tp_fp_validated.html'
+    # The two '*_validated' plots require general.metadata.validated_variants_tsv:
+    # without it write_filter_metrics() omits the TP_validated/FP_validated columns and
+    # the plotting loop in step 4.1 would fail on the missing columns.
+    # snv-TP_validated-FP_validated: '${cvars.pltdir}/hard_filter_evaluation.snv.tp_fp_validated.html'
+    # indel-TP_validated-FP_validated: '${cvars.pltdir}/hard_filter_evaluation.indel.tp_fp_validated.html'
 
 
   # --- Step 4.2 --- #
@@ -494,7 +504,9 @@ stage4:
     # Put here `null`, if you don't want add VEP consequences annotation
     cqfile: '${general.metadata.vep_consequences}'
     # Put here `null`, if you don't want add VEP consequences annotation. Othrewise specify to have correct header in the output VCFs
-    csq_header: '${general.metadata_dir}/${general.dataset_name}.csq_header.txt'
+    # The VEP run in scripts/testdata-create/7_run_vep_annotation emits no CSQ header line,
+    # so the exported VCFs carry the consequence/gene/hgnc_id INFO fields instead of CSQ.
+    csq_header: null
 
   apply_hard_filters:
     # Set to true if you want to apply different hard filters for sex chromosomes in male samples (depth threshold will be halfed for sex chromosome).

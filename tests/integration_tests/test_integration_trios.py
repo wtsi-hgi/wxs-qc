@@ -12,7 +12,7 @@ from wxs_qc.teszt import assert_saved_tables_match
 
 # /path/to/wxs_qc must be in PYTHONPATH
 
-PEDIGREE_FILE_PATH_TRIOS = """ '${cvars.metadir}/control_set_small.trios.fam' """
+PEDIGREE_FILE_PATH_TRIOS = """ '${cvars.metadir}/${cvars.dataset}.trios.fam' """
 
 GNOMAD_TABLE_SKIP = pytest.mark.skip(
     reason="The test depends on gnomAD table, not present in downloaded test data.\n"
