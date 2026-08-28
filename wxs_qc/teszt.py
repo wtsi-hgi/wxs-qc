@@ -134,7 +134,6 @@ def assert_saved_tables_match(
 TEST_DATA_FILENAME = "all_test_data.zip"
 TEST_DATA_ARCHIVE_URL = f"https://wxs-qc-data.cog.sanger.ac.uk/all_test_data/{TEST_DATA_FILENAME}"
 TEST_DATA_PARENT_DIR_URL = "https://wxs-qc-data.cog.sanger.ac.uk"
-TEST_DATA_DIR_NAMES = ["control_set_small", "unit_tests", "training_sets", "resources"]
 
 
 # TODO: download using a .txt file with the list of all files instead of archiving
@@ -149,29 +148,20 @@ def download_test_data_using_files_list(files_list: str, outdir: str) -> None:
     with open(files_list, "r") as f:
         all_files = [file_path for file_path in f.readlines() if not file_path.startswith("#")]
 
-    downloaded_test_dirs = [
-        test_dir for test_dir in TEST_DATA_DIR_NAMES if os.path.exists(os.path.join(outdir, test_dir))
-    ]
-    print(f"DEBUG: Test folders {', '.join(downloaded_test_dirs)} already downloaded")
     print(f"DEBUG: Checking for file presence in {outdir}")
     for file_path in all_files:
         file_path = file_path.rstrip()
         file_path_relative_to_download_dir = file_path.replace("./", "", 1)
-        data_folder = file_path_relative_to_download_dir.split("/")[0]  # TODO: optimise
-
-        # naive approach - if parent dir of the file already exists, don't download the file
-        if data_folder in downloaded_test_dirs:
-            continue
-
-        file_url = file_path.replace(".", TEST_DATA_PARENT_DIR_URL, 1)  # create download urls for each file
 
         file_destination_path = os.path.normpath(os.path.join(outdir, file_path_relative_to_download_dir))
         file_destination_dir = os.path.dirname(file_destination_path)
         # remove possible double slashes
 
-        # Checking that the file exists
-        if Path(file_destination_path).is_file():
+        # Presence is checked per file
+        if os.path.isfile(file_destination_path):
             continue
+
+        file_url = file_path.replace(".", TEST_DATA_PARENT_DIR_URL, 1)  # create download urls for each file
 
         proc = subprocess.run(
             ["wget", "-nv", "-nc", file_url, "-P", file_destination_dir]

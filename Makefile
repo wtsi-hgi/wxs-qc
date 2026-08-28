@@ -4,6 +4,11 @@ export PYTHONPATH:=$PYTHONPATH:$(shell pwd)
 export PYSPARK_PYTHON:=$(shell which python)
 export PYSPARK_DRIVER_PYTHON:=$(shell which python)
 
+# Results root written by the integration tests.
+# Must stay in sync with general.data_root in tests/integration_tests/config_test_template.yaml,
+# i.e. tests/data/<general.dataset_name>_results.
+RESULTS_DIR:=tests/data/control_set_small_v2_results
+
 # Runs pre-commit hooks only on modified files
 # used to run with agent skills because agents can't stage/commit files
 check:
@@ -51,7 +56,7 @@ integration-test-coverage: clear-ht clear-logs
 
 
 clear-hard-filter-checkpoints:
-	rm -rf tests/data/control_set_small_results/annotations/testhash/json_dump/* || true
+	rm -rf $(RESULTS_DIR)/annotations/testhash/json_dump/* || true
 
 clear-logs:
 	rm hail*.log || true
@@ -59,7 +64,7 @@ clear-logs:
 	rm tests/unit_tests/hail*.log || true
 	rm tests/integration_tests/hail*.log || true
 	rm tests/data/hail*.log || true
-	rm tests/data/control_set_small_results/hail*.log || true
+	rm $(RESULTS_DIR)/hail*.log || true
 
 clear-ht:
-	rm -rf tests/data/control_set_small_results/matrixtables/* || true
+	rm -rf $(RESULTS_DIR)/matrixtables/* || true

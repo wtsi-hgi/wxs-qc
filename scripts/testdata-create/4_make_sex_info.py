@@ -5,7 +5,7 @@ Builds self_reported_sex.tsv for the fixed testdata.consts sample set.
 
 Adapted from artifacts/public-dataset-build/4_make_sex_info (a `cut`+`sed`
 one-liner) but converted to Python: filters igsr_samples.tsv down to just the
-10 fixed 1000 Genomes samples using structured csv parsing instead of `sed`, since the
+several fixed 1000 Genomes samples using structured csv parsing instead of `sed`, since the
 generic version had no need to filter by sample.
 
 The 6 fixed GIAB samples aren't in igsr_samples.tsv at all (they aren't part of 1000

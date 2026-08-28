@@ -11,7 +11,7 @@
 # simple enough for consts_loader.py to parse). Only `$(cd ... && pwd)`-style command
 # substitution is used, to derive absolute paths relative to this file's own location.
 #
-# The dataset described here (fixed 10-sample 1000 Genomes exome cohort, 2 trios) is
+# The dataset described here (fixed 9-sample 1000 Genomes exome cohort, 2 trios) is
 # intentionally fixed and not meant to be parametrized further - see AGENTS.md and
 # artifacts/1_plan.md. Do not add CLI flags or extra parametrization to the scripts that
 # read this file; edit this file directly if the fixed dataset ever needs to change.
@@ -42,10 +42,10 @@ VEP_ANNOTATION_RESULTS_DIR="$WORKDIR/vep_annotation_results"
 IGSR_SAMPLES_TSV="igsr_samples.tsv"
 EXOME_TARGETS_BED="hg38_exome_v2.0.2_targets_sorted_validated.re_annotated.padded50.bed"
 
-# Fixed sample set: 10 samples, "SAMPLE_ID:POPULATION:SEX" tokens, space-separated.
+# Fixed sample set: 9 samples, "SAMPLE_ID:POPULATION:SEX" tokens, space-separated.
 # Includes trio CEU1 (NA12878/NA12891/NA12892) and trio YRI1 (NA19240/NA19239/NA19238),
-# plus 4 unrelated samples spanning other populations.
-SAMPLES="NA12878:CEU:female NA12891:CEU:male NA12892:CEU:female NA19238:YRI:female NA19239:YRI:male NA19240:YRI:female HG00584:CHS:female NA19798:MXL:male NA20778:TSI:male NA20903:GIH:male"
+# plus 3 unrelated samples spanning other populations.
+SAMPLES="NA12878:CEU:female NA12891:CEU:male NA12892:CEU:female NA19238:YRI:female NA19239:YRI:male NA19240:YRI:female HG00584:CHS:female NA19798:MXL:male NA20778:TSI:male"
 
 # Fixed trio definitions: "FAMILY_ID:CHILD:FATHER:MOTHER" tokens, space-separated.
 TRIOS="CEU1:NA12878:NA12891:NA12892 YRI1:NA19240:NA19239:NA19238"

@@ -1,44 +1,15 @@
-# Small control set metadata - pedigree, sex,
-./metadata/control_set_small.all_consequences.tsv.bgz
-./metadata/control_set_small.all_consequences_with_gene_and_csq.tsv.bgz
-./metadata/control_set_small.combined.gtcheck.original.txt
-./metadata/control_set_small.combined.gtcheck.txt
-./metadata/control_set_small.microarray_mapping.tsv
-./metadata/control_set_small.microarray_samples.txt
-./metadata/control_set_small.self_reported_sex.tsv
-./metadata/control_set_small.samples_to_remove_after_sampleqc.tsv
-./metadata/control_set_small.synonymous_variants.tsv.bgz
-./metadata/control_set_small.trios.fam
-./metadata/control_set_small.trios-withparents.fam
-./metadata/control_set_small.verify_bam_id_result.selfSM.tsv
-./metadata/control_set_small.csq_header.txt
-./metadata/HG001_twistedexome_1kg.bed
-./metadata/control_set_small.validated_variants.tsv
-# Small control set VCFs
-./control_set_small/control_set_small_chr1.vcf.bgz
-./control_set_small/control_set_small_chr2.vcf.bgz
-./control_set_small/control_set_small_chr3.vcf.bgz
-./control_set_small/control_set_small_chr4.vcf.bgz
-./control_set_small/control_set_small_chr5.vcf.bgz
-./control_set_small/control_set_small_chr6.vcf.bgz
-./control_set_small/control_set_small_chr7.vcf.bgz
-./control_set_small/control_set_small_chr8.vcf.bgz
-./control_set_small/control_set_small_chr9.vcf.bgz
-./control_set_small/control_set_small_chr10.vcf.bgz
-./control_set_small/control_set_small_chr11.vcf.bgz
-./control_set_small/control_set_small_chr12.vcf.bgz
-./control_set_small/control_set_small_chr13.vcf.bgz
-./control_set_small/control_set_small_chr14.vcf.bgz
-./control_set_small/control_set_small_chr15.vcf.bgz
-./control_set_small/control_set_small_chr16.vcf.bgz
-./control_set_small/control_set_small_chr17.vcf.bgz
-./control_set_small/control_set_small_chr18.vcf.bgz
-./control_set_small/control_set_small_chr19.vcf.bgz
-./control_set_small/control_set_small_chr20.vcf.bgz
-./control_set_small/control_set_small_chr21.vcf.bgz
-./control_set_small/control_set_small_chr22.vcf.bgz
-./control_set_small/control_set_small_chrX.vcf.bgz
-./control_set_small/control_set_small_chrY.vcf.bgz
+# Small control set v2 - single joint VCF and metadata
+# Layout mirrors scripts/testdata-create/control_set_small_v2/ (see artifacts/1_plan.md).
+./control_set_small_v2/vcfs_pre-qc/control_set_small_v2.joint_germline.vcf.gz
+./control_set_small_v2/vcfs_pre-qc/control_set_small_v2.joint_germline.vcf.gz.tbi
+./control_set_small_v2/metadata/control_set_small_v2.all_consequences_with_gene_and_csq.tsv.bgz
+./control_set_small_v2/metadata/control_set_small_v2.all_consequences_with_gene_and_csq.tsv.bgz.tbi
+./control_set_small_v2/metadata/control_set_small_v2.self_reported_sex.tsv
+./control_set_small_v2/metadata/control_set_small_v2.trios.fam
+./control_set_small_v2/metadata/control_set_small_v2.trios-withparents.fam
+./control_set_small_v2/metadata/control_set_small_v2.verify_bam_id_result.selfSM.tsv
+# Precision/recall panel for step 4.1 - not produced by scripts/testdata-create
+./control_set_small_v2/metadata/HG001_twistedexome_1kg.bed
 # Resources
 ./resources/mini_1000G/chr21.1000g.vcf.gz.tbi
 ./resources/mini_1000G/chr21.1000g.vcf.gz

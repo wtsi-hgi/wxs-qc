@@ -5,7 +5,7 @@ import pytest
 from tests.integration_tests.integration_stub import IntegrationTestsStub
 from wxs_qc.config import parse_config_file
 
-PEDIGREE_FILE_PATH_TRIOS = """ '${cvars.metadir}/control_set_small.trios.fam' """
+PEDIGREE_FILE_PATH_TRIOS = """ '${cvars.metadir}/${cvars.dataset}.trios.fam' """
 
 
 def assert_sample_qc_outputs(
