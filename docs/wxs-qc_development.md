@@ -92,6 +92,35 @@ make test-it-one-step test=test_trios_2_2
 
 Unit tests are currently broken and are not the active validation path.
 
+#### Known gap: relatedness detection is not covered on the small test cohort
+
+Testing relatedness detection was one of the reasons for building a test dataset with trios,
+but that coverage is currently disabled and the behaviour is **under validation**.
+
+On `control_set_small_v2` (14 samples, four declared trios) PC-Relate reports kinship around
+0.10 for known parent-offspring pairs instead of the expected ~0.25.
+Nothing then clears the default `relatedness_threshold` of 0.125, so
+`mt_related_samples_to_remove.ht` is empty. Because `run_population_pca` splits the
+MatrixTable on that table, every population PCA output covers all 14 samples and the
+PC-projection branch for related samples runs on no samples at all.
+The approach was validated on large cohorts, so cohort size is the suspected cause,
+but this has not been confirmed.
+
+Consequences for validation work:
+
+- In `assert_step_2_2_outputs_match_expected`
+  (`tests/integration_tests/test_integration_trios.py`) the assertions downstream of the
+  PC-Relate kinship threshold are commented out rather than frozen as correct: the two
+  relatedness TSV comparisons, the samples-to-remove count, and all four population PCA
+  outputs. The KING-split assertions upstream of the threshold are still active.
+- Their expected values are kept in `expected_integration_test_results.json`
+  and the reference tables are kept in `tests/integration_tests/validation/`,
+  so the checks can be restored unchanged once the behaviour is understood.
+- Treat step 2.2 as a smoke test for the related-samples path until then, and do not
+  take a passing `test_trios_2_2_sample_qc` as evidence that relatedness detection works.
+
+See the [PC-Relate section of the user howto](wxs-qc_howto.md) for the operational guidance.
+
 Full end-to-end integration suites are long-running checks:
 
 ```bash

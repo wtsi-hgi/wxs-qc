@@ -393,6 +393,23 @@ The script uses a two-pass approach:
 This two-pass approach correctly identifies related samples
 even in datasets with diverse superpopulations.
 
+> **Under validation: relatedness on small cohorts.**
+> This approach was validated on large cohorts, where it behaves as described above.
+> Its behaviour on small cohorts is still under validation and should not be relied on.
+> On the small trio test dataset (`control_set_small_v2`, 14 samples) PC-Relate reports
+> kinship around 0.10 for known parent-offspring pairs instead of the expected ~0.25.
+> No pair then clears the default `relatedness_threshold` of 0.125, so the final list of
+> related samples comes out empty and the final PCA treats every sample as unrelated.
+> PC-Relate needs enough samples and variants to estimate the ancestry-adjusted
+> kinship reliably, so a small cohort is the suspected cause, but this is not confirmed.
+> If you run this step on a small cohort, inspect the kinship values in the relatedness
+> table and the Kinship vs. IBD2 plot before trusting the related-samples list, and
+> consider lowering `stage2 -> pc_relate_params -> relatedness_threshold` to match the
+> kinship scale you actually observe.
+> The integration-test assertions covering this behaviour are commented out for the same
+> reason; see `tests/integration_tests/test_integration_trios.py` and
+> [the development guide](wxs-qc_development.md).
+
 The script is split into resumable substeps. Run the substeps in order:
 
 ```shell
@@ -621,11 +638,11 @@ python stage3_variant_qc/vqc2_create_rf_ht.py
 ### Train the random forest model
 
 Then, we train the RF model on the constructed dataset.
-A random subset of the true-positive and false-positive training variants is withheld for testing the trained model; 
+A random subset of the true-positive and false-positive training variants is withheld for testing the trained model;
 the rest is used for training.
 
 The size of this subset is controlled by the `stage3 -> rf_test_percentage` config parameter,
-which specifies the percentage (0-100] of variants to withhold for testing, 
+which specifies the percentage (0-100] of variants to withhold for testing,
 chosen at random independently from each of the true-positive and false-positive sets.
 By default (`stage3 -> train_rf -> seed: null`), a different random test subset is selected on every run;
 set this to a fixed integer to select the same test subset across runs.

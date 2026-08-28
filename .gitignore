@@ -133,6 +133,7 @@ tests/test_data_individual_files/
 
 # generated test data
 tests/data/
+tests/test_data
 
 
 # All userprovided notebooks with temporary code
