@@ -1,19 +1,16 @@
 # useful functions
 import os
-import hail as hl
 from gnomad.resources.resource_utils import TableResource
 import pandas as pd
 
 from shutil import rmtree
-from typing import Optional, Union, Set
+from typing import Optional, Union
 
 from wxs_qc.hail_utils import path_local
 
 __all__ = [
     "get_rf",
     "rm_mt",
-    "select_founders",
-    "collect_pedigree_samples",
     "expand_pd_array_col",
 ]
 
@@ -76,16 +73,3 @@ def get_rf(
 
 def rm_mt(path: str) -> None:
     rmtree(path_local(path))
-
-
-def collect_pedigree_samples(ped: hl.Pedigree) -> Set[str]:
-    samples = {getattr(trio, member) for trio in ped.trios for member in ("mat_id", "pat_id", "s")}
-    samples.discard(None)
-    return samples
-
-
-def select_founders(ped: hl.Pedigree) -> Set[str]:
-    samples = collect_pedigree_samples(ped)
-    for trio in ped.trios:
-        samples.discard(trio.s)
-    return samples

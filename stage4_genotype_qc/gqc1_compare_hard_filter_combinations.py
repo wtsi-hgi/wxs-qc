@@ -10,7 +10,7 @@ from typing import Optional, Any, Union, Callable, cast
 
 from wxs_qc.hail_utils import path_spark
 from wxs_qc.config import get_config
-from utils.utils import select_founders, collect_pedigree_samples
+from wxs_qc.pedigree import select_founders, collect_pedigree_samples
 from wxs_qc import hail_utils, filtering, hail_patches, constants
 import pandas as pd
 import bokeh.plotting

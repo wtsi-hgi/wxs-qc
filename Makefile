@@ -1,6 +1,7 @@
-.PHONY: test check typecheck
+.PHONY: test-unit check typecheck
 
-export PYTHONPATH:=$PYTHONPATH:$(shell pwd)
+# Prepend the repository root, so that `wxs_qc`, `utils` and the pipeline stages are importable
+export PYTHONPATH:=$(if $(PYTHONPATH),$(PYTHONPATH):)$(shell pwd)
 export PYSPARK_PYTHON:=$(shell which python)
 export PYSPARK_DRIVER_PYTHON:=$(shell which python)
 
@@ -34,6 +35,10 @@ typecheck:
 	else \
 		echo "No modified Python files to typecheck."; \
 	fi
+
+# Runs only the working unit tests; the remaining ones in tests/unit_tests require refactoring
+test-unit:
+	pytest tests/unit_tests/test_pedigree.py -vv
 
 test-it-one-step:
 	cd tests/integration_tests && pytest -vv -s --exitfirst -k $(test)
