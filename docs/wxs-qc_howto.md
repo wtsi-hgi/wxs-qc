@@ -436,7 +436,7 @@ The step outputs the list of related samples and PCA scores.
 The relatedness information can be used to validate pedigree data and detect sample mislabeling.
 It also plots the Koch's relatedness plots (Kinship vs. IBD2) and PC1/PC2 sample scatterplot.
 
-The `--validate-trios` substep cross-checks the pedigree supplied in
+The experimental`--validate-trios` substep cross-checks the pedigree supplied in
 `general -> metadata -> pedigree` against the PC-Relate relatedness table,
 and writes a revised pedigree containing only the trios it can confirm.
 For each parent-child pair declared in the pedigree, it looks up the corresponding
