@@ -55,6 +55,7 @@ def tables_are_identical(
     first_path: str | Path,
     second_path: str | Path,
     *,
+    has_header: bool = True,
     rel_tol: float = 1e-4,
     abs_tol: float = 1e-6,
 ) -> bool:
@@ -71,14 +72,19 @@ def tables_are_identical(
     ----------
     first_path, second_path
         Paths to comma- or tab-delimited tables.
+    has_header
+        Whether the first line holds the column names. Pass ``False`` for tables
+        written without one, so that their first line compares as data rather than
+        as exact column labels.
     rel_tol, abs_tol
         Non-negative relative and absolute tolerances for floating-point values.
     """
     if rel_tol < 0 or abs_tol < 0:
         raise ValueError("Comparison tolerances must be non-negative")
 
-    first = pd.read_csv(first_path, sep=_detect_table_delimiter(first_path))
-    second = pd.read_csv(second_path, sep=_detect_table_delimiter(second_path))
+    header: int | None = 0 if has_header else None
+    first = pd.read_csv(first_path, sep=_detect_table_delimiter(first_path), header=header)
+    second = pd.read_csv(second_path, sep=_detect_table_delimiter(second_path), header=header)
 
     if first.shape != second.shape or not first.columns.equals(second.columns):
         return False
@@ -118,14 +124,20 @@ def tables_are_identical(
 def assert_saved_tables_match(
     validation_dir: str | Path,
     actual_paths_by_filename: Mapping[str, str | Path],
+    *,
+    has_header: bool = True,
 ) -> None:
-    """Assert that actual tables match their named saved validation tables."""
+    """Assert that actual tables match their named saved validation tables.
+
+    All compared tables must share the same ``has_header`` setting; group the
+    headerless ones into a separate call.
+    """
     validation_dir = Path(validation_dir)
     print(f"== VALIDATE: Comparing table results to {validation_dir} ==")
     for validation_filename, actual_path in actual_paths_by_filename.items():
         expected_path = validation_dir / validation_filename
         assert tables_are_identical(
-            actual_path, expected_path
+            actual_path, expected_path, has_header=has_header
         ), f"{validation_filename} does not match the saved result"
 
 

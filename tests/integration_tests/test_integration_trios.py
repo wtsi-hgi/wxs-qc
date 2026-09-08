@@ -131,6 +131,22 @@ def assert_step_2_2_outputs_match_expected(config_path: str) -> None:
     # _assert_pca_matrix_matches_expected(actual_pca["pca_mt_file"], hail_outputs["population_pca_mt"])
 
 
+def assert_step_2_3_outputs_match_expected(config_path: str) -> None:
+    stage2_config = parse_config_file(config_path)["stage2"]
+    validation_dir = Path(__file__).with_name("validation")
+    assert_saved_tables_match(
+        validation_dir,
+        {"pop_assignments.tsv": stage2_config["predict_pops"]["pop_ht_out_tsv"]},
+    )
+    # pop_pca writes the eigenvalues as one value per line, without a header row,
+    # so the first eigenvalue would otherwise be compared as an exact column name.
+    assert_saved_tables_match(
+        validation_dir,
+        {"pop_pca_1kg_evals.tsv": stage2_config["pop_pca"]["pca_1kg_evals_file"]},
+        has_header=False,
+    )
+
+
 def assert_step_4_1_outputs_match_expected(config_path: str) -> None:
     evaluation_config = parse_config_file(config_path)["stage4"]["evaluation"]
     validation_dir = Path(__file__).with_name("validation")
@@ -180,8 +196,9 @@ class TestIntegration(IntegrationTestsStub):
         self.stub_2_2_sample_qc()
         assert_step_2_2_outputs_match_expected(WES_CONFIG)
 
-    def test_trios_2_3_sample_qc(self) -> None:
+    def test_trios_2_3_sample_qc(self, WES_CONFIG: str) -> None:
         self.stub_2_3_sample_qc()
+        assert_step_2_3_outputs_match_expected(WES_CONFIG)
 
     def test_trios_2_4_sample_qc(self) -> None:
         self.stub_2_4_sample_qc()
