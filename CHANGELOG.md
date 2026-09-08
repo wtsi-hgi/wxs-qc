@@ -72,6 +72,8 @@ The version in `pyproject.toml` is already bumped to `0.9.4`, but the tag is not
 * Added a validation of the `rf_test_percentage` value (must be in `(0, 100]`).
 * Added unit tests for the pedigree helper functions.
 * Updated the step 2.2 integration test expectations for the pedigree correction.
+* The step 2.1 integration test now also validates the f-stat outliers report
+  (`sex_annotation_f_stat_outliers.tsv`) against a saved reference table.
 
 ---
 

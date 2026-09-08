@@ -64,11 +64,16 @@ def _assert_pca_matrix_matches_expected(actual_path: str, expected: dict[str, An
 
 
 def assert_step_2_1_outputs_match_expected(config_path: str) -> None:
-    impute_sex_config = parse_config_file(config_path)["stage2"]["impute_sex"]
+    stage2_config = parse_config_file(config_path)["stage2"]
     validation_dir = Path(__file__).with_name("validation")
     assert_saved_tables_match(
         validation_dir,
-        {"sex_annotated.sex_check.tsv": impute_sex_config["sex_ht_outfile"]},
+        {
+            "sex_annotated.sex_check.tsv": stage2_config["impute_sex"]["sex_ht_outfile"],
+            # The outliers report is the sex_check table filtered to fstat_low < f_stat < fstat_high,
+            # so it also pins the f-stat bounds from stage2.f_stat_outliers.
+            "sex_annotation_f_stat_outliers.tsv": stage2_config["f_stat_outliers"]["fstat_outliers_report_file"],
+        },
     )
 
 
