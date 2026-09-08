@@ -10,7 +10,7 @@ import gzip
 import os
 import subprocess
 from pathlib import Path
-from typing import Any, Literal, Mapping
+from typing import Any, Collection, Literal, Mapping
 
 import pandas as pd
 
@@ -56,6 +56,7 @@ def tables_are_identical(
     second_path: str | Path,
     *,
     has_header: bool = True,
+    ignore_columns: Collection[str] = (),
     rel_tol: float = 1e-4,
     abs_tol: float = 1e-6,
 ) -> bool:
@@ -76,6 +77,11 @@ def tables_are_identical(
         Whether the first line holds the column names. Pass ``False`` for tables
         written without one, so that their first line compares as data rather than
         as exact column labels.
+    ignore_columns
+        Columns whose values are not compared, for example serialized structs and
+        arrays. They must still be present in both tables, in the same position:
+        column names are compared before these columns are dropped. Naming a column
+        that is absent raises ``KeyError``.
     rel_tol, abs_tol
         Non-negative relative and absolute tolerances for floating-point values.
     """
@@ -88,6 +94,11 @@ def tables_are_identical(
 
     if first.shape != second.shape or not first.columns.equals(second.columns):
         return False
+
+    if ignore_columns:
+        ignored = list(ignore_columns)
+        first = first.drop(columns=ignored)
+        second = second.drop(columns=ignored)
 
     first_column_kinds = [_table_column_kind(first[column], first_path) for column in first.columns]
     second_column_kinds = [_table_column_kind(second[column], second_path) for column in second.columns]
@@ -126,18 +137,20 @@ def assert_saved_tables_match(
     actual_paths_by_filename: Mapping[str, str | Path],
     *,
     has_header: bool = True,
+    ignore_columns: Collection[str] = (),
 ) -> None:
     """Assert that actual tables match their named saved validation tables.
 
-    All compared tables must share the same ``has_header`` setting; group the
-    headerless ones into a separate call.
+    All compared tables must share the same ``has_header`` and ``ignore_columns``
+    settings; group the headerless ones, and those with columns to skip, into
+    separate calls.
     """
     validation_dir = Path(validation_dir)
     print(f"== VALIDATE: Comparing table results to {validation_dir} ==")
     for validation_filename, actual_path in actual_paths_by_filename.items():
         expected_path = validation_dir / validation_filename
         assert tables_are_identical(
-            actual_path, expected_path, has_header=has_header
+            actual_path, expected_path, has_header=has_header, ignore_columns=ignore_columns
         ), f"{validation_filename} does not match the saved result"
 
 

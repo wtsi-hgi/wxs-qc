@@ -147,6 +147,23 @@ def assert_step_2_3_outputs_match_expected(config_path: str) -> None:
     )
 
 
+def assert_step_2_4_outputs_match_expected(config_path: str) -> None:
+    stratified_sample_qc_config = parse_config_file(config_path)["stage2"]["stratified_sample_qc"]
+    sample_qc_method = stratified_sample_qc_config["sample_qc_method"]
+    # The output file name is templated with the method, so a reference frozen for `lr`
+    # says nothing about the `nn` and `pop` outputs.
+    assert sample_qc_method == "lr", f"The saved result covers the 'lr' method only, got {sample_qc_method!r}"
+
+    validation_dir = Path(__file__).with_name("validation")
+    assert_saved_tables_match(
+        validation_dir,
+        {"stratified_sample_qc.lr.tsv.gz": stratified_sample_qc_config["output_text_file"]},
+        # `sample_qc` and `scores` hold serialized Hail structs and arrays, so their values
+        # would compare as exact strings. Their column names are still pinned.
+        ignore_columns=("sample_qc", "scores"),
+    )
+
+
 def assert_step_4_1_outputs_match_expected(config_path: str) -> None:
     evaluation_config = parse_config_file(config_path)["stage4"]["evaluation"]
     validation_dir = Path(__file__).with_name("validation")
@@ -200,8 +217,9 @@ class TestIntegration(IntegrationTestsStub):
         self.stub_2_3_sample_qc()
         assert_step_2_3_outputs_match_expected(WES_CONFIG)
 
-    def test_trios_2_4_sample_qc(self) -> None:
+    def test_trios_2_4_sample_qc(self, WES_CONFIG: str) -> None:
         self.stub_2_4_sample_qc()
+        assert_step_2_4_outputs_match_expected(WES_CONFIG)
 
     def test_trios_2_5_sample_qc(self) -> None:
         self.stub_2_5_sample_qc()

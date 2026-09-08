@@ -78,6 +78,11 @@ The version in `pyproject.toml` is already bumped to `0.9.4`, but the tag is not
   (`pop_assignments.tsv`) and the 1000 Genomes PCA eigenvalues (`pop_pca_1kg_evals.tsv`)
   against saved reference tables. `tables_are_identical` and `assert_saved_tables_match`
   accept a `has_header` flag for the headerless eigenvalues file.
+* The step 2.4 integration test now validates the stratified sample QC metrics
+  (`stratified_sample_qc.lr.tsv.gz`, `lr` method only) against a saved reference table.
+  `tables_are_identical` and `assert_saved_tables_match` accept an `ignore_columns` list;
+  the `sample_qc` and `scores` columns are skipped because they hold serialized Hail
+  structs and arrays (the PCA scores in particular flip sign between runs).
 
 ---
 
