@@ -37,6 +37,10 @@ We provide:
     By altering the inputs to the RF model, the variant QC could be adapted for other variant callers
     (FreeBayes, Strelka2, etc).
   - The adaptation of the variant QC for modern neural network-based callers, like DeepVariant and DRAGEN, is underway.
+* The pipeline sample QC has a performance issue on large whole-genome cohorts (>2500 WGS samples).
+  The code optimization is underway, but even with all optimizations, it can take significant time to process big datasets.
+  The section [How to perform Sample QC on big datasets](#how-to-perform-sample-qc-on-big-datasets)
+  provides a solution to speed up your analysis.
 
 ## How to QC your data
 
@@ -67,6 +71,45 @@ make update
 
 This will fetch the latest changes from the `main` branch and rebase your current branch onto it.
 If there are any unstaged changes in the branch, you will be asked to commit or stash them first.
+
+### How to perform Sample QC on big datasets
+
+The Sample QC stage of the pipeline can take significant time to process big WGS datasets
+due to the large number of entities that need to read, analyze and write.
+However, the sample QC metrics that we use to identify outlier samples
+can be estimated on a subset of variations.
+We have tested the approach with pre-filtering of the dataset variants to a subset of common variants from gnomAD,
+and it works fine.
+
+To reduce the number of variants before starting the analysis, you can do the following:
+
+1. Extract common variants from gnomAD VCFs:
+
+  ```bash
+  gnomad_vcf=/home/ubuntu/resources/gnomad.genomes.v4.1.sites.chr${chr}.vcf.bgz
+  gnomad_commonvar=/home/ubuntu/resources/gnomad.genomes.v4.1.sites.chr${chr}.commonvar.tsv
+
+  bcftools query \
+      -i 'INFO/AF>0.05' \
+      -f '%CHROM\t%POS\t%POS\n' \
+      ${gnomad_vcf} > ${gnomad_commonvar}
+  ```
+
+2. Intersect variants from your dataset with the common variant regions
+
+  ```bash
+  vcfin=/home/ubuntu/dataset/chr${chr}.vcf.bgz
+  vcfout=/home/ubuntu/dataset_commonvars/chr${chr}.vcf.gz
+  regionsfile=/home/ubuntu/resources/gnomad.genomes.v4.1.sites.chr${chr}.commonvar.tsv
+
+  bcftools view \
+      -T ${regionsfile} \
+      --regions-overlap record \
+      --threads 4 \
+      -Oz \
+      -o ${vcfout} \
+      ${vcfin}
+  ```
 
 ## Authors
 
