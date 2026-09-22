@@ -48,6 +48,7 @@ general:
     vep_consequences:    '${general.metadata_dir}/${general.dataset_name}.all_consequences_with_gene_and_csq.tsv.bgz'
     # Set pedigree to null, if you don't want to run transmitted/untransmitted singletons statistics calculations
     pedigree:            '${general.metadata_dir}/${general.dataset_name}.trios.fam'
+    # NA12878 is GIAB HG001, the sample the benchmark VCF in stage4.evaluation holds
     giab_sample_id: 'NA12878'
     # control samples are excluded from sample QC to remain in variant QC
     control_samples: ['NA12878']
@@ -379,7 +380,7 @@ stage3:
     variant_stats_plot_file : '${cvars.pltdir}/variant_stats_preqc.html'
 
   # --- Step 3.3 --- #
-  rf_test_percentage: 20 # Percent of variants randomly chosen to be a test for RF model
+  rf_test_percentage: 20 # Percentage of variants randomly chosen to be a test for the RF model
   runs_json: '${cvars.rfdir}/rf_runs.json'
 
   train_rf:

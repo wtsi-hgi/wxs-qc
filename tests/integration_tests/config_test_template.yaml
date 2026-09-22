@@ -53,9 +53,7 @@ general:
     # control samples are excluded from sample QC to remain in variant QC
     control_samples: ['NA12878']
     # Optional sample-level validated TP/FP variants TSV with columns: type, sample, chr, pos, ref, alt
-    # No such fixture exists for control_set_small_v2 yet. When one is added, restore the
-    # two '*_validated' entries in stage4.plot as well - see stage4.plot below.
-    validated_variants_tsv: null
+    validated_variants_tsv: '${general.metadata_dir}/${general.dataset_name}.validated_variants.tsv'
 
   # Sample QC method (see the details in docs/wxs-qc_howto.md ):
   # * pop - Stratified QC with PCA-assigned superpopulations (from gnomAD v3 + de novo PCA projection)
@@ -157,11 +155,9 @@ stage1:
 
   # --- Step 1.3 --- #
   validate_gtcheck:
-    # control_set_small_v2 has no microarray/gtcheck data, so the step writes the
-    # matrixtable through unchanged. Set all three to real paths to enable validation.
-    wes_microarray_mapping: null # Set to null if you don't have microarray data
-    microarray_ids: null
-    gtcheck_report: null
+    wes_microarray_mapping: null # '${cvars.metadir}/testdata_1000genomes_v2.microarray_mapping.tsv' # Set to null if you don't have microarray data
+    microarray_ids: null #'${cvars.metadir}/testdata_1000genomes_v2.samples_microarray.txt'
+    gtcheck_report: null #'${cvars.metadir}/testdata_1000genomes_v2.gtcheck.txt'
     gtcheck_results_folder: '${cvars.anndir}/gtcheck'
     mt_gtcheck_validated: '${cvars.mtdir}/mt_gtcheck_validated.mt'
 
@@ -217,14 +213,14 @@ stage2:
     ld_prune_args: # https://hail.is/docs/0.2/methods/genetics.html#hail.methods.ld_prune
       r2: 0.2
       # bp_window_size:
-      # memory_per_core:
+      memory_per_core: 6000 # in MB
       # keep_higher_maf:
       # block_size:
   pc_relate_params:
     unrelated_samples_scores_file: '${cvars.mtdir}/mt_pruned.unrelated_samples.pca_scores.ht' # output
     pca_loadings_file_pc_relate: '${cvars.mtdir}/mt_pruned.pca_loadings.ht' # output
     scores_file: '${cvars.mtdir}/mt_pruned.pca_scores.ht' # output
-    pca_components: 2
+    pca_components: 10
     pc_relate_args: # https://hail.is/docs/0.2/methods/relatedness.html#hail.methods.pc_relate
       min_individual_maf: 0.05
       block_size: 4096
@@ -246,7 +242,7 @@ stage2:
   prune_plot_pca:
     #plink_outfile: '${cvars.anndir}/mt_unrelated.plink'
     pruned_unrelated_pcrelate_file: '${cvars.mtdir}/mt_unrelated_ldpruned_pcrelate.mt' # output
-    pca_components: 2
+    pca_components: 10
     union_pca_scores_file: '${cvars.mtdir}/mt_pca_scores.ht' # output
     pca_scores_file: '${cvars.mtdir}/mt_pca_scores.unrelated_samples.ht' # output
     pca_loadings_file: '${cvars.mtdir}/mt_pca_loadings.unrelated_samples.ht' # output
@@ -308,20 +304,20 @@ stage2:
     # Additional parameters to pass to gnomAD determine_nearest_neighbors function:
     # https://broadinstitute.github.io/gnomad_methods/api_reference/sample_qc/filtering.html#gnomad.sample_qc.filtering.compute_qc_metrics_residuals
     compute_qc_metrics_residuals_args: #do not specify strata and regression_sample_inclusion_expr in compute_qc_metrics_residuals_args
-      n_pcs: 2 # Number of PCA components. Should be <= pc_components in `pc_relate_params`
+      n_pcs: 10 # Number of PCA components. Should be <= pc_components in `pc_relate_params`
 
     # Additional parameters to pass to gnomAD determine_nearest_neighbors function:
     #https://broadinstitute.github.io/gnomad_methods/api_reference/sample_qc/filtering.html#gnomad.sample_qc.filtering.determine_nearest_neighbors
     determine_nearest_neighbors_args: #do not specify add_neighbor_distances and strata here
-      n_pcs: 2 # Number of PCA components. Should be <= pc_components in `pc_relate_params`
-      n_neighbors: 4 # Number of neighbours to calculate average values
+      n_pcs: 10 # Number of PCA components. Should be <= pc_components in `pc_relate_params`
+      n_neighbors: 3 # Number of neighbours to calculate average values
 
     # Additional parameters to pass to gnomAD sampleQC function:
     # https://broadinstitute.github.io/gnomad_methods/api_reference/sample_qc/filtering.html#gnomad.sample_qc.filtering.compute_stratified_metrics_filter
     compute_stratified_metrics_filter_args: #do not specify comparison_sample_expr in compute_stratified_metrics_filter_args
       lower_threshold: 4.0 # Using a broad interval to make all samples pass QC
       upper_threshold: 4.0
-    #  metric_threshold: {'r_het_hom_var': [math.inf, 4.0], 'heterozygosity_rate': [math.inf, 4.0]} # Per-metric MAD thresholds
+      metric_threshold: {'r_het_hom_var': [math.inf, 4.0], 'heterozygosity_rate': [math.inf, 4.0]} # Per-metric MAD thresholds
     # extra output files
     output_text_file: '${cvars.anndir}/stratified_sample_qc.${general.sample_qc_method}.tsv.gz' # output
     output_stratified_metrics_json_file: '${cvars.anndir}/stratified_sample_qc.${general.sample_qc_method}.qc_metrics_stats.json' # output
@@ -340,7 +336,7 @@ stage2:
 
   sample_qc_combine_results:
     # Put here `null`, if you don't want to remove any samples
-    samples_to_remove_file: null # Put here none, if you don't want to remove any samples
+    samples_to_remove_file: null #'${cvars.metadir}/wxs-qc_public_dataset_v3.samples_to_remove_after_sampleqc.tsv'
 
 
 stage3:
@@ -459,8 +455,6 @@ stage4:
     giab_vcf: '${cvars.resdir}/HG001_GRCh38_benchmark.interval.illumina.vcf.gz'
     giab_cqfile: '${cvars.resdir}/HG001_GRCh38_benchmark.all.interval.illumina.vep.info.txt'
     # The list of overlaps between the high-confidence regions from giab_vcf and panel used for the dataset
-    # Not produced by scripts/testdata-create - shipped alongside the dataset metadata
-    # (see tests/test_files_list_in_bucket.txt)
     prec_recall_panel_bed: '${cvars.metadir}/HG001_twistedexome_1kg.bed'
     giab_ht_file: '${cvars.mtdir}/HG001_GRCh38_benchmark.interval.illumina.ht'
     # The ID of GIAB HG001 (NA12878) sample, if it presents in your sequencing data
