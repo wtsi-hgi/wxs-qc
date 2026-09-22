@@ -48,6 +48,7 @@ general:
     vep_consequences:    '${general.metadata_dir}/${general.dataset_name}.all_consequences_with_gene_and_csq.tsv.bgz'
     # Set pedigree to null, if you don't want to run transmitted/untransmitted singletons statistics calculations
     pedigree:            '${general.metadata_dir}/${general.dataset_name}.trios.fam'
+    # NA12878 is GIAB HG001, the sample the benchmark VCF in stage4.evaluation holds
     giab_sample_id: 'NA12878'
     # control samples are excluded from sample QC to remain in variant QC
     control_samples: ['NA12878']
@@ -175,7 +176,7 @@ stage1:
 stage2:
   # --- Step 2.1 --- #
   sex_annotation_hard_filters:
-    n_alt_alleles_threshold: 0.01
+    n_alt_alleles_threshold: 0.001
     defined_gt_frac_threshold: 0.99
 
   impute_sex:
@@ -316,7 +317,7 @@ stage2:
     compute_stratified_metrics_filter_args: #do not specify comparison_sample_expr in compute_stratified_metrics_filter_args
       lower_threshold: 4.0 # Using a broad interval to make all samples pass QC
       upper_threshold: 4.0
-    #  metric_threshold: {'r_het_hom_var': [math.inf, 4.0], 'heterozygosity_rate': [math.inf, 4.0]} # Per-metric MAD thresholds
+      metric_threshold: {'r_het_hom_var': [math.inf, 4.0], 'heterozygosity_rate': [math.inf, 4.0]} # Per-metric MAD thresholds
     # extra output files
     output_text_file: '${cvars.anndir}/stratified_sample_qc.${general.sample_qc_method}.tsv.gz' # output
     output_stratified_metrics_json_file: '${cvars.anndir}/stratified_sample_qc.${general.sample_qc_method}.qc_metrics_stats.json' # output
@@ -379,7 +380,7 @@ stage3:
     variant_stats_plot_file : '${cvars.pltdir}/variant_stats_preqc.html'
 
   # --- Step 3.3 --- #
-  rf_test_percentage: 20 # Percent of variants randomly chosen to be a test for RF model
+  rf_test_percentage: 20 # Percentage of variants randomly chosen to be a test for the RF model
   runs_json: '${cvars.rfdir}/rf_runs.json'
 
   train_rf:
