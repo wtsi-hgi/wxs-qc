@@ -124,6 +124,10 @@ def render_config(
 
 
 class IntegrationTestsStub:
+    # RF model ID trained in step 3.3. Test classes that apply a pre-trained model from step 3.4 on
+    # train under a separate ID, so that step 3.3 doesn't overwrite the pre-trained model.
+    rf_training_model_id = RF_RUN_TEST_HASH
+
     def stub_0_0_create_data_folder(self) -> None:
         try:
             qc_step_0_0.main()
@@ -241,12 +245,15 @@ class IntegrationTestsStub:
         except Exception as e:
             pytest.fail(f"Step 3.2 failed with an exception: {e}")
 
-    @patch("argparse.ArgumentParser.parse_args", return_value=argparse.Namespace(manual_model_id=RF_RUN_TEST_HASH))
-    def stub_3_3_variant_qc(self, mock_args: Any) -> None:
-        try:
-            qc_step_3_3.main()
-        except Exception as e:
-            pytest.fail(f"Step 3.3 failed with an exception: {e}")
+    def stub_3_3_variant_qc(self) -> None:
+        with patch(
+            "argparse.ArgumentParser.parse_args",
+            return_value=argparse.Namespace(manual_model_id=self.rf_training_model_id),
+        ):
+            try:
+                qc_step_3_3.main()
+            except Exception as e:
+                pytest.fail(f"Step 3.3 failed with an exception: {e}")
 
     # mock cli arguments
     def stub_3_4_variant_qc(self) -> None:
