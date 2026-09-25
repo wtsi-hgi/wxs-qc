@@ -463,18 +463,17 @@ def filter_and_count(
     mt_bin_path_previous = os.path.join(mtdir, f"tmp.hard_filters_combs_{var_type}.bin.1.mt")
     mt_bin_path_current = os.path.join(mtdir, f"tmp.hard_filters_combs_{var_type}.bin.2.mt")
 
-    # Making the first bin-filtered matrixtable
-    # For the zero iteration, this is full initial matrixtable
-    mtbin = mt
-    mtbin.checkpoint(mt_bin_path_previous, overwrite=True)
+    # For the first bin, the previous bin-filtered matrixtable is the full initial matrixtable
+    mt_bin = mt
 
     for rf_bin in sorted(bins, reverse=True):
         print(f"=== Processing {var_type} bin: {rf_bin} ===")
-        # Making next bin-filtered matrixtable form the previous matrixtable,
+        # Making next bin-filtered matrixtable from the previous matrixtable,
         # It works because we cycle from the most relaxed bin to the most stringent
-        mt_bin = mt.filter_rows(mtbin.info.rf_bin <= rf_bin)
+        mt_bin = mt_bin.filter_rows(mt_bin.info.rf_bin <= rf_bin)
         mt_bin = mt_bin.checkpoint(mt_bin_path_current, overwrite=True)
         # Swapping paths
+        # The next bin reads the checkpoint just written, so it must write to the other path
         # The current path becomes previous, and the old previous becomes current for the next bin
         mt_bin_path_previous, mt_bin_path_current = mt_bin_path_current, mt_bin_path_previous
 
