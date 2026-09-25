@@ -106,8 +106,8 @@ def prepare_giab_ht(giab_vcf: str, giab_cqfile: str, prec_recall_panel: Optional
     """
     logging.info("Preparing GiaB HailTable")
     mt = hl.import_vcf(path_spark(giab_vcf), force_bgz=True, reference_genome="GRCh38")
-    mt = hl.variant_qc(mt)
-    mt = mt.filter_rows(mt.variant_qc.n_non_ref > 0)
+    # Dropping reference-only sites
+    mt = mt.filter_rows(hl.agg.any(hl.is_defined(mt.GT) & mt.GT.is_non_ref()))
 
     ht = hl.import_table(path_spark(giab_cqfile), types={"f1": "int32"}, no_header=True)
     ht = ht.rename(
@@ -336,8 +336,10 @@ def get_giab_sample_from_dataset(giab_sample_id: str, mt_hard: hl.MatrixTable, c
     mt_giab_sample = mt_hard.filter_cols(mt_hard.s == giab_sample_id)  # GIAB sample for precision/recall
     # Filtering out X and Y coromosomes because GIAB HG001 doesn't contain it
     mt_giab_sample = mt_giab_sample.filter_rows(mt_giab_sample.locus.in_autosome())
-    mt_giab_sample = hl.variant_qc(mt_giab_sample)
-    mt_giab_sample = mt_giab_sample.filter_rows(mt_giab_sample.variant_qc.n_non_ref > 0)
+    # Dropping reference-only sites
+    mt_giab_sample = mt_giab_sample.filter_rows(
+        hl.agg.any(hl.is_defined(mt_giab_sample.GT) & mt_giab_sample.GT.is_non_ref())
+    )
     ht_giab_dataset = mt_giab_sample.rows()
     ht_giab_dataset = ht_giab_dataset.checkpoint(checkpoint_path, overwrite=True)
     return ht_giab_dataset
@@ -615,9 +617,10 @@ def apply_hard_filters(
     mt_tmp = mt_tmp.annotate_rows(pass_count=hl.agg.count_where(mt_tmp.hard_filters == "Pass"))
     mt_tmp = mt_tmp.filter_rows(mt_tmp.pass_count / mt_tmp.count_cols() > call_rate)
 
-    # remove reference-only rows
-    mt_tmp = hl.variant_qc(mt_tmp)
-    mt_tmp = mt_tmp.filter_rows(mt_tmp.variant_qc.n_non_ref == 0, keep=False)
+    # Dropping reference-only sites
+    # Lighter replacement for hl.variant_qc().n_non_ref > 0, which computes and stores ~20 unused row stats.
+    # Unlike n_non_ref (call_stats ignores haploid homozygotes), haploid reference calls count as reference.
+    mt_tmp = mt_tmp.filter_rows(hl.agg.any(hl.is_defined(mt_tmp.GT) & mt_tmp.GT.is_non_ref()))
     mt_tmp = mt_tmp.checkpoint(checkpoint_path, overwrite=True)
 
     return mt_tmp
