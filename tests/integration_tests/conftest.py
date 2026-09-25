@@ -89,6 +89,20 @@ def pretrained_rf_model(test_data_dir: Path, rendered_config: Path) -> Path:
 
 
 @pytest.fixture
+def clean_hard_filter_json_dump(rendered_config: Path) -> Path:
+    """Remove cached step 4.1 hard-filter results so the step recalculates them.
+
+    Step 4.1 loads a filter combination result from `json_dump_folder` instead of
+    recalculating it when the JSON file exists.
+    """
+    json_dump_folder = Path(parse_config_file(str(rendered_config))["stage4"]["evaluation"]["json_dump_folder"])
+    shutil.rmtree(json_dump_folder, ignore_errors=True)
+    print(f"Removed cached hard-filter results in {json_dump_folder}")
+
+    return json_dump_folder
+
+
+@pytest.fixture
 def WES_CONFIG(monkeypatch: pytest.MonkeyPatch, rendered_config: Path) -> str:
     config_path = str(rendered_config)
     monkeypatch.setenv("WES_CONFIG", config_path)

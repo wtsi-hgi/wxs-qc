@@ -253,6 +253,7 @@ class TestIntegration(IntegrationTestsStub):
     def test_trios_3_9_variant_qc(self) -> None:
         self.stub_3_9_variant_qc()
 
+    @pytest.mark.usefixtures("clean_hard_filter_json_dump")
     def test_trios_4_1_genotype_qc(self, WES_CONFIG: str) -> None:
         self.stub_4_1_genotype_qc()
         # TODO:
