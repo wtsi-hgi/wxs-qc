@@ -34,6 +34,7 @@ from collections import Counter
 from pathlib import Path
 import hail as hl
 import numpy as np
+import csv
 from wxs_qc.hail_utils import path_spark
 from wxs_qc.config import get_config
 from wxs_qc import hail_utils
@@ -188,15 +189,70 @@ def mapping_clean_missing(
 
 
 # ======== The second part - validation of the gtcheck data consistency =======
+def read_gtcheck(gtcheck_file: str | Path) -> pd.DataFrame:
+    """Read validated DCv2 records from a bcftools gtcheck report."""
+
+    columns = [
+        "data_sample",
+        "microarray_sample",
+        "discordance",
+        "average_logP",
+        "n_sites",
+        "N_matching_genotypes",
+    ]
+
+    records = []
+
+    with open(gtcheck_file, encoding="utf-8", newline="") as handle:
+        for line_number, row in enumerate(
+            csv.reader(handle, delimiter="\t"),
+            start=1,
+        ):
+            if not row:
+                continue
+
+            record_type = row[0].strip()
+
+            # Ignore bcftools comments and summary information.
+            if record_type.startswith("#") or record_type == "INFO":
+                continue
+
+            if record_type != "DCv2":
+                raise ValueError(
+                    f"Unexpected record type {record_type!r} "
+                    f"at line {line_number}"
+                )
+
+            # Seven fields include the initial "DCv2" field.
+            if len(row) != len(columns) + 1:
+                raise ValueError(
+                    f"Malformed DCv2 record at line {line_number}: "
+                    f"expected {len(columns) + 1} fields, "
+                    f"found {len(row)}"
+                )
+
+            # Exclude the validated "DCv2" field.
+            records.append(row[1:])
+
+    if not records:
+        raise ValueError(f"No DCv2 records found in {gtcheck_file}")
+
+    gtcheck = pd.DataFrame(records, columns=columns)
+
+    gtcheck[["discordance", "average_logP"]] = (
+        gtcheck[["discordance", "average_logP"]]
+        .apply(pd.to_numeric, errors="raise")
+    )
+
+    gtcheck[["n_sites", "N_matching_genotypes"]] = (
+        gtcheck[["n_sites", "N_matching_genotypes"]]
+        .apply(pd.to_numeric, errors="raise", downcast="integer")
+    )
+
+    return gtcheck
+
+
 def prepare_gtcheck(gtcheck: pd.DataFrame) -> pd.DataFrame:
-    gtcheck_column_names = {
-        i: s
-        for i, s in enumerate(
-            "DCv2 data_sample microarray_sample discordance average_logP n_sites N_matching_genotypes".split()
-        )
-    }
-    gtcheck = gtcheck.rename(columns=gtcheck_column_names)
-    gtcheck = gtcheck.drop("DCv2", axis=1)
 
     print("Checking mapping ID pairs uniqiness")
 
@@ -488,7 +544,7 @@ def main() -> None:
     wes2microarray = mapping_clean_missing(wes2microarray, ids_microarray_data, microarray_id_col)
 
     # === The second part - validation of the gtcheck results ===
-    gtcheck = pd.read_csv(gtcheck_report, sep="\t", header=None)
+    gtcheck = read_gtcheck(gtcheck_report)
 
     validated = gtcheck_validate(
         gtcheck, wes2microarray, gtcheck_score_threshold, wes_id_col=wes_id_col, microarray_id_col=microarray_id_col
