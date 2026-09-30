@@ -544,7 +544,7 @@ def main() -> None:
     wes2microarray = mapping_clean_missing(wes2microarray, ids_microarray_data, microarray_id_col)
 
     # === The second part - validation of the gtcheck results ===
-    gtcheck = pd.read_csv(gtcheck_report, sep="\t", header=None)
+    gtcheck = read_gtcheck(gtcheck_report)
 
     validated = gtcheck_validate(
         gtcheck, wes2microarray, gtcheck_score_threshold, wes_id_col=wes_id_col, microarray_id_col=microarray_id_col
