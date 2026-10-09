@@ -15,6 +15,7 @@ def export_vcfs(
     model_id: str,
     csq_file: Optional[str] = None,
     header_file: Optional[str] = None,
+    drop_failed: bool = False,
     filter_level: str = "stringent",
 ):
     """
@@ -24,6 +25,7 @@ def export_vcfs(
     :param dict hard_filters: details of all sets of filters
     :param str model_id: random forest run hash used
     :param str filter_level: filter level to apply - 'relaxed', 'medium', or 'stringent'
+    :param bool drop_failed: whether to drop variants and genotypes that fail the selected filters
     """
     # Validate filter level
     valid_levels = ["relaxed", "medium", "stringent"]
@@ -41,8 +43,9 @@ def export_vcfs(
     ac_het_field = f"{filter_level}_AC_Het"
 
     # Filter to remove rows where all variants fail the selected filters
-    mt = mt.filter_rows(mt.info[fraction_field] > 0)
-    mt = mt.filter_entries(mt[filter_field] == "Pass")
+    if drop_failed:
+        mt = mt.filter_rows(mt.info[fraction_field] > 0)
+        mt = mt.filter_entries(mt[filter_field] == "Pass")
 
     # Drop unwanted fields
     mt = mt.drop(
@@ -69,7 +72,8 @@ def export_vcfs(
     )
 
     # Remove variants with AC equals 0
-    mt = mt.filter_rows(mt.info.AC == [0], keep=False)
+    if drop_failed:
+        mt = mt.filter_rows(mt.info.AC == [0], keep=False)
 
     # Remove all filter columns
     mt = mt.drop(mt.relaxed_filters, mt.medium_filters, mt.stringent_filters)
@@ -207,6 +211,7 @@ def main():
     # = STEP PARAMETERS = #
     model_id = config["general"]["rf_model_id"]
     hard_filters = config["stage4"]["apply_hard_filters"]["hard_filters"]  # set during step 4.1a
+    drop_failed = config["stage4"]["export_vcfs_b"]["drop_failed"]
 
     # = STEP DEPENDENCIES = #
     mtfile = config["stage4"]["export_vcfs_b"]["mtfile"]
@@ -219,7 +224,7 @@ def main():
     # = STEP LOGIC = #
     _ = hail_utils.init_hl(tmp_dir)
     export_vcfs(
-        mtfile, filtered_vcf_dir, hard_filters, model_id, csq_file, csq_header_file, filter_level=args.filter_level
+        mtfile, filtered_vcf_dir, hard_filters, model_id, csq_file, csq_header_file, drop_failed, filter_level=args.filter_level,
     )
 
 

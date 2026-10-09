@@ -21,6 +21,7 @@ def export_vcfs(
     model_id: str,
     csq_file: Optional[str] = None,
     header_file: Optional[str] = None,
+    drop_failed: bool = False,
 ):
     """
     Export VCFs annotated with a range of hard filters
@@ -28,11 +29,13 @@ def export_vcfs(
     :param str filtered_vcf_dir: output directory for VCFs
     :param dict hard_filters: details of all sets of filters
     :param str model_id: random forest run hash used
+    :param bool drop_failed: whether to drop variants that fail the relaxed filters
     """
     mt = hl.read_matrix_table(path_spark(mtfile))
 
     # filter to remove rows where all variants fail the most relaxed filters
-    mt = mt.filter_rows(mt.info.fraction_pass_relaxed_filters > 0)
+    if drop_failed:
+        mt = mt.filter_rows(mt.info.fraction_pass_relaxed_filters > 0)
 
     # drop unwanted fields
     mt = mt.annotate_rows(info=mt.info.drop("AC", "AN", "AF"))
@@ -41,8 +44,10 @@ def export_vcfs(
             filter_metric = f"{filter_level}_{metric}"
             mt = mt.annotate_rows(info=mt.info.annotate(**{filter_metric: mt[filter_metric]}))
             mt = mt.drop(mt[filter_metric])
+
     # remove variants if their relaxed_AC equals 0 after filtering
-    mt = mt.filter_rows(mt.info.relaxed_AC == [0], keep=False)
+    if drop_failed:
+        mt = mt.filter_rows(mt.info.relaxed_AC == [0], keep=False)
     mt = mt.drop(
         mt.a_index,
         mt.was_split,
@@ -246,6 +251,7 @@ def main():
     # = STEP PARAMETERS = #
     hard_filters = config["stage4"]["apply_hard_filters"]["hard_filters"]  # set in step 4.1a
     model_id = config["general"]["rf_model_id"]
+    drop_failed = config["stage4"]["export_vcfs_a"]["drop_failed"]
 
     # = STEP DEPENDENCIES = #
     mtfile = config["stage4"]["export_vcfs_a"]["mtfile"]
@@ -257,7 +263,7 @@ def main():
 
     # = STEP LOGIC = #
     _ = hail_utils.init_hl(tmp_dir)
-    export_vcfs(mtfile, filtered_vcf_dir, hard_filters, model_id, csq_file, csq_header_file)
+    export_vcfs(mtfile, filtered_vcf_dir, hard_filters, model_id, csq_file, csq_header_file, drop_failed)
 
 
 if __name__ == "__main__":
