@@ -947,7 +947,11 @@ Set it to `False` to use the same filtering for all chromosomes.
 ### Export the filtered variants to VCFs
 
 Script `3a` tags all variations with the corresponding filter (relaxed, medium, stringent)
-removes all variants not passing the relaxed filter, and saves the resulting data to VCF files.
+and saves the resulting data to VCF files.
+By default, all variants are exported "as is".
+You can filter out variants that do not pass relaxed filter by
+specifying `drop_failed: False` option for the step 4.3a in the config file.
+
 
 ```shell
 python stage4_genotype_qc/gqc3a_export_vcfs_range_of_hard_filters.py

@@ -556,7 +556,6 @@ stage4:
   export_vcfs_b:
     mtfile: '${cvars.mtdir}/mt_hard_filter_combinations.mt'
     filtered_vcf_dir: '${cvars.vcf_export_dir}/filtered_vcfs_combinations_stringent/'
-    drop_failed: False # drops variants and genotypes that failed one selected filter, and drops variants if AC==0. If set to False, all variants and genotypes will be exported and annotated.
 
   # --- Step 4.4 --- #
   annotate_gnomad:
