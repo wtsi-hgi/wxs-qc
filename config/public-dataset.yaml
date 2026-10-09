@@ -550,8 +550,9 @@ stage4:
   export_vcfs_a:
     mtfile: '${cvars.mtdir}/mt_hard_filter_combinations.mt'
     vcf_output_dir: '${cvars.vcf_export_dir}/filtered_vcfs_combinations/'
+    drop_failed: False # drops variants that failed relaxed filters, and drops variants if relaxed_AC==0. If set to False, all variants will be exported and annotated.
 
-  # --- Ster 4.3b --- #
+  # --- Step 4.3b --- #
   export_vcfs_b:
     mtfile: '${cvars.mtdir}/mt_hard_filter_combinations.mt'
     filtered_vcf_dir: '${cvars.vcf_export_dir}/filtered_vcfs_combinations_stringent/'
